@@ -10,9 +10,9 @@ To run the code in this repo, we have provided a Dockerfile. Steps for setup and
   a. Docker
   b. Dev Containers
 4. Do F1, and select: Dev Containers: Open Folder in Container...
-5. Select the project folder, and when prompted 'How would you like to create your container configuration?' select: From 'Dockerfile'. Click OK.
-6. VSCode will open a new window with the project. There, install the VSCode extensions:
-  a. Jupyter
-  b. Python
-7. Run test.py and test_notebook.py to make sure the installation works
-8. Ready to go!
+  a. Select the project folder
+  b. When prompted 'How would you like to create your container configuration?' select: From 'Dockerfile'.
+  c. When prompted to add any additional resources, select Python, from the devcontainers provider.
+  d. Click OK.
+6. Run test.py and test_notebook.py to make sure the installation works
+7. Ready to go!
