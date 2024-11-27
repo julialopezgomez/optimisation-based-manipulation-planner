@@ -4,12 +4,18 @@
 This is the code repository for my MInf 2 project: Tangent Configuration Space Manipulation Planner.
 
 ### Installation
-To run the code in this repo, we have provided a Dockerfile. Steps for setup and installation:
+To run the code in this repo, you will need version 1.35.0 of Drake, in specific, the python bindings. 
+
+We have provided a Dockerfile for easiness. If you are familiar with Docker, you are free to select the method or IDE of your choice. Steps for setup and installation in VSCode follow:
 1. Install Docker, VSCode.
-2. Install Extensions:
+2. Install VSCode extensions:
   a. Docker
   b. Dev Containers
-4. Do F1, and select: Dev Containers: Open Folder in Container...
+4. Right-click on Dockerfile and select: Build Image... Give it a name of your choice.
+  a. If an error pops up in the terminal, do: nano ~/.docker/config.json and delete the line that says "credsStore:.
+  b. Close nano using 1) ctril+X, 2) y , and 3) ENTER.
+  c. There is no need to click on 'Build Image...' again.
+5. Do F1, and select: Dev Containers: Open Folder in Container...
   a. Select the project folder
   b. When prompted 'How would you like to create your container configuration?' select: From 'Dockerfile'.
   c. When prompted to add any additional resources, select Python, from the devcontainers provider.
