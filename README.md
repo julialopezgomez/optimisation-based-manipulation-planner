@@ -18,7 +18,6 @@ We have provided a Dockerfile for easiness. If you are familiar with Docker, you
 5. Do F1, and select: Dev Containers: Open Folder in Container...<br />
   a. Select the project folder<br />
   b. When prompted 'How would you like to create your container configuration?' select: From 'Dockerfile'.<br />
-  c. When prompted to add any additional resources, select Python, from the devcontainers provider.<br />
   d. Click OK.
 6. Run test.py and test_notebook.py to make sure the installation works
 7. Ready to go!
