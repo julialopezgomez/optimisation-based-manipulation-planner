@@ -4,7 +4,7 @@
 This is the code repository for my MInf 2 project: Tangent Configuration Space Manipulation Planner.
 
 ### Installation
-To run the code in this repo, you will need version 1.35.0 of Drake, in specific, the python bindings. 
+To run the code in this repo, you will need version 1.35.0 of Drake, specifically, the Python bindings. 
 
 We have provided a Dockerfile for easiness. If you are familiar with Docker, you are free to select the method or IDE of your choice. Steps for setup and installation in VSCode follow:
 1. Install Docker, VSCode.
