@@ -13,7 +13,7 @@ We have provided a Dockerfile for easiness. If you are familiar with Docker, you
   b. Dev Containers
 4. Right-click on Dockerfile and select: Build Image... Give it a name of your choice.<br />
   a. If an error pops up in the terminal, do: nano ~/.docker/config.json and delete the line that says "credsStore:".<br />
-  b. Close nano using 1) ctril+X, 2) y , and 3) ENTER.<br />
+  b. Close nano using 1) ctrl+X, 2) y , and 3) ENTER.<br />
   c. There is no need to click on 'Build Image...' again.
 5. Do F1, and select: Dev Containers: Open Folder in Container...<br />
   a. Select the project folder<br />
