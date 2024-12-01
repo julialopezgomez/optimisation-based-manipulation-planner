@@ -21,3 +21,16 @@ We have provided a Dockerfile for easiness. If you are familiar with Docker, you
   d. Click OK.
 6. Run test.py and test_notebook.py to make sure the installation works
 7. Ready to go!
+
+### MOSEK Solver License
+Some notebooks in this implementation require a MOSEK license.
+
+*MOSEK is a state-of-the-art optimization solver, used for solving large-scale convex optimization problems efficiently. It supports a variety of optimization problem types, including linear programming (LP), quadratic programming (QP), second-order cone programming (SOCP), and semidefinite programming (SDP).* 
+
+**Academic users can request a free academic license by visiting the MOSEK website**: https://www.mosek.com/products/academic-licenses/. 
+
+Following the instructions, you will instantly receive an email first, to accept the terms and conditions, and then to download your license.
+
+**To use your license in this implementation**, you will need to replace the file `mosek.lic` with your own license file (or paste the content of your license file into the existing `mosek.lic` file).
+
+
