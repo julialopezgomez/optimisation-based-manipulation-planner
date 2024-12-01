@@ -8,8 +8,8 @@ To run the code in this repo, you will need version 1.35.0 of Drake, specificall
 
 We have provided a Dockerfile for easiness. If you are familiar with Docker, you are free to select the method or IDE of your choice. Steps for setup and installation in VSCode follow:
 1. Install [Docker](https://www.docker.com/) and [VSCode](https://code.visualstudio.com/).
-2. Install VSCode extensions:
-  a. [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker)
+2. Install VSCode extensions:<br />
+  a. [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) <br />
   b. [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 4. Right-click on Dockerfile and select: Build Image... Give it a name of your choice.<br />
   a. If an error pops up in the terminal, do: `nano ~/.docker/config.json` and delete the line that says "credsStore:".<br />
