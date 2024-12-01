@@ -11,13 +11,13 @@ We have provided a Dockerfile for easiness. If you are familiar with Docker, you
 2. Install VSCode extensions:<br />
   a. [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) <br />
   b. [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-4. Right-click on Dockerfile and select: Build Image... Give it a name of your choice.<br />
+4. In the project folder, right-click on the `Dockerfile` and select: `Build Image...` Give it a name of your choice.<br />
   a. If an error pops up in the terminal, do: `nano ~/.docker/config.json` and delete the line that says "credsStore:".<br />
-  b. Close nano using 1) `ctrl+X`, 2) `y` , and 3) `ENTER`.<br />
+  b. Close nano using 1) `ctrl+X`, 2) `y`, and 3) `ENTER`.<br />
   c. There is no need to click on 'Build Image...' again.
-5. Do F1, and select: Dev Containers: Open Folder in Container...<br />
+5. Do `F1`, and select: Dev Containers: Open Folder in Container...<br />. If prompted:
   a. Select the project folder<br />
-  b. When prompted 'How would you like to create your container configuration?' select: From 'Dockerfile'.<br />
+  b. When asked 'How would you like to create your container configuration?' select: From 'Dockerfile'.<br />
   d. Click OK.
 6. Run `test.py` and `test_notebook.py` to make sure the installation works
 7. Ready to go!
@@ -27,7 +27,7 @@ Some notebooks in this implementation require a MOSEK license.
 
 **Academic users can request a free academic license by visiting the MOSEK website**: https://www.mosek.com/products/academic-licenses/. 
 
-Following the instructions, you will instantly receive an email first, to accept the terms and conditions, and then to download your license.
+Following the instructions, you will instantly receive an email. First, to accept the terms and conditions, and then another one to download your license.
 
 **To use your license in this implementation**, you will need to replace the file `mosek.lic` with your own license file (or paste the content of your license file into the existing `mosek.lic` file).
 
