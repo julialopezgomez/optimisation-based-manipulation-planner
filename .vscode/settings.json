@@ -1,5 +1,7 @@
 {
-    "files.associations": {
-        "*.md": "mdx"
-      },
+  "files.associations": {
+      "*.md": "mdx"
+  },
+  "remote.autoForwardPorts": true,
+  "remote.autoForwardPortsSource": "process"
 }
