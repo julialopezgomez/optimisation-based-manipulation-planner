@@ -32,6 +32,19 @@
           <diffuse>0.0 0.0 1.0 1.0</diffuse> <!-- Changed color to blue -->
         </material>
       </visual>
+      <!-- Add a visual line on the cap -->
+      <visual name="visual_cap_line">
+        <pose>0.017 0 0.0075 0 1.574 0</pose> <!-- Position the line on the edge -->
+        <geometry>
+          <cylinder>
+            <radius>0.001</radius> <!-- Narrow line -->
+            <length>0.032</length> <!-- Same height as the cap -->
+          </cylinder>
+        </geometry>
+        <material>
+          <diffuse>1.0 0.0 0.0 1.0</diffuse> <!-- Red color for visibility -->
+        </material>
+      </visual>
       <collision name="collision_cap">
         <geometry>
           <cylinder>
