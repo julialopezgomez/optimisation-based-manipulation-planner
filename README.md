@@ -15,7 +15,7 @@ We have provided a Dockerfile for easiness. If you are familiar with Docker, you
   a. If an error pops up in the terminal, do: `nano ~/.docker/config.json` and delete the line that says "credsStore:".<br />
   b. Close nano using 1) `ctrl+x`, 2) `y`, and 3) `ENTER`.<br />
   c. There is no need to click on 'Build Image...' again.
-5. Open the VSCode Command Palette using `F1` or `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS). Select: Dev Containers: Open Folder in Container...<br />. If prompted:
+5. Open the VSCode Command Palette using `F1` or `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS). Select: Dev Containers: Open Folder in Container...<br />. If prompted:
   a. Select the project folder<br />
   b. When asked 'How would you like to create your container configuration?' select: From 'Dockerfile'.<br />
   d. Click OK.
