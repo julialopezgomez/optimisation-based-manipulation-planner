@@ -24,7 +24,7 @@
       <visual name="visual_cap">
         <geometry>
           <cylinder>
-            <radius>0.033</radius>
+            <radius>0.025</radius>
             <length>0.015</length> <!-- Reduced height for a bottle cap -->
           </cylinder>
         </geometry>
@@ -34,11 +34,11 @@
       </visual>
       <!-- Add a visual line on the cap -->
       <visual name="visual_cap_line">
-        <pose>0.017 0 0.0075 0 1.574 0</pose> <!-- Position the line on the edge -->
+        <pose>0.013 0 0.0075 0 1.574 0</pose> <!-- Position the line on the edge -->
         <geometry>
           <cylinder>
             <radius>0.001</radius> <!-- Narrow line -->
-            <length>0.032</length> <!-- Same height as the cap -->
+            <length>0.024</length> <!-- Same height as the cap -->
           </cylinder>
         </geometry>
         <material>
@@ -48,7 +48,7 @@
       <collision name="collision_cap">
         <geometry>
           <cylinder>
-            <radius>0.033</radius>
+            <radius>0.025</radius>
             <length>0.015</length> <!-- Same height for collision -->
           </cylinder>
         </geometry>
@@ -72,7 +72,7 @@
       <visual name="visual_base">
         <geometry>
           <cylinder>
-            <radius>0.033</radius>
+            <radius>0.025</radius>
             <length>0.005</length> <!-- Base is thinner -->
           </cylinder>
         </geometry>
@@ -83,7 +83,7 @@
       <collision name="collision_base">
         <geometry>
           <cylinder>
-            <radius>0.033</radius>
+            <radius>0.025</radius>
             <length>0.005</length>
           </cylinder>
         </geometry>
