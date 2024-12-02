@@ -26,7 +26,8 @@
 				"ms-python.debugpy",
 				"smilerobotics.urdf",
 				"redhat.vscode-xml",
-				"unifiedjs.vscode-mdx"
+				"unifiedjs.vscode-mdx",
+				"ms-toolsai.jupyter-keymap"
 			]
 		}
 	}
