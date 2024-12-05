@@ -6,7 +6,7 @@ from pydrake.all import (HPolyhedron, AngleAxis,
                          Hyperellipsoid, Simulator, Box)
 import mcubes
 
-import visualisation_utils as viz_utils
+import visualization_utils as viz_utils
 
 import pydrake.symbolic as sym
 from pydrake.all import MeshcatVisualizer, StartMeshcat, DiagramBuilder, \
@@ -77,9 +77,9 @@ class CIrisPlantVisualizer:
             self.scene_graph.GetMyContextFromRoot(self.task_space_diagram_context))
 
         # Construct Rational Forward Kinematics for easy conversions.
-        self.forward_kin = RationalForwardKinematics(plant)
-        self.s_variables = sym.Variables(self.forward_kin.s())
-        self.s_array = self.forward_kin.s()
+        self.rat_forward_kin = RationalForwardKinematics(plant)
+        self.s_variables = sym.Variables(self.rat_forward_kin.s())
+        self.s_array = self.rat_forward_kin.s()
         self.num_joints = self.plant.num_positions()
 
         # the point around which we construct the stereographic projection.
@@ -87,10 +87,10 @@ class CIrisPlantVisualizer:
 
         # The lower and upper limits of the joint positions in the plant.
         self.q_lower_limits = plant.GetPositionLowerLimits()
-        self.s_lower_limits = self.forward_kin.ComputeSValue(
+        self.s_lower_limits = self.rat_forward_kin.ComputeSValue(
             self.q_lower_limits, self.q_star)
         self.q_upper_limits = plant.GetPositionUpperLimits()
-        self.s_upper_limits = self.forward_kin.ComputeSValue(
+        self.s_upper_limits = self.rat_forward_kin.ComputeSValue(
             self.q_upper_limits, self.q_star)
 
         # A dictionary mapping str -> (HPolyhedron, SearchResult, Color) where
@@ -102,7 +102,7 @@ class CIrisPlantVisualizer:
         # constraint.
         self.ik = InverseKinematics(plant, self.plant_context)
         min_dist = 1e-5
-        self.collision_constraint = self.ik.AddMinimumDistanceConstraint(
+        self.collision_constraint = self.ik.AddMinimumDistanceLowerBoundConstraint(
             min_dist, 1e-5)
 
         # The plane numbers which we wish to visualize.
@@ -133,7 +133,7 @@ class CIrisPlantVisualizer:
     def show_res_q(self, q):
         self.plant.SetPositions(self.plant_context, q)
         in_collision = self.check_collision_q_by_ik(q)
-        s = self.forward_kin.ComputeSValue(np.array(q), self.q_star)
+        s = self.rat_forward_kin.ComputeSValue(np.array(q), self.q_star)
 
         color = Rgba(1, 0.72, 0, 1) if in_collision else Rgba(0.24, 1, 0, 1)
         self.task_space_diagram.ForcedPublish(self.task_space_diagram_context)
@@ -143,7 +143,7 @@ class CIrisPlantVisualizer:
         self.update_certificates(s)
 
     def show_res_s(self, s):
-        q = self.forward_kin.ComputeQValue(np.array(s), self.q_star)
+        q = self.rat_forward_kin.ComputeQValue(np.array(s), self.q_star)
         self.show_res_q(q)
 
     '''
@@ -157,9 +157,18 @@ class CIrisPlantVisualizer:
         else:
             return 1
 
-    def check_collision_s_by_ik(self, s, min_dist=1e-5):
+    def check_collision_s_by_ik(self, s, min_dist=1e-5, third=None, fourth=None):
         s = np.array(s)
-        q = self.forward_kin.ComputeQValue(s, self.q_star)
+        q = self.rat_forward_kin.ComputeQValue(s, self.q_star)
+        # print("\nfirst_arg 's' is ", s)
+        # print(type(s))
+        # print("q is ", q)
+        # print("second_arg 'min_dist' is ", min_dist)
+        # print(type(min_dist))
+        # print("third_arg 'third' is ", third)
+        # print(type(third))
+        # print("fourth_arg 'fourth' is ", fourth)
+        # print(type(fourth))
         return self.check_collision_q_by_ik(q, min_dist)
 
     def visualize_collision_constraint(self, **kwargs):
@@ -180,9 +189,11 @@ class CIrisPlantVisualizer:
         """
 
         vertices, triangles = mcubes.marching_cubes_func(
-            tuple(
-                factor * self.s_lower_limits), tuple(
-                factor * self.s_upper_limits), N, N, N, self.check_collision_s_by_ik, iso_surface)
+            tuple(factor * self.s_lower_limits), 
+                tuple(factor * self.s_upper_limits), 
+                N, N, N, 
+                self.check_collision_s_by_ik, 
+                iso_surface)
         tri_drake = [SurfaceTriangle(*t) for t in triangles]
         self.meshcat_cspace.SetObject("/collision_constraint",
                                       TriangleSurfaceMesh(tri_drake, vertices),
@@ -294,7 +305,7 @@ class CIrisPlantVisualizer:
         self.highlight_geometry_id(geom2, color, name + f"/{geom2}")
 
         env = {var_s: val_s for var_s, val_s in zip(
-            self.cspace_free_polytope.rational_forward_kin().s(), s)}
+            self.cspace_free_polytope.rational_rat_forward_kin().s(), s)}
 
         a = np.array([a_poly.Evaluate(env)
                      for a_poly in search_result.a[plane_index]])
