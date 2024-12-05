@@ -314,20 +314,10 @@
     </joint>
 
     <!-- Revolute joint between gripper_base and body -->
-    <joint name="base_revolute_joint" type="revolute">
+    <joint name="base_revolute_joint" type="fixed">
       <parent>base_wsg</parent>
       <child>body</child>
-      <axis>
-        <xyz>0 1 0</xyz> <!-- Allow rotation around Z-axis -->
-        <limit>
-          <lower>-1.</lower> <!-- Lower limit: -180 degrees -->
-          <upper>1.</upper> <!-- Upper limit: 180 degrees -->
-          <effort>5.0</effort> <!-- Optional: torque limit -->
-        </limit>
-        <dynamics>
-          <damping>0.1</damping> <!-- Optional: damping coefficient -->
-        </dynamics>
-      </axis>
+      <pose>0 0 0 0 0 0</pose>
     </joint>
     <static>0</static>
   </model>

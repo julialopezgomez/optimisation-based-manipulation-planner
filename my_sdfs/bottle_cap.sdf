@@ -97,8 +97,8 @@
       <axis>
         <xyz>0 0 1</xyz> <!-- Rotation around the Z-axis -->
         <limit>
-          <lower>-3.14159</lower> <!-- Full rotation allowed -->
-          <upper>3.14159</upper>
+          <lower>-3.14</lower> <!-- Full rotation allowed -->
+          <upper>3.14</upper>
           <effort>10.0</effort> <!-- Maximum torque -->
           <velocity>1.0</velocity> <!-- Maximum rotational speed -->
         </limit>
