@@ -3,5 +3,5 @@
       "*.md": "mdx"
   },
   "remote.autoForwardPorts": true,
-  "remote.autoForwardPortsSource": "process"
+  "remote.autoForwardPortsSource": "hybrid"
 }
