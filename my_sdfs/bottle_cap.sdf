@@ -91,16 +91,30 @@
     </link>
 
     <!-- Add a revolute joint -->
-    <joint name="cap_to_base" type="revolute">
+    <!-- <joint name="cap_to_base" type="revolute">
       <parent>base_link</parent>
       <child>cap_link</child>
       <axis>
-        <xyz>0 0 1</xyz> <!-- Rotation around the Z-axis -->
+        <xyz>0 0 1</xyz> Rotation around the Z-axis
         <limit>
-          <lower>-3.14</lower> <!-- Full rotation allowed -->
+          <lower>-3.14</lower> Full rotation allowed
           <upper>3.14</upper>
-          <effort>10.0</effort> <!-- Maximum torque -->
-          <velocity>1.0</velocity> <!-- Maximum rotational speed -->
+          <effort>10.0</effort> Maximum torque
+          <velocity>1.0</velocity> Maximum rotational speed
+        </limit>
+      </axis>
+    </joint> -->
+    <joint name="cap_to_base" type="revolute">
+      <parent>base_link</parent>
+      <child>cap_link</child>
+      <!-- <pose>0 0 0 0 0 0</pose> -->
+      <axis>
+        <xyz>0 0 1</xyz> <!--Rotation around the Z-axis -->
+        <limit>
+          <lower>-3.14</lower> <!--Full rotation allowed-->
+          <upper>3.14</upper>
+          <effort>10.0</effort> <!--Maximum torque-->
+          <velocity>1.0</velocity> <!--Maximum rotational speed-->
         </limit>
       </axis>
     </joint>

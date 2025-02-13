@@ -33,7 +33,7 @@ class CIrisPlantVisualizer:
         self.visualizer_task_space = MeshcatVisualizer.AddToBuilder(
             builder, scene_graph, self.meshcat_task_space)
 
-        # Create a meshcat visualizer for the c-space
+        # Create a meshcat visualizer for the tc-space
         self.meshcat_cspace = StartMeshcat()
         self.meshcat_cspace.Delete()
         builder_cspace = DiagramBuilder()

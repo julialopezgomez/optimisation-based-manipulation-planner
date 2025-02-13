@@ -23,7 +23,7 @@ We have provided a Dockerfile for easiness. If you are familiar with Docker, you
   a. [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) <br />
   b. [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
 4. In the project folder, right-click on the `Dockerfile` and select: `Build Image...` Give it a name of your choice.<br />
-  a. If an error pops up in the terminal, do: `nano ~/.docker/config.json` and delete the line that says "credsStore:".<br />
+  a. If an error pops up in the terminal, do: `nano ~/.docker/config.json` and delete the line that says `"credsStore:"`.<br />
   b. Close nano using 1) `ctrl+x`, 2) `y`, and 3) `ENTER`.<br />
   c. There is no need to click on 'Build Image...' again.
 5. Open the VSCode Command Palette using `F1` or `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS). Select: Dev Containers: Open Folder in Container...<br />. If prompted:
