@@ -20,7 +20,11 @@
 				"ms-python.vscode-pylance",
 				"smilerobotics.urdf",
 				"redhat.vscode-xml",
-				"ms-toolsai.jupyter-renderers"
+				"ms-toolsai.jupyter-renderers",
+				"donjayamanne.python-extension-pack",
+				"ms-python.debugpy",
+				"njpwerner.autodocstring",
+				"mgesbert.python-path"
 			]
 		}
 	}
