@@ -8,11 +8,19 @@ import mcubes
 
 import visualization_utils as viz_utils
 
+from mimicFingerSystem import MimicFingerSystem
+
 import pydrake.symbolic as sym
 from pydrake.all import MeshcatVisualizer, StartMeshcat, DiagramBuilder, \
     AddMultibodyPlantSceneGraph, TriangleSurfaceMesh, Rgba, SurfaceTriangle, Sphere
 from scipy.linalg import null_space
 import time
+
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import numpy as np
+from ipywidgets import FloatSlider, VBox, HBox, Output
+from IPython.display import display
 
 
 class CIrisPlantVisualizer:
@@ -24,8 +32,11 @@ class CIrisPlantVisualizer:
             cspace_free_polytope,
             **kwargs):
         if plant.num_positions() > 3:
-            raise ValueError(
-                "Can't visualize the TC-Space of plants with more than 3-DOF")
+            if kwargs.get('allow_plus_3dof', False):
+                print("Visualisations won't work properly. Can't visualize the TC-Space of plants with more than 3-DOF. The first 3 DOF from the plant will be visualized")
+            else:
+                raise ValueError(
+                    "Can't visualize the TC-Space of plants with more than 3-DOF")
         
         # Create a meshcat visualizer for the task space
         self.meshcat_task_space = StartMeshcat()
@@ -49,6 +60,7 @@ class CIrisPlantVisualizer:
         self.builder = builder
         self.scene_graph = scene_graph
         self.viz_role = kwargs.get('viz_role', Role.kIllustration)
+        
 
         # Create the task space diagram and context
         # - a diagram in drake is a collection of connected systems
@@ -160,22 +172,339 @@ class CIrisPlantVisualizer:
     def check_collision_s_by_ik(self, s, min_dist=1e-5, third=None, fourth=None):
         s = np.array(s)
         q = self.rat_forward_kin.ComputeQValue(s, self.q_star)
-        # print("\nfirst_arg 's' is ", s)
-        # print(type(s))
-        # print("q is ", q)
-        # print("second_arg 'min_dist' is ", min_dist)
-        # print(type(min_dist))
-        # print("third_arg 'third' is ", third)
-        # print(type(third))
-        # print("fourth_arg 'fourth' is ", fourth)
-        # print(type(fourth))
         return self.check_collision_q_by_ik(q, min_dist)
 
+    # def visualize_collision_constraint(self, **kwargs):
+    #     if self.plant.num_positions() >= 3:
+    #         self._visualize_collision_constraint3d(**kwargs)
+    #     else:
+    #         self._visualize_collision_constraint2d(**kwargs)
+    
+
     def visualize_collision_constraint(self, **kwargs):
-        if self.plant.num_positions() == 3:
-            self._visualize_collision_constraint3d(**kwargs)
+        if self.plant.num_positions() >= 3:
+            self._visualize_collision_constraint3d_plotly(**kwargs)
         else:
-            self._visualize_collision_constraint2d(**kwargs)
+            self._visualize_collision_constraint2d_plotly(**kwargs)
+
+    def _visualize_collision_constraint3d_plotly(
+            self,
+            num_points=50,
+            factor=2,
+            config=None):
+        """
+        Visualize the collision constraint in 3D using Plotly.
+        :param N: Density of the marching cubes grid. Runtime scales cubically in N.
+        :param factor: Scaling factor for the grid limits.
+        :param config: Optional configuration to plot. Should be a numpy array of joint positions.
+        :return: Plotly figure object.
+        """
+        # Assert that the configuration has the correct number of joints
+        if config is not None:
+            assert len(config) == 3, \
+                f"Configuration must have 3 joints."
+                
+        # Generate the grid for q visualization (3D)
+        q0 = np.linspace(
+            factor * self.q_lower_limits[0],
+            factor * self.q_upper_limits[0],
+            num_points)
+        q1 = np.linspace(
+            factor * self.q_lower_limits[1],
+            factor * self.q_upper_limits[1],
+            num_points)
+        q2 = np.linspace(
+            factor * self.q_lower_limits[2],
+            factor * self.q_upper_limits[2],
+            num_points)
+    
+        Q0, Q1, Q2 = np.meshgrid(q0, q1, q2, indexing="ij")
+        Z_q = np.zeros_like(Q0)
+        
+        # Populate the collision grid for q-space
+        for i in range(num_points):
+            for j in range(num_points):
+                for k in range(num_points):
+                    q = np.array([Q0[i, j, k], Q1[i, j, k], Q2[i, j, k]])
+                    Z_q[i, j, k] = self.check_collision_q_by_ik(q)
+
+        # Generate the grid for s visualization (3D)
+        s0 = np.linspace(
+            factor * self.s_lower_limits[0],
+            factor * self.s_upper_limits[0],
+            num_points)
+        s1 = np.linspace(
+            factor * self.s_lower_limits[1],
+            factor * self.s_upper_limits[1],
+            num_points)
+        s2 = np.linspace(
+            factor * self.s_lower_limits[2],
+            factor * self.s_upper_limits[2],
+            num_points)
+        
+        S0, S1, S2 = np.meshgrid(s2, s0, s1, indexing="ij")
+        Z_s = np.zeros_like(S0) # Initialize the collision grid for s-space
+
+        # Populate the collision grid for s-space
+        for i in range(num_points):
+            for j in range(num_points):
+                for k in range(num_points):
+                    s = np.array([S1[i, j, k], S2[i, j, k], S0[i, j, k]])
+                    Z_s[i, j, k] = self.check_collision_s_by_ik(s)
+                    
+
+        # Create the Plotly 3D surface plot
+        # Create the q-space plot
+        fig_q = go.Figure(
+            data=[
+                go.Volume(
+                    x=Q0.flatten(),
+                    y=Q1.flatten(),
+                    z=Q2.flatten(),
+                    value=Z_q.flatten(),
+                    opacity=0.4,  # Adjust transparency for better visibility
+                    colorscale=[
+                        [0, "white"],  # Free space
+                        [1, "red"]     # Collision space
+                    ],
+                    showscale=False
+                )
+            ]
+        )
+
+        # Create the s-space plot
+        fig_s = go.Figure(
+            data=[
+                go.Volume(
+                    x=S0.flatten(),
+                    y=S1.flatten(),
+                    z=S2.flatten(),
+                    value=Z_s.flatten(),
+                    opacity=0.4,
+                    colorscale=[
+                        [0, "white"],  # Free space
+                        [1, "red"]     # Collision space
+                    ],
+                    showscale=False
+                )
+            ]
+        )
+
+        # If a configuration is provided, plot the point/marker in both plots
+        if config is not None:
+            # Check if the configuration is in collision
+            in_collision = self.check_collision_q_by_ik(config)
+            marker_color = "orange" if in_collision else "green"
+
+            # Compute s values from the configuration
+            s_values = self.rat_forward_kin.ComputeSValue(config, self.q_star)
+
+            # Add marker to q-space plot
+            fig_q.add_trace(go.Scatter3d(
+                x=[config[0]],
+                y=[config[1]],
+                z=[config[2]],
+                mode="markers",
+                marker=dict(size=8, color=marker_color),
+                name="q"
+            ))
+
+            # Add marker to s-space plot
+            fig_s.add_trace(go.Scatter3d(
+                x=[s_values[2]],  # s2
+                y=[s_values[0]],  # s0
+                z=[s_values[1]],  # s1
+                mode="markers",
+                marker=dict(size=8, color=marker_color),
+                name="s"
+            ))
+
+        # Update layout for better readability
+        for fig in [fig_q, fig_s]:
+            fig.update_layout(
+                autosize=True,
+                margin=dict(l=50, r=50, b=50, t=50)
+            )
+
+        # Combine the two figures into a single figure with subplots
+        # Create subplots with 3D specs
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=("C-Space Collision Constraint", "TC-Space Collision Constraint"),
+            specs=[[{'type': 'scene'}, {'type': 'scene'}]]
+        )
+
+        # Add traces from fig_q and fig_s to the combined figure
+        for trace in fig_q.data:
+            fig.add_trace(trace, row=1, col=1)
+        for trace in fig_s.data:
+            fig.add_trace(trace, row=1, col=2)
+
+        # Update layout for the first subplot (C-Space)
+        fig.update_scenes(
+            xaxis_title="q0", yaxis_title="q1", zaxis_title="q2",
+            row=1, col=1
+        )
+
+        # Update layout for the second subplot (TC-Space)
+        fig.update_scenes(
+            xaxis_title="s0", yaxis_title="s1", zaxis_title="s2",
+            row=1, col=2
+        )
+
+        # Update the overall layout
+        fig.update_layout(
+            title_text="Collision Constraint Visualization",
+            showlegend=False,
+            width=1000,  # Adjust width to fit both plots
+            height=500   # Adjust height as needed
+        )
+
+        # Show the combined figure
+        fig.show()
+
+    def _visualize_collision_constraint2d_plotly(self, factor=2, num_points=20, config=None):
+        """
+        Visualize the 2D collision constraint in both C-space and TC-space with interactive sliders.
+        :param factor: Scaling factor for the grid limits.
+        :param num_points: Number of points along each axis.
+        :param config: Optional configuration to plot. Should be a numpy array of joint positions.
+        """
+        # Assert that the configuration has the correct number of joints
+        if config is not None:
+            assert len(config) == 2, \
+                f"Configuration must have 2 joints."
+
+        # Generate the grid for q visualization
+        q0 = np.linspace(
+            factor * self.q_lower_limits[0],
+            factor * self.q_upper_limits[0],
+            num_points)
+        q1 = np.linspace(
+            factor * self.q_lower_limits[1],
+            factor * self.q_upper_limits[1],
+            num_points)
+        X_q, Y_q = np.meshgrid(q0, q1)
+        Z_q = np.zeros_like(X_q)
+
+        # Populate the collision grid for q
+        for i in range(num_points):
+            for j in range(num_points):
+                Z_q[i, j] = self.check_collision_q_by_ik(
+                    np.array([X_q[i, j], Y_q[i, j]]))
+
+        # Generate the grid for s visualization
+        s0 = np.linspace(
+            factor * self.s_lower_limits[0],
+            factor * self.s_upper_limits[0],
+            num_points)
+        s1 = np.linspace(
+            factor * self.s_lower_limits[1],
+            factor * self.s_upper_limits[1],
+            num_points)
+        X_s, Y_s = np.meshgrid(s1, s0)  # Invert the axes for s-space
+        Z_s = np.zeros_like(X_s)
+
+        # Populate the collision grid for s
+        for i in range(num_points):
+            for j in range(num_points):
+                Z_s[i, j] = self.check_collision_s_by_ik(
+                    np.array([Y_s[i, j], X_s[i, j]]))  # Note the inversion of s0 and s1
+
+        # Create the q-space plot
+        fig_q = go.Figure(
+            data=[
+                go.Heatmap(
+                    z=Z_q,
+                    x=q0,
+                    y=q1,
+                    colorscale=[
+                        [0, 'white'],
+                        [1, 'red']
+                    ],
+                    showscale=False
+                )
+            ]
+        )
+
+        # Create the s-space plot
+        fig_s = go.Figure(
+            data=[
+                go.Heatmap(
+                    z=Z_s,
+                    x=s1,  # Horizontal axis for s1
+                    y=s0,  # Vertical axis for s0
+                    colorscale=[
+                        [0, 'white'],
+                        [1, 'red']
+                    ],
+                    showscale=False
+                )
+            ]
+        )
+
+        # If a configuration is provided, plot the point/marker in both plots
+        if config is not None:
+            # Check if the configuration is in collision
+            in_collision = self.check_collision_q_by_ik(config)
+            marker_color = "orange" if in_collision else "green"
+
+            # Compute s values from the configuration
+            s_values = self.rat_forward_kin.ComputeSValue(config, self.q_star)
+
+            # Add marker to q-space plot
+            fig_q.add_trace(go.Scatter(
+                x=[config[0]],
+                y=[config[1]],
+                mode="markers",
+                marker=dict(size=12, color=marker_color),
+                name="q"
+            ))
+
+            # Add marker to s-space plot
+            fig_s.add_trace(go.Scatter(
+                x=[s_values[1]],  # s1
+                y=[s_values[0]],  # s0
+                mode="markers",
+                marker=dict(size=12, color=marker_color),
+                name="s"
+            ))
+
+        # Update layout for better readability
+        for fig in [fig_q, fig_s]:
+            fig.update_layout(
+                autosize=True,
+                margin=dict(l=50, r=50, b=50, t=50)
+            )
+
+        # Combine the two figures into a single figure with subplots
+        fig = make_subplots(rows=1, cols=2, subplot_titles=("C-Space Collision Constraint", "TC-Space Collision Constraint"))
+
+        # Add traces from fig_q and fig_s to the combined figure
+        for trace in fig_q.data:
+            fig.add_trace(trace, row=1, col=1)
+        for trace in fig_s.data:
+            fig.add_trace(trace, row=1, col=2)
+
+        # Update layout for the first subplot (C-Space)
+        fig.update_xaxes(title_text="q0", row=1, col=1)
+        fig.update_yaxes(title_text="q1", row=1, col=1)
+
+        # Update layout for the second subplot (TC-Space)
+        fig.update_xaxes(title_text="s0", row=1, col=2)
+        fig.update_yaxes(title_text="s1", row=1, col=2)
+
+        # Update the overall layout
+        fig.update_layout(
+            title_text="Collision Constraint Visualization",
+            showlegend=False,
+            width=1000,  # Adjust width to fit both plots
+            height=500   # Adjust height as needed
+        )
+
+        # Show the combined figure
+        fig.show()
+
 
     def _visualize_collision_constraint3d(
             self,
@@ -208,9 +537,9 @@ class CIrisPlantVisualizer:
             num_points)
         s1 = np.linspace(
             factor *
-            self.s_lower_limits[0],
+            self.s_lower_limits[1],
             factor *
-            self.s_upper_limits[0],
+            self.s_upper_limits[1],
             num_points)
         X, Y = np.meshgrid(s0, s1)
         Z = np.zeros_like(X)
@@ -233,6 +562,8 @@ class CIrisPlantVisualizer:
                 0,
                 1))
         return Z
+    
+    
 
     def update_region_visualization_by_group_name(self, name, **kwargs):
         region_and_certificates_list = self.region_certificate_groups[name]

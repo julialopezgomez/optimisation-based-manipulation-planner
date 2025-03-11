@@ -48,7 +48,7 @@
       <collision name="collision_cap">
         <geometry>
           <cylinder>
-            <radius>0.025</radius>
+            <radius>0.024</radius>
             <length>0.015</length> <!-- Same height for collision -->
           </cylinder>
         </geometry>
@@ -83,7 +83,7 @@
       <collision name="collision_base">
         <geometry>
           <cylinder>
-            <radius>0.025</radius>
+            <radius>0.024</radius>
             <length>0.005</length>
           </cylinder>
         </geometry>
