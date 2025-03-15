@@ -8,12 +8,11 @@ import mcubes
 
 import visualization_utils as viz_utils
 
-from mimicFingerSystem import MimicFingerSystem
-
 import pydrake.symbolic as sym
 from pydrake.all import MeshcatVisualizer, StartMeshcat, DiagramBuilder, \
     AddMultibodyPlantSceneGraph, TriangleSurfaceMesh, Rgba, SurfaceTriangle, Sphere
 from scipy.linalg import null_space
+from scipy.spatial import ConvexHull
 import time
 
 import plotly.graph_objects as go
@@ -21,6 +20,7 @@ from plotly.subplots import make_subplots
 import numpy as np
 from ipywidgets import FloatSlider, VBox, HBox, Output
 from IPython.display import display
+import colorsys
 
 
 class CIrisPlantVisualizer:
@@ -45,15 +45,15 @@ class CIrisPlantVisualizer:
             builder, scene_graph, self.meshcat_task_space)
 
         # Create a meshcat visualizer for the tc-space
-        self.meshcat_cspace = StartMeshcat()
-        self.meshcat_cspace.Delete()
-        builder_cspace = DiagramBuilder()
-        plant_cspace, scene_graph_cspace = AddMultibodyPlantSceneGraph(
-            builder_cspace, time_step=0.0)
-        plant_cspace.Finalize()
+        # self.meshcat_cspace = StartMeshcat()
+        # self.meshcat_cspace.Delete()
+        # builder_cspace = DiagramBuilder()
+        # plant_cspace, scene_graph_cspace = AddMultibodyPlantSceneGraph(
+        #     builder_cspace, time_step=0.0)
+        # plant_cspace.Finalize()
 
-        self.visualizer_cspace = MeshcatVisualizer.AddToBuilder(
-            builder_cspace, scene_graph_cspace, self.meshcat_cspace)
+        # self.visualizer_cspace = MeshcatVisualizer.AddToBuilder(
+        #     builder_cspace, scene_graph_cspace, self.meshcat_cspace)
 
         # Set up the plant, builder, scene_graph, and visualizer
         self.plant = plant
@@ -69,8 +69,8 @@ class CIrisPlantVisualizer:
         self.task_space_diagram_context = self.task_space_diagram.CreateDefaultContext()
 
         # Create the c-space diagram and context
-        self.cspace_diagram = builder_cspace.Build()
-        self.cspace_diagram_context = self.cspace_diagram.CreateDefaultContext()
+        # self.cspace_diagram = builder_cspace.Build()
+        # self.cspace_diagram_context = self.cspace_diagram.CreateDefaultContext()
 
 
         self.plant_context = plant.GetMyMutableContextFromRoot(
@@ -191,7 +191,9 @@ class CIrisPlantVisualizer:
             self,
             num_points=50,
             factor=2,
-            config=None):
+            config: np.ndarray = None,
+            polytopes: list[HPolyhedron] = None,
+            wireframe: bool = False):
         """
         Visualize the collision constraint in 3D using Plotly.
         :param N: Density of the marching cubes grid. Runtime scales cubically in N.
@@ -326,15 +328,15 @@ class CIrisPlantVisualizer:
                 margin=dict(l=50, r=50, b=50, t=50)
             )
 
-        # Combine the two figures into a single figure with subplots
-        # Create subplots with 3D specs
-        fig = make_subplots(
-            rows=1, cols=2,
-            subplot_titles=("C-Space Collision Constraint", "TC-Space Collision Constraint"),
-            specs=[[{'type': 'scene'}, {'type': 'scene'}]]
-        )
+        # Add polytopes to the plot
+        if polytopes is not None:
+            for i, polytope in enumerate(polytopes):
+                self.plot_polytope_3d(polytope, fig_q, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
+                self.plot_polytope_3d(polytope, fig_s, isS=True, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
 
-        # Add traces from fig_q and fig_s to the combined figure
+        # Combine the figures and show
+        fig = make_subplots(rows=1, cols=2, specs=[[{'type': 'scene'}, {'type': 'scene'}]],
+                            subplot_titles=("C-Space Collision Constraint", "TC-Space Collision Constraint"))
         for trace in fig_q.data:
             fig.add_trace(trace, row=1, col=1)
         for trace in fig_s.data:
@@ -363,7 +365,14 @@ class CIrisPlantVisualizer:
         # Show the combined figure
         fig.show()
 
-    def _visualize_collision_constraint2d_plotly(self, factor=2, num_points=20, config=None):
+    def _visualize_collision_constraint2d_plotly(
+            self, 
+            factor=2, 
+            num_points=20, 
+            config=None,
+            polytopes: list[HPolyhedron] = None,
+            wireframe: bool = False
+            ):
         """
         Visualize the 2D collision constraint in both C-space and TC-space with interactive sliders.
         :param factor: Scaling factor for the grid limits.
@@ -476,6 +485,12 @@ class CIrisPlantVisualizer:
                 autosize=True,
                 margin=dict(l=50, r=50, b=50, t=50)
             )
+            
+        # Add polytopes to the plot
+        if polytopes is not None:
+            for i, polytope in enumerate(polytopes):
+                self.plot_polytope_2d(polytope, fig_q, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
+                self.plot_polytope_2d(polytope, fig_s, isS=True, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
 
         # Combine the two figures into a single figure with subplots
         fig = make_subplots(rows=1, cols=2, subplot_titles=("C-Space Collision Constraint", "TC-Space Collision Constraint"))
@@ -504,64 +519,206 @@ class CIrisPlantVisualizer:
 
         # Show the combined figure
         fig.show()
-
-
-    def _visualize_collision_constraint3d(
+        
+    def plot_polytope_2d(
+            self, 
+            polytope: HPolyhedron, 
+            fig: go.Figure, 
+            isS: bool = False,
+            wireframe: bool = False,
+            color: str = 'blue', 
+            name: str = 'Polytope'):
+        
+        # Get vertices and edges
+        vertices = self.get_polytope_vertices(polytope)
+        
+        if isS:
+            # turn all vertices coordinates to TC-space
+            vertices = [self.rat_forward_kin.ComputeSValue(v, self.q_star) for v in vertices]
+            vertices = np.array(vertices)
+            vertices = np.array([vertices[:,1], vertices[:,0]]).T
+        
+        
+        if wireframe:
+            edges = self.get_polytope_edges(vertices)
+            
+            # Extract x, y, z coordinates for the edges
+            x_lines = []
+            y_lines = []
+            for edge in edges:
+                x_lines.extend([vertices[edge[0]][0], vertices[edge[1]][0], None])
+                y_lines.extend([vertices[edge[0]][1], vertices[edge[1]][1], None])
+            
+            # Add the wireframe to the figure
+            fig.add_trace(go.Scatter(
+                x=x_lines,
+                y=y_lines,
+                mode="lines",
+                line=dict(color=color, width=2),
+                name=name
+            ))
+        else:
+            
+            hull = ConvexHull(vertices)
+            vertices = vertices[hull.vertices]
+            # Close the polygon by repeating the first vertex
+            x = vertices[:, 0].tolist() + [vertices[0, 0]]
+            y = vertices[:, 1].tolist() + [vertices[0, 1]]
+        
+            h, s, l = map(float, color[4:-1].replace("%", "").split(","))
+            r, g, b = colorsys.hls_to_rgb(h / 360, l / 100, s / 100)
+            r, g, b = int(r * 255), int(g * 255), int(b * 255)
+            color = f"rgba({r}, {g}, {b}, {0.2})"
+            
+            # Add the filled polygon to the figure
+            fig.add_trace(go.Scatter(
+                x=x,
+                y=y,
+                mode="lines",
+                fill="toself",  # Fill the polygon
+                line=dict(color=color, width=2),
+                fillcolor=color,  # Set fill color with opacity
+                name=name
+            ))
+            
+    def plot_polytope_3d(
             self,
-            N=50,
-            factor=2,
-            iso_surface=0.5,
-            wireframe=True):
-        """
-        :param N: N is density of marchingcubes grid. Runtime scales cubically in N
-        :return:
-        """
+            polytope: HPolyhedron,
+            fig: go.Figure,
+            isS: bool = False,
+            wireframe: bool = False,
+            color: str = 'blue',
+            name: str = 'Polytope'):
+        
+        # Get vertices and edges
+        vertices = self.get_polytope_vertices(polytope)
+        
+        if isS:
+            # turn all vertices coordinates to TC-space
+            vertices = [self.rat_forward_kin.ComputeSValue(v, self.q_star) for v in vertices]
+            vertices = np.array(vertices)
+            vertices = np.array([vertices[:,2], vertices[:,0], vertices[:,1]]).T
+            
+            #swap columns 0,1,2 to 2,0,1
+        
+        if wireframe:
+        
+            edges = self.get_polytope_edges(vertices)
+            
+            # Extract x, y, z coordinates for the edges
+            x_lines = []
+            y_lines = []
+            z_lines = []
+            for edge in edges:
+                x_lines.extend([vertices[edge[0]][0], vertices[edge[1]][0], None])
+                y_lines.extend([vertices[edge[0]][1], vertices[edge[1]][1], None])
+                z_lines.extend([vertices[edge[0]][2], vertices[edge[1]][2], None])
+                
+            # Add the wireframe to the figure
+            fig.add_trace(go.Scatter3d(
+                x=x_lines,
+                y=y_lines,
+                z=z_lines,
+                mode="lines",
+                line=dict(color=color, width=2),
+                name=name
+            ))
+            
+        else:
+            
+            # Get faces for volume rendering
+            hull = ConvexHull(vertices)
+            faces = hull.simplices  # Faces are represented as triangles (indices of vertices)
+            
+            # Extract x, y, z coordinates of the vertices
+            x = vertices[:, 0]
+            y = vertices[:, 1]
+            z = vertices[:, 2]
+            
+            # Add the volume to the figure
+            fig.add_trace(go.Mesh3d(
+                x=x,
+                y=y,
+                z=z,
+                i=faces[:, 0],  # Indices of the first vertex of each triangle
+                j=faces[:, 1],  # Indices of the second vertex of each triangle
+                k=faces[:, 2],  # Indices of the third vertex of each triangle
+                opacity=0.2,  # Set opacity for the volume
+                color=color,      # Set color for the volume
+                name=name
+            ))
+            
+        
+    def get_polytope_vertices(self, polytope: HPolyhedron):
+        return VPolytope(polytope).vertices().T 
+    
+    def get_polytope_edges(self, vertices):
+        hull = ConvexHull(vertices)
+        edges = set()
+        for simplex in hull.simplices:
+            for i in range(len(simplex)):
+                edges.add((simplex[i], simplex[(i + 1) % len(simplex)]))
+        return list(edges)
+        
 
-        vertices, triangles = mcubes.marching_cubes_func(
-            tuple(factor * self.s_lower_limits), 
-                tuple(factor * self.s_upper_limits), 
-                N, N, N, 
-                self.check_collision_s_by_ik, 
-                iso_surface)
-        tri_drake = [SurfaceTriangle(*t) for t in triangles]
-        self.meshcat_cspace.SetObject("/collision_constraint",
-                                      TriangleSurfaceMesh(tri_drake, vertices),
-                                      Rgba(1, 0, 0, 1), wireframe=wireframe)
 
-    def _visualize_collision_constraint2d(self, factor=2, num_points=20):
-        s0 = np.linspace(
-            factor *
-            self.s_lower_limits[0],
-            factor *
-            self.s_upper_limits[0],
-            num_points)
-        s1 = np.linspace(
-            factor *
-            self.s_lower_limits[1],
-            factor *
-            self.s_upper_limits[1],
-            num_points)
-        X, Y = np.meshgrid(s0, s1)
-        Z = np.zeros_like(X)
-        for i in range(num_points):
-            for j in range(num_points):
-                Z[i, j] = self.check_collision_s_by_ik(
-                    np.array([X[i, j], Y[i, j]]))
-                if Z[i, j] == 0:
-                    Z[i, j] = np.nan
-        Z = Z - 1
-        viz_utils.plot_surface(
-            self.meshcat_cspace,
-            "/collision_constraint",
-            X,
-            Y,
-            Z,
-            Rgba(
-                1,
-                0,
-                0,
-                1))
-        return Z
+    # TODO: Remove
+    # def _visualize_collision_constraint3d(
+    #         self,
+    #         N=50,
+    #         factor=2,
+    #         iso_surface=0.5,
+    #         wireframe=True):
+    #     """
+    #     :param N: N is density of marchingcubes grid. Runtime scales cubically in N
+    #     :return:
+    #     """
+
+    #     vertices, triangles = mcubes.marching_cubes_func(
+    #         tuple(factor * self.s_lower_limits), 
+    #             tuple(factor * self.s_upper_limits), 
+    #             N, N, N, 
+    #             self.check_collision_s_by_ik, 
+    #             iso_surface)
+    #     tri_drake = [SurfaceTriangle(*t) for t in triangles]
+    #     self.meshcat_cspace.SetObject("/collision_constraint",
+    #                                   TriangleSurfaceMesh(tri_drake, vertices),
+    #                                   Rgba(1, 0, 0, 1), wireframe=wireframe)
+
+    # def _visualize_collision_constraint2d(self, factor=2, num_points=20):
+    #     s0 = np.linspace(
+    #         factor *
+    #         self.s_lower_limits[0],
+    #         factor *
+    #         self.s_upper_limits[0],
+    #         num_points)
+    #     s1 = np.linspace(
+    #         factor *
+    #         self.s_lower_limits[1],
+    #         factor *
+    #         self.s_upper_limits[1],
+    #         num_points)
+    #     X, Y = np.meshgrid(s0, s1)
+    #     Z = np.zeros_like(X)
+    #     for i in range(num_points):
+    #         for j in range(num_points):
+    #             Z[i, j] = self.check_collision_s_by_ik(
+    #                 np.array([X[i, j], Y[i, j]]))
+    #             if Z[i, j] == 0:
+    #                 Z[i, j] = np.nan
+    #     Z = Z - 1
+    #     viz_utils.plot_surface(
+    #         self.meshcat_cspace,
+    #         "/collision_constraint",
+    #         X,
+    #         Y,
+    #         Z,
+    #         Rgba(
+    #             1,
+    #             0,
+    #             0,
+    #             1))
+    #     return Z
     
     
 
