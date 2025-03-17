@@ -191,21 +191,36 @@ class CIrisPlantVisualizer:
             self,
             num_points=50,
             factor=2,
-            config: np.ndarray = None,
-            polytopes: list[HPolyhedron] = None,
-            wireframe: bool = False):
+            qs: list[np.ndarray] = None,  # List of configurations
+            paths: list[list[np.ndarray]] = None,  # List of paths (each path is a list of configurations)
+            filled_polytopes: list[HPolyhedron] = None,
+            wireframe_polytopes: list[HPolyhedron] = None):
         """
         Visualize the collision constraint in 3D using Plotly.
-        :param N: Density of the marching cubes grid. Runtime scales cubically in N.
+        :param num_points: Density of the marching cubes grid. Runtime scales cubically in N.
         :param factor: Scaling factor for the grid limits.
-        :param config: Optional configuration to plot. Should be a numpy array of joint positions.
+        :param qs: List of configurations to plot. Each configuration should be a numpy array of joint positions.
+        :param paths: List of paths to plot. Each path is a list of configurations.
+        :param filled_polytopes: List of polytopes to plot as filled volumes.
+        :param wireframe_polytopes: List of polytopes to plot as wireframes.
         :return: Plotly figure object.
         """
-        # Assert that the configuration has the correct number of joints
-        if config is not None:
-            assert len(config) == 3, \
-                f"Configuration must have 3 joints."
-                
+        # Assert that all configurations have the correct number of joints
+        if qs is not None:
+            for q in qs:
+                assert len(q) == 3, f"Configuration must have 3 joints."
+                assert np.all(q >= self.q_lower_limits) \
+                    and np.all(q <= self.q_upper_limits), \
+                    f"Configuration {q} is out of bounds."
+                    
+        if paths is not None:
+            for path in paths:
+                for q in path:
+                    assert len(q) == 3, f"All configurations in path must have 3 joints."
+                    assert np.all(q >= self.q_lower_limits) \
+                        and np.all(q <= self.q_upper_limits), \
+                        f"Configuration {q} is out of bounds. Path: {path}"
+
         # Generate the grid for q visualization (3D)
         q0 = np.linspace(
             factor * self.q_lower_limits[0],
@@ -219,10 +234,10 @@ class CIrisPlantVisualizer:
             factor * self.q_lower_limits[2],
             factor * self.q_upper_limits[2],
             num_points)
-    
+
         Q0, Q1, Q2 = np.meshgrid(q0, q1, q2, indexing="ij")
         Z_q = np.zeros_like(Q0)
-        
+
         # Populate the collision grid for q-space
         for i in range(num_points):
             for j in range(num_points):
@@ -243,9 +258,9 @@ class CIrisPlantVisualizer:
             factor * self.s_lower_limits[2],
             factor * self.s_upper_limits[2],
             num_points)
-        
+
         S0, S1, S2 = np.meshgrid(s2, s0, s1, indexing="ij")
-        Z_s = np.zeros_like(S0) # Initialize the collision grid for s-space
+        Z_s = np.zeros_like(S0)  # Initialize the collision grid for s-space
 
         # Populate the collision grid for s-space
         for i in range(num_points):
@@ -253,7 +268,6 @@ class CIrisPlantVisualizer:
                 for k in range(num_points):
                     s = np.array([S1[i, j, k], S2[i, j, k], S0[i, j, k]])
                     Z_s[i, j, k] = self.check_collision_s_by_ik(s)
-                    
 
         # Create the Plotly 3D surface plot
         # Create the q-space plot
@@ -292,34 +306,64 @@ class CIrisPlantVisualizer:
             ]
         )
 
-        # If a configuration is provided, plot the point/marker in both plots
-        if config is not None:
-            # Check if the configuration is in collision
-            in_collision = self.check_collision_q_by_ik(config)
-            marker_color = "orange" if in_collision else "green"
+        # If configurations are provided, plot them in both spaces
+        if qs is not None:
+            for i, q in enumerate(qs):
+                # Check if the configuration is in collision
+                in_collision = self.check_collision_q_by_ik(q)
+                marker_color = "orange" if in_collision else "green"
 
-            # Compute s values from the configuration
-            s_values = self.rat_forward_kin.ComputeSValue(config, self.q_star)
+                # Compute s values from the configuration
+                s_values = self.rat_forward_kin.ComputeSValue(q, self.q_star)
 
-            # Add marker to q-space plot
-            fig_q.add_trace(go.Scatter3d(
-                x=[config[0]],
-                y=[config[1]],
-                z=[config[2]],
-                mode="markers",
-                marker=dict(size=8, color=marker_color),
-                name="q"
-            ))
+                # Add marker to q-space plot
+                fig_q.add_trace(go.Scatter3d(
+                    x=[q[0]],
+                    y=[q[1]],
+                    z=[q[2]],
+                    mode="markers",
+                    marker=dict(size=8, color=marker_color),
+                    name=f"Configuration {i}"
+                ))
 
-            # Add marker to s-space plot
-            fig_s.add_trace(go.Scatter3d(
-                x=[s_values[2]],  # s2
-                y=[s_values[0]],  # s0
-                z=[s_values[1]],  # s1
-                mode="markers",
-                marker=dict(size=8, color=marker_color),
-                name="s"
-            ))
+                # Add marker to s-space plot
+                fig_s.add_trace(go.Scatter3d(
+                    x=[s_values[2]],  # s2
+                    y=[s_values[0]],  # s0
+                    z=[s_values[1]],  # s1
+                    mode="markers",
+                    marker=dict(size=8, color=marker_color),
+                    name=f"Configuration {i}"
+                ))
+
+        # If paths are provided, plot them in both spaces
+        if paths is not None:
+            for i, path in enumerate(paths):
+                # Extract q and s values for the path
+                q_path = np.array(path)
+                s_path = np.array([self.rat_forward_kin.ComputeSValue(q, self.q_star) for q in path])
+
+                # Add path to q-space plot
+                fig_q.add_trace(go.Scatter3d(
+                    x=q_path[:, 0],
+                    y=q_path[:, 1],
+                    z=q_path[:, 2],
+                    mode="lines+markers",
+                    line=dict(color=f"hsl({(i+1) * 60}, 100%, 50%)", width=4),
+                    marker=dict(size=4),
+                    name=f"Path {i}"
+                ))
+
+                # Add path to s-space plot
+                fig_s.add_trace(go.Scatter3d(
+                    x=s_path[:, 2],  # s2
+                    y=s_path[:, 0],  # s0
+                    z=s_path[:, 1],  # s1
+                    mode="lines+markers",
+                    line=dict(color=f"hsl({(i+1) * 60}, 100%, 50%)", width=4),
+                    marker=dict(size=4),
+                    name=f"Path {i}"
+                ))
 
         # Update layout for better readability
         for fig in [fig_q, fig_s]:
@@ -328,11 +372,17 @@ class CIrisPlantVisualizer:
                 margin=dict(l=50, r=50, b=50, t=50)
             )
 
-        # Add polytopes to the plot
-        if polytopes is not None:
-            for i, polytope in enumerate(polytopes):
-                self.plot_polytope_3d(polytope, fig_q, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
-                self.plot_polytope_3d(polytope, fig_s, isS=True, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
+        # Add filled polytopes to the plot
+        if filled_polytopes is not None:
+            for i, polytope in enumerate(filled_polytopes):
+                self.plot_polytope_3d(polytope, fig_q, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
+                self.plot_polytope_3d(polytope, fig_s, isS=True, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
+
+        # Add wireframe polytopes to the plot
+        if wireframe_polytopes is not None:
+            for i, polytope in enumerate(wireframe_polytopes):
+                self.plot_polytope_3d(polytope, fig_q, wireframe=True, color=f"hsl({(i+3) * 75}, 100%, 50%)", name=f"Wireframe Polytope {i}")
+                self.plot_polytope_3d(polytope, fig_s, isS=True, wireframe=True, color=f"hsl({(i+3) * 75}, 100%, 50%)", name=f"Wireframe Polytope {i}")
 
         # Combine the figures and show
         fig = make_subplots(rows=1, cols=2, specs=[[{'type': 'scene'}, {'type': 'scene'}]],
@@ -370,8 +420,8 @@ class CIrisPlantVisualizer:
             factor=2, 
             num_points=20, 
             config=None,
-            polytopes: list[HPolyhedron] = None,
-            wireframe: bool = False
+            wireframe_polytopes: list[HPolyhedron] = None,
+            filled_polytopes: list[HPolyhedron] = None
             ):
         """
         Visualize the 2D collision constraint in both C-space and TC-space with interactive sliders.
@@ -485,13 +535,18 @@ class CIrisPlantVisualizer:
                 autosize=True,
                 margin=dict(l=50, r=50, b=50, t=50)
             )
-            
-        # Add polytopes to the plot
-        if polytopes is not None:
-            for i, polytope in enumerate(polytopes):
-                self.plot_polytope_2d(polytope, fig_q, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
-                self.plot_polytope_2d(polytope, fig_s, isS=True, wireframe=wireframe, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Polytope {i}")
+        
+        # Add filled polytopes to the plot
+        if filled_polytopes is not None:
+            for i, polytope in enumerate(filled_polytopes):
+                self.plot_polytope_2d(polytope, fig_q, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
+                self.plot_polytope_2d(polytope, fig_s, isS=True, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
 
+        # Add wireframe polytopes to the plot
+        if wireframe_polytopes is not None:
+            for i, polytope in enumerate(wireframe_polytopes):
+                self.plot_polytope_2d(polytope, fig_q, wireframe=True, color=f"hsl({(i+3) * 60}, 100%, 50%)", name=f"Wireframe Polytope {i}")
+                self.plot_polytope_2d(polytope, fig_s, isS=True, wireframe=True, color=f"hsl({(i+3) * 60}, 100%, 50%)", name=f"Wireframe Polytope {i}")
         # Combine the two figures into a single figure with subplots
         fig = make_subplots(rows=1, cols=2, subplot_titles=("C-Space Collision Constraint", "TC-Space Collision Constraint"))
 
