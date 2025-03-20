@@ -194,6 +194,7 @@ class CIrisPlantVisualizer:
             qs: list[np.ndarray] = None,  # List of configurations
             paths: list[list[np.ndarray]] = None,  # List of paths (each path is a list of configurations)
             filled_polytopes: list[HPolyhedron] = None,
+            filled_s_polytopes: list[HPolyhedron] = None,
             wireframe_polytopes: list[HPolyhedron] = None):
         """
         Visualize the collision constraint in 3D using Plotly.
@@ -378,6 +379,12 @@ class CIrisPlantVisualizer:
                 self.plot_polytope_3d(polytope, fig_q, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
                 self.plot_polytope_3d(polytope, fig_s, isS=True, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
 
+        if filled_s_polytopes is not None:
+            for j, polytope in enumerate(filled_s_polytopes):
+                i += j
+                self.plot_s_polytope_3d(polytope, fig_q, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {j}")
+                self.plot_s_polytope_3d(polytope, fig_s, isS=True, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {j}")
+            
         # Add wireframe polytopes to the plot
         if wireframe_polytopes is not None:
             for i, polytope in enumerate(wireframe_polytopes):
@@ -421,7 +428,8 @@ class CIrisPlantVisualizer:
             num_points=20, 
             config=None,
             wireframe_polytopes: list[HPolyhedron] = None,
-            filled_polytopes: list[HPolyhedron] = None
+            filled_polytopes: list[HPolyhedron] = None,
+            filled_s_polytopes: list[HPolyhedron] = None
             ):
         """
         Visualize the 2D collision constraint in both C-space and TC-space with interactive sliders.
@@ -541,6 +549,11 @@ class CIrisPlantVisualizer:
             for i, polytope in enumerate(filled_polytopes):
                 self.plot_polytope_2d(polytope, fig_q, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
                 self.plot_polytope_2d(polytope, fig_s, isS=True, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {i}")
+        if filled_s_polytopes is not None:
+            for j, polytope in enumerate(filled_s_polytopes):
+                i += j
+                self.plot_s_polytope_2d(polytope, fig_q, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {j}")
+                self.plot_s_polytope_2d(polytope, fig_s, isS=True, wireframe=False, color=f"hsl({(i+1) * 60}, 100%, 50%)", name=f"Filled Polytope {j}")
 
         # Add wireframe polytopes to the plot
         if wireframe_polytopes is not None:
@@ -702,6 +715,141 @@ class CIrisPlantVisualizer:
                 color=color,      # Set color for the volume
                 name=name
             ))
+    
+    def plot_s_polytope_2d(
+            self, 
+            polytope: HPolyhedron, 
+            fig: go.Figure, 
+            isS: bool = False,
+            wireframe: bool = False,
+            color: str = 'blue', 
+            name: str = 'Polytope'):
+        
+        # Get vertices and edges
+        vertices = self.get_polytope_vertices(polytope)
+        
+        if not isS:
+            # turn all vertices coordinates to TC-space
+            vertices = [self.rat_forward_kin.ComputeQValue(v, self.q_star) for v in vertices]
+            vertices = np.array(vertices)
+            # vertices = np.array([vertices[:,1], vertices[:,0]]).T
+        
+        else:
+            vertices = np.array([vertices[:,1], vertices[:,0]]).T
+        
+        
+        if wireframe:
+            edges = self.get_polytope_edges(vertices)
+            
+            # Extract x, y, z coordinates for the edges
+            x_lines = []
+            y_lines = []
+            for edge in edges:
+                x_lines.extend([vertices[edge[0]][0], vertices[edge[1]][0], None])
+                y_lines.extend([vertices[edge[0]][1], vertices[edge[1]][1], None])
+            
+            # Add the wireframe to the figure
+            fig.add_trace(go.Scatter(
+                x=x_lines,
+                y=y_lines,
+                mode="lines",
+                line=dict(color=color, width=2),
+                name=name
+            ))
+        else:
+            
+            hull = ConvexHull(vertices)
+            vertices = vertices[hull.vertices]
+            # Close the polygon by repeating the first vertex
+            x = vertices[:, 0].tolist() + [vertices[0, 0]]
+            y = vertices[:, 1].tolist() + [vertices[0, 1]]
+        
+            h, s, l = map(float, color[4:-1].replace("%", "").split(","))
+            r, g, b = colorsys.hls_to_rgb(h / 360, l / 100, s / 100)
+            r, g, b = int(r * 255), int(g * 255), int(b * 255)
+            color = f"rgba({r}, {g}, {b}, {0.2})"
+            
+            # Add the filled polygon to the figure
+            fig.add_trace(go.Scatter(
+                x=x,
+                y=y,
+                mode="lines",
+                fill="toself",  # Fill the polygon
+                line=dict(color=color, width=2),
+                fillcolor=color,  # Set fill color with opacity
+                name=name
+            ))
+            
+    def plot_s_polytope_3d(
+            self,
+            polytope: HPolyhedron,
+            fig: go.Figure,
+            isS: bool = False,
+            wireframe: bool = False,
+            color: str = 'blue',
+            name: str = 'Polytope'):
+        
+        # Get vertices and edges
+        vertices = self.get_polytope_vertices(polytope)
+        
+        if not isS:
+            # turn all vertices coordinates to TC-space
+            vertices = [self.rat_forward_kin.ComputeQValue(v, self.q_star) for v in vertices]
+            vertices = np.array(vertices)
+            # vertices = np.array([vertices[:,2], vertices[:,0], vertices[:,1]]).T
+            
+        else:
+            vertices = np.array([vertices[:,2], vertices[:,0], vertices[:,1]]).T
+            
+            
+            #swap columns 0,1,2 to 2,0,1
+        
+        if wireframe:
+        
+            edges = self.get_polytope_edges(vertices)
+            
+            # Extract x, y, z coordinates for the edges
+            x_lines = []
+            y_lines = []
+            z_lines = []
+            for edge in edges:
+                x_lines.extend([vertices[edge[0]][0], vertices[edge[1]][0], None])
+                y_lines.extend([vertices[edge[0]][1], vertices[edge[1]][1], None])
+                z_lines.extend([vertices[edge[0]][2], vertices[edge[1]][2], None])
+                
+            # Add the wireframe to the figure
+            fig.add_trace(go.Scatter3d(
+                x=x_lines,
+                y=y_lines,
+                z=z_lines,
+                mode="lines",
+                line=dict(color=color, width=2),
+                name=name
+            ))
+            
+        else:
+            
+            # Get faces for volume rendering
+            hull = ConvexHull(vertices)
+            faces = hull.simplices  # Faces are represented as triangles (indices of vertices)
+            
+            # Extract x, y, z coordinates of the vertices
+            x = vertices[:, 0]
+            y = vertices[:, 1]
+            z = vertices[:, 2]
+            
+            # Add the volume to the figure
+            fig.add_trace(go.Mesh3d(
+                x=x,
+                y=y,
+                z=z,
+                i=faces[:, 0],  # Indices of the first vertex of each triangle
+                j=faces[:, 1],  # Indices of the second vertex of each triangle
+                k=faces[:, 2],  # Indices of the third vertex of each triangle
+                opacity=0.2,  # Set opacity for the volume
+                color=color,      # Set color for the volume
+                name=name
+            ))
             
         
     def get_polytope_vertices(self, polytope: HPolyhedron):
@@ -716,65 +864,6 @@ class CIrisPlantVisualizer:
         return list(edges)
         
 
-
-    # TODO: Remove
-    # def _visualize_collision_constraint3d(
-    #         self,
-    #         N=50,
-    #         factor=2,
-    #         iso_surface=0.5,
-    #         wireframe=True):
-    #     """
-    #     :param N: N is density of marchingcubes grid. Runtime scales cubically in N
-    #     :return:
-    #     """
-
-    #     vertices, triangles = mcubes.marching_cubes_func(
-    #         tuple(factor * self.s_lower_limits), 
-    #             tuple(factor * self.s_upper_limits), 
-    #             N, N, N, 
-    #             self.check_collision_s_by_ik, 
-    #             iso_surface)
-    #     tri_drake = [SurfaceTriangle(*t) for t in triangles]
-    #     self.meshcat_cspace.SetObject("/collision_constraint",
-    #                                   TriangleSurfaceMesh(tri_drake, vertices),
-    #                                   Rgba(1, 0, 0, 1), wireframe=wireframe)
-
-    # def _visualize_collision_constraint2d(self, factor=2, num_points=20):
-    #     s0 = np.linspace(
-    #         factor *
-    #         self.s_lower_limits[0],
-    #         factor *
-    #         self.s_upper_limits[0],
-    #         num_points)
-    #     s1 = np.linspace(
-    #         factor *
-    #         self.s_lower_limits[1],
-    #         factor *
-    #         self.s_upper_limits[1],
-    #         num_points)
-    #     X, Y = np.meshgrid(s0, s1)
-    #     Z = np.zeros_like(X)
-    #     for i in range(num_points):
-    #         for j in range(num_points):
-    #             Z[i, j] = self.check_collision_s_by_ik(
-    #                 np.array([X[i, j], Y[i, j]]))
-    #             if Z[i, j] == 0:
-    #                 Z[i, j] = np.nan
-    #     Z = Z - 1
-    #     viz_utils.plot_surface(
-    #         self.meshcat_cspace,
-    #         "/collision_constraint",
-    #         X,
-    #         Y,
-    #         Z,
-    #         Rgba(
-    #             1,
-    #             0,
-    #             0,
-    #             1))
-    #     return Z
-    
     
 
     def update_region_visualization_by_group_name(self, name, **kwargs):
