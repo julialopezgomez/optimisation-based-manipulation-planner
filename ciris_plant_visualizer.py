@@ -38,11 +38,7 @@ class CIrisPlantVisualizer:
                 raise ValueError(
                     "Can't visualize the TC-Space of plants with more than 3-DOF")
         
-        # Create a meshcat visualizer for the task space
-        self.meshcat_task_space = StartMeshcat()
-        self.meshcat_task_space.Delete()
-        self.visualizer_task_space = MeshcatVisualizer.AddToBuilder(
-            builder, scene_graph, self.meshcat_task_space)
+        
 
         # Create a meshcat visualizer for the tc-space
         # self.meshcat_cspace = StartMeshcat()
@@ -57,15 +53,21 @@ class CIrisPlantVisualizer:
 
         # Set up the plant, builder, scene_graph, and visualizer
         self.plant = plant
-        self.builder = builder
+        # self.robot_diagram = builder.Build()
+        self.builder = builder.builder()
         self.scene_graph = scene_graph
         self.viz_role = kwargs.get('viz_role', Role.kIllustration)
         
+        # Create a meshcat visualizer for the task space
+        self.meshcat_task_space = StartMeshcat()
+        self.meshcat_task_space.Delete()
+        self.visualizer_task_space = MeshcatVisualizer.AddToBuilder(
+            self.builder, self.scene_graph, self.meshcat_task_space)
 
         # Create the task space diagram and context
         # - a diagram in drake is a collection of connected systems
         # - the context is the state of the diagram, used in the meshcat to update the visualization
-        self.task_space_diagram = self.builder.Build()
+        self.task_space_diagram = builder.Build()
         self.task_space_diagram_context = self.task_space_diagram.CreateDefaultContext()
 
         # Create the c-space diagram and context
@@ -121,6 +123,7 @@ class CIrisPlantVisualizer:
         self._plane_indices_of_interest = []
         self.plane_indices = np.arange(
             0, len(cspace_free_polytope.separating_planes()))
+
 
     def clear_plane_indices_of_interest(self):
         self._plane_indices_of_interest = []
@@ -279,9 +282,9 @@ class CIrisPlantVisualizer:
                     y=Q1.flatten(),
                     z=Q2.flatten(),
                     value=Z_q.flatten(),
-                    opacity=0.4,  # Adjust transparency for better visibility
+                    opacity=0.8,  # Adjust transparency for better visibility
                     colorscale=[
-                        [0, "white"],  # Free space
+                        [0, "rgba(255,255,255,0)"],  # Free space
                         [1, "red"]     # Collision space
                     ],
                     showscale=False
@@ -297,9 +300,9 @@ class CIrisPlantVisualizer:
                     y=S1.flatten(),
                     z=S2.flatten(),
                     value=Z_s.flatten(),
-                    opacity=0.4,
+                    opacity=0.8,
                     colorscale=[
-                        [0, "white"],  # Free space
+                        [0, "rgba(255,255,255,0)"],  # Free space
                         [1, "red"]     # Collision space
                     ],
                     showscale=False
