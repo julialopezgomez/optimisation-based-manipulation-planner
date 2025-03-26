@@ -35,7 +35,7 @@
       <collision name="collision_obs">
         <geometry>
           <cylinder>
-            <radius>0.006</radius>
+            <radius>0.007</radius>
             <length>0.025</length> <!-- Same height for collision -->
           </cylinder>
         </geometry>

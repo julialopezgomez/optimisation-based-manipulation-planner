@@ -352,7 +352,7 @@ class CIrisPlantVisualizer:
                     x=q_path[:, 0],
                     y=q_path[:, 1],
                     z=q_path[:, 2],
-                    mode="lines+markers",
+                    mode="lines",
                     line=dict(color=f"hsl({(i+1) * 60}, 100%, 50%)", width=4),
                     marker=dict(size=4),
                     name=f"Path {i}"
@@ -363,7 +363,7 @@ class CIrisPlantVisualizer:
                     x=s_path[:, 2],  # s2
                     y=s_path[:, 0],  # s0
                     z=s_path[:, 1],  # s1
-                    mode="lines+markers",
+                    mode="lines",
                     line=dict(color=f"hsl({(i+1) * 60}, 100%, 50%)", width=4),
                     marker=dict(size=4),
                     name=f"Path {i}"
