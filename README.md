@@ -3,16 +3,18 @@
 
 This is the code repository for my MInf 2 project: Tangent Configuration Space Manipulation Planner.
 
-### Aditya
-Hi Aditya. Here you have the instructions to run the implementation in Vscode, although with the Docker file it there should not be any problem to run it somewhere else.
-Files to look at:
-- `bottle_cap_TCspace.ipynb` and `bottle_cap_3DTCspace.ipynb` are the main notebooks to run. They start the meshcat, plant, etc and generate the TCspace polytopes, and try to run the implementation. The first one takes a scene with 2DOF: the finger prismatic joint from the gripper and the bottle cap rotation; and the second file takes 3DOF: the finger joint, gripper rotation, and the cap rotation.
-- `ciris_plant_visualizer.py` and `visualization_utils.py` are the files I took from the [C-IRIS implementation](https://deepnote.com/workspace/alexandre-amice-c018b305-0386-4703-9474-01b867e6efea/project/C-IRIS-7e82e4f5-f47a-475a-aad3-c88093ed36c6/notebook/2d_example_bilinear_alternation-14f1ee8c795e499ca7f577b6885c10e9) for visualization. Examples are provided in this repo for a 2D TCSpace. `bottle_cap_TCspace` uses them to visualize the TCSpace, with the problem of the all-red rectangle I showed you. In `bottle_cap_3DTCspace` I am trying to reproduce them step by step, because the visualize_collision_constraint_3d method was returning an Error.
-- `my_sdfs/wsg_1dof.sdf`, `my_sdfs/wsg_2dof.sdf` and `my_sdfs/bottle_cap.sdf`, are the SDF files used. The latter has 1 rotational DOF, the 1dof wsg has the finger prismatic dof, and the 2dof wsg has the finger prismatic dof and the gripper rotation dof.
+### Walkthrough
+The main files of interest are `full_pipeline.ipynb`, `manipulation_planner_3dof.ipynb` and `manipulation_planner_4dof.ipynb` from the main directory. The former contains the full pipeline step by step through our manipulation algorithm, while the two latter files include an object-oriented-programming implementation embeeding the planner in a class, and providing example usages. One file contains constraints for a 3 DOF task, and the otherone with a 4 DOF task.
 
-I don't think you should be needing to use any other file other than this. Let me know in teams if anything is unclear or you have any question.
+The files within the testing directory have been used for testing and implementing the elements of this planner individually.
 
-Thank you again for all of your help!
+The my_sdfs directory contains the sdf files we have used to define our scene.
+
+Finally, helper files are `ciris_plant_visualizer` and `visualization_utils`.
+
+`test.py` and `test_notebook.ipynb` serve for testing the installation of the system and the main libraries. 
+
+Installation steps follow
 
 ### Installation
 To run the code in this repo, you will need version 1.35.0 of Drake, specifically, the Python bindings. 
