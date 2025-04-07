@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="obstacle">
+    <!-- Axes:
+         +X - pointing toward the handle.
+         +Z - pointing toward the top.
+         Origin:
+         (0, 0, 0) at the center of the cap. -->
+
+    <!-- Define the bottle cap link -->
+    <link name="obstacle_link">
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.05</mass> <!-- Reduced mass for a smaller cap -->
+        <inertia>
+          <ixx>0.0001</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>0.0001</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.00008</izz>
+        </inertia>
+      </inertial>
+      <visual name="visual_obs">
+        <geometry>
+          <cylinder>
+            <radius>0.007</radius>
+            <length>0.025</length> <!-- Reduced height for a bottle cap -->
+          </cylinder>
+        </geometry>
+        <material>
+          <diffuse>1.0 0.0 0.0 1.0</diffuse> <!-- Changed color to blue -->
+        </material>
+      </visual>
+      <collision name="collision_obs">
+        <geometry>
+          <cylinder>
+            <radius>0.007</radius>
+            <length>0.025</length> <!-- Same height for collision -->
+          </cylinder>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Add a revolute joint -->
+    <!-- <joint name="cap_to_base" type="revolute">
+      <parent>base_link</parent>
+      <child>cap_link</child>
+      <axis>
+        <xyz>0 0 1</xyz> Rotation around the Z-axis
+        <limit>
+          <lower>-3.14</lower> Full rotation allowed
+          <upper>3.14</upper>
+          <effort>10.0</effort> Maximum torque
+          <velocity>1.0</velocity> Maximum rotational speed
+        </limit>
+      </axis>
+    </joint> -->
+  </model>
+</sdf>

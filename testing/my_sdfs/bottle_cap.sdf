@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="bottle_cap">
+    <!-- Axes:
+         +X - pointing toward the handle.
+         +Z - pointing toward the top.
+         Origin:
+         (0, 0, 0) at the center of the cap. -->
+
+    <!-- Define the bottle cap link -->
+    <link name="cap_link">
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.05</mass> <!-- Reduced mass for a smaller cap -->
+        <inertia>
+          <ixx>0.0001</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>0.0001</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.00008</izz>
+        </inertia>
+      </inertial>
+      <visual name="visual_cap">
+        <geometry>
+          <cylinder>
+            <radius>0.025</radius>
+            <length>0.015</length> <!-- Reduced height for a bottle cap -->
+          </cylinder>
+        </geometry>
+        <material>
+          <diffuse>0.0 0.0 1.0 1.0</diffuse> <!-- Changed color to blue -->
+        </material>
+      </visual>
+      <!-- Add a visual line on the cap -->
+      <visual name="visual_cap_line">
+        <pose>0.013 0 0.0075 0 1.574 0</pose> <!-- Position the line on the edge -->
+        <geometry>
+          <cylinder>
+            <radius>0.001</radius> <!-- Narrow line -->
+            <length>0.024</length> <!-- Same height as the cap -->
+          </cylinder>
+        </geometry>
+        <material>
+          <diffuse>1.0 0.0 0.0 1.0</diffuse> <!-- Red color for visibility -->
+        </material>
+      </visual>
+      <collision name="collision_cap">
+        <geometry>
+          <cylinder>
+            <radius>0.024</radius>
+            <length>0.015</length> <!-- Same height for collision -->
+          </cylinder>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Add the base link -->
+    <link name="base_link">
+      <inertial>
+        <pose>0 0 -0.01 0 0 0</pose>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0002</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>0.0002</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.00015</izz>
+        </inertia>
+      </inertial>
+      <visual name="visual_base">
+        <geometry>
+          <cylinder>
+            <radius>0.025</radius>
+            <length>0.005</length> <!-- Base is thinner -->
+          </cylinder>
+        </geometry>
+        <material>
+          <diffuse>0.5 0.5 0.5 0.0</diffuse> <!-- Grey base -->
+        </material>
+      </visual>
+      <collision name="collision_base">
+        <geometry>
+          <cylinder>
+            <radius>0.024</radius>
+            <length>0.005</length>
+          </cylinder>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Add a revolute joint -->
+    <!-- <joint name="cap_to_base" type="revolute">
+      <parent>base_link</parent>
+      <child>cap_link</child>
+      <axis>
+        <xyz>0 0 1</xyz> Rotation around the Z-axis
+        <limit>
+          <lower>-3.14</lower> Full rotation allowed
+          <upper>3.14</upper>
+          <effort>10.0</effort> Maximum torque
+          <velocity>1.0</velocity> Maximum rotational speed
+        </limit>
+      </axis>
+    </joint> -->
+    <joint name="cap_to_base" type="revolute">
+      <parent>base_link</parent>
+      <child>cap_link</child>
+      <!-- <pose>0 0 0 0 0 0</pose> -->
+      <axis>
+        <xyz>0 0 1</xyz> <!--Rotation around the Z-axis -->
+        <limit>
+          <lower>-3.14</lower> <!--Full rotation allowed-->
+          <upper>3.14</upper>
+          <effort>10.0</effort> <!--Maximum torque-->
+          <velocity>1.0</velocity> <!--Maximum rotational speed-->
+        </limit>
+      </axis>
+    </joint>
+  </model>
+</sdf>

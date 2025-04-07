@@ -2,6 +2,27 @@
 <!-- This sdf file is based on schunk_wsg_50.sdf -->
 <sdf version="1.7">
   <model name="Schunk_Gripper">
+    <!-- New base link for the gripper -->
+    <link name="base_wsg">
+      <pose>0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+    </link>
+    <!-- Frame attached to gripper_base -->
+    <frame name="wsg_base_frame">
+      <pose relative_to="base_wsg"/>
+    </frame>
+
+    
     <link name="body">
       <pose>0 -0.049133 0 0 0 0</pose>
       <inertial>
