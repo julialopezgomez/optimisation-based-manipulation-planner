@@ -1,7 +1,6 @@
-# MInf 2 Project - Julia Lopez Gomez
-## Tangent Configuration Space Manipulation Planner
+# Optimisation-Based Manipulation Planner in convex Decompositions of C-free
 
-This is the code repository for my MInf 2 project: Tangent Configuration Space Manipulation Planner.
+This is the code repository for my MInf 2 project: Optimisation-Based Manipulation Planner in Convex Decompositions of C-free.
 
 ### Walkthrough
 The main files of interest are `full_pipeline.ipynb`, `manipulation_planner_3dof.ipynb` and `manipulation_planner_4dof.ipynb` from the main directory. The former contains the full pipeline step by step through our manipulation algorithm, while the two latter files include an object-oriented-programming implementation embeeding the planner in a class, and providing example usages. One file contains constraints for a 3 DOF task, and the otherone with a 4 DOF task.
