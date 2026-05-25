@@ -16,23 +16,53 @@ Finally, helper files are `ciris_plant_visualizer` and `visualization_utils`.
 Installation steps follow
 
 ### Installation
-To run the code in this repo, you will need version 1.35.0 of Drake, specifically, the Python bindings. 
+This repository uses Drake's Python bindings (`pydrake`). Drake's pre-built Docker images are being discontinued upstream, so the recommended setup is now via `pip` wheels.
 
-We have provided a Dockerfile for easiness. If you are familiar with Docker, you are free to select the method or IDE of your choice. Steps for setup and installation in VSCode follow:
-1. Install [Docker](https://www.docker.com/) and [VSCode](https://code.visualstudio.com/).
-2. Install VSCode extensions:<br />
-  a. [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) <br />
-  b. [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-4. In the project folder, right-click on the `Dockerfile` and select: `Build Image...` Give it a name of your choice.<br />
-  a. If an error pops up in the terminal, do: `nano ~/.docker/config.json` and delete the line that says `"credsStore:"`.<br />
-  b. Close nano using 1) `ctrl+x`, 2) `y`, and 3) `ENTER`.<br />
-  c. There is no need to click on 'Build Image...' again.
-5. Open the VSCode Command Palette using `F1` or `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS). Select: Dev Containers: Open Folder in Container...<br />. If prompted:
-  a. Select the project folder<br />
-  b. When asked 'How would you like to create your container configuration?' select: From 'Dockerfile'.<br />
-  d. Click OK.
-6. Run `test.py` and `test_notebook.py` to make sure the installation works
-7. Ready to go!
+Important Drake pip notes:
+- Drake wheels require `pip >= 20.3`.
+- Drake's pip packages do **not** support the Gurobi solver (use a source build if you require Gurobi).
+- Drake is not tested regularly with Anaconda; using Conda may work but can have compatibility hiccups.
+- On macOS, prefer Homebrew Python (not Apple’s system Python) when using `venv`.
+
+Supported configurations (excerpted from Drake release notes):
+- macOS Sequoia (15), arm64, Python 3.13, pip (October 2026)
+- macOS Sequoia (15), arm64, Python 3.14, pip / binary (October 2026)
+- macOS Tahoe (26), arm64, Python 3.13, pip (October 2026)
+- macOS Tahoe (26), arm64, Python 3.14, pip / binary (October 2027)
+
+#### Option A: Conda (recommended for this repo)
+1. Install Miniforge / Conda (macOS arm64 users: Miniforge is typically the easiest).
+2. Create the environment:
+   - `conda env create -f environment.yml`
+   - `conda activate obmp`
+3. Smoke test:
+   - `python test.py`
+4. Open the notebooks:
+   - `jupyter lab`
+
+#### Option B: Python `venv` + pip
+1. Create and activate a virtual environment:
+   - `python3 -m venv .venv`
+   - `source .venv/bin/activate`
+2. Install Drake and the remaining dependencies:
+   - `python -m pip install --upgrade pip`
+   - `python -m pip install drake`
+   - `python -m pip install -r requirements.txt`
+   - (optional) `python -m pip install -r requirements-optional.txt`
+3. Smoke test:
+   - `python test.py`
+
+#### Nightly Drake (optional)
+Drake nightly wheels are published at `https://drake-packages.csail.mit.edu/whl/nightly/`.
+
+To install a specific nightly build (replace `YYYYMMDD`):
+- `python -m pip install --extra-index-url https://drake-packages.csail.mit.edu/whl/nightly/ 'drake==0.0.YYYYMMDD'`
+
+To install the latest nightly available today:
+- `python -m pip install --extra-index-url https://drake-packages.csail.mit.edu/whl/nightly/ 'drake<0.1'`
+
+#### Legacy Docker setup
+The prior Docker-based setup is preserved under `legacy/docker/` for reference (see `legacy/docker/README.md`).
 
 ### MOSEK Solver License
 Some notebooks in this implementation require a MOSEK license.

@@ -1,0 +1,4 @@
+# Optional dependencies.
+#
+# Some wheels may not be available for all Python versions / platforms.
+quadprog
