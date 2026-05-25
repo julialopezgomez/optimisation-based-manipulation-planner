@@ -24,11 +24,10 @@ Important Drake pip notes:
 - Drake is not tested regularly with Anaconda; using Conda may work but can have compatibility hiccups.
 - On macOS, prefer Homebrew Python (not Apple’s system Python) when using `venv`.
 
-Supported configurations (excerpted from Drake release notes):
-- macOS Sequoia (15), arm64, Python 3.13, pip (October 2026)
-- macOS Sequoia (15), arm64, Python 3.14, pip / binary (October 2026)
-- macOS Tahoe (26), arm64, Python 3.13, pip (October 2026)
-- macOS Tahoe (26), arm64, Python 3.14, pip / binary (October 2027)
+For the up-to-date OS / Python compatibility matrix (including Ubuntu 24.04+), see Drake’s official Supported Configurations:
+- https://drake.mit.edu/installation.html#supported-configurations
+
+This repo is commonly used on Ubuntu 24.04 (including over SSH); `environment.yml` is the recommended way to match a working set of dependencies.
 
 #### Option A: Conda (recommended for this repo)
 1. Install Miniforge / Conda (macOS arm64 users: Miniforge is typically the easiest).
@@ -37,8 +36,6 @@ Supported configurations (excerpted from Drake release notes):
    - `conda activate obmp`
 3. Smoke test:
    - `python test.py`
-4. Open the notebooks:
-   - `jupyter lab`
 
 #### Option B: Python `venv` + pip
 1. Create and activate a virtual environment:
@@ -48,18 +45,8 @@ Supported configurations (excerpted from Drake release notes):
    - `python -m pip install --upgrade pip`
    - `python -m pip install drake`
    - `python -m pip install -r requirements.txt`
-   - (optional) `python -m pip install -r requirements-optional.txt`
 3. Smoke test:
    - `python test.py`
-
-#### Nightly Drake (optional)
-Drake nightly wheels are published at `https://drake-packages.csail.mit.edu/whl/nightly/`.
-
-To install a specific nightly build (replace `YYYYMMDD`):
-- `python -m pip install --extra-index-url https://drake-packages.csail.mit.edu/whl/nightly/ 'drake==0.0.YYYYMMDD'`
-
-To install the latest nightly available today:
-- `python -m pip install --extra-index-url https://drake-packages.csail.mit.edu/whl/nightly/ 'drake<0.1'`
 
 #### Legacy Docker setup
 The prior Docker-based setup is preserved under `legacy/docker/` for reference (see `legacy/docker/README.md`).
@@ -71,6 +58,12 @@ Some notebooks in this implementation require a MOSEK license.
 
 Following the instructions, you will instantly receive an email. First, to accept the terms and conditions, and then another one to download your license.
 
-**To use your license in this implementation**, you will need to replace the file `mosek.lic` with your own license file (or paste the content of your license file into the existing `mosek.lic` file).
+**To use your license in this implementation**, save your `mosek.lic` somewhere on your machine (do not commit it to git) and point MOSEK at it using an environment variable:
+
+- `export MOSEKLM_LICENSE_FILE="/absolute/path/to/mosek.lic"`
+
+If you want to keep the license file in the repo directory for convenience, create a local `mosek.lic` from `mosek.lic.example` (it is ignored by git) and set:
+
+- `export MOSEKLM_LICENSE_FILE="$PWD/mosek.lic"`
 
 *MOSEK is a state-of-the-art optimization solver, used for solving large-scale convex optimization problems efficiently. It supports a variety of optimization problem types, including linear programming (LP), quadratic programming (QP), second-order cone programming (SOCP), and semidefinite programming (SDP).* 

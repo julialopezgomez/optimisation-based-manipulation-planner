@@ -8,3 +8,5 @@ The original Docker-based setup is preserved here for reference:
 - `legacy/docker/.devcontainer/devcontainer.json`
 
 If you still choose to use Docker locally, note that this setup may stop working as the upstream images are removed or stop receiving updates. The recommended setup going forward is Drake via `pip` (see `../../README.md`).
+
+If you use MOSEK inside the container, ensure you provide your own `mosek.lic` file and set `MOSEKLM_LICENSE_FILE` accordingly (the legacy `Dockerfile` sets it to `/workspaces/optimisation-based-manipulation-planner/mosek.lic`).
