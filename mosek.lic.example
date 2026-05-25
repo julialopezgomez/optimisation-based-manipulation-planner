@@ -1,5 +1,5 @@
 #
-# Rename this file to `mosek.lic` and replace it with your own license contents.
+# Copy this file to `mosek.lic` and replace it with your own license contents.
 #
 # Do not commit your license file. MOSEK expects you to set:
 #   MOSEKLM_LICENSE_FILE=/absolute/path/to/mosek.lic
