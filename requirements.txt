@@ -1,0 +1,16 @@
+# Python dependencies used by the notebooks/scripts in this repo (excluding Drake).
+#
+# Install Drake separately:
+#   python -m pip install drake
+#
+# Optional: use a virtualenv or conda env (see README.md).
+ipywidgets==8.0.4
+widgetsnbextension==4.0.5
+jupyterlab
+jupyterlab-widgets
+plotly
+scipy>=1.12
+pymcubes==0.1.4
+cvxpy
+mosek
+quadprog

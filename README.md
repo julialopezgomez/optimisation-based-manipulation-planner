@@ -16,23 +16,40 @@ Finally, helper files are `ciris_plant_visualizer` and `visualization_utils`.
 Installation steps follow
 
 ### Installation
-To run the code in this repo, you will need version 1.35.0 of Drake, specifically, the Python bindings. 
+This repository uses Drake's Python bindings (`pydrake`). Drake's pre-built Docker images are being discontinued from June 2026, so the recommended setup is now via `pip`.
 
-We have provided a Dockerfile for easiness. If you are familiar with Docker, you are free to select the method or IDE of your choice. Steps for setup and installation in VSCode follow:
-1. Install [Docker](https://www.docker.com/) and [VSCode](https://code.visualstudio.com/).
-2. Install VSCode extensions:<br />
-  a. [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) <br />
-  b. [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-4. In the project folder, right-click on the `Dockerfile` and select: `Build Image...` Give it a name of your choice.<br />
-  a. If an error pops up in the terminal, do: `nano ~/.docker/config.json` and delete the line that says `"credsStore:"`.<br />
-  b. Close nano using 1) `ctrl+x`, 2) `y`, and 3) `ENTER`.<br />
-  c. There is no need to click on 'Build Image...' again.
-5. Open the VSCode Command Palette using `F1` or `Ctrl+Shift+P` (`Cmd+Shift+P` on macOS). Select: Dev Containers: Open Folder in Container...<br />. If prompted:
-  a. Select the project folder<br />
-  b. When asked 'How would you like to create your container configuration?' select: From 'Dockerfile'.<br />
-  d. Click OK.
-6. Run `test.py` and `test_notebook.py` to make sure the installation works
-7. Ready to go!
+Important Drake pip notes:
+- Drake wheels require `pip >= 20.3`.
+- Drake's pip packages do **not** support the Gurobi solver (use a source build if you require Gurobi).
+- Drake is not tested regularly with Anaconda; using Conda may work but can have compatibility hiccups.
+- On macOS, prefer Homebrew Python (not Apple’s system Python) when using `venv`.
+
+For the up-to-date OS / Python compatibility matrix (including Ubuntu 24.04+), see Drake’s official Supported Configurations:
+- https://drake.mit.edu/installation.html#supported-configurations
+
+This repo is commonly used on Ubuntu 24.04 (including over SSH); `environment.yml` is the recommended way to match a working set of dependencies.
+
+#### Option A: Conda (recommended for this repo)
+1. Install Miniforge / Conda (macOS arm64 users: Miniforge is typically the easiest).
+2. Create the environment:
+   - `conda env create -f environment.yml`
+   - `conda activate obmp`
+3. Smoke test:
+   - `python test.py`
+
+#### Option B: Python `venv` + pip
+1. Create and activate a virtual environment:
+   - `python3 -m venv .venv`
+   - `source .venv/bin/activate`
+2. Install Drake and the remaining dependencies:
+   - `python -m pip install --upgrade pip`
+   - `python -m pip install drake`
+   - `python -m pip install -r requirements.txt`
+3. Smoke test:
+   - `python test.py`
+
+#### Legacy Docker setup
+The prior Docker-based setup is preserved under `legacy/docker/` for reference (see `legacy/docker/README.md`).
 
 ### MOSEK Solver License
 Some notebooks in this implementation require a MOSEK license.
@@ -41,6 +58,12 @@ Some notebooks in this implementation require a MOSEK license.
 
 Following the instructions, you will instantly receive an email. First, to accept the terms and conditions, and then another one to download your license.
 
-**To use your license in this implementation**, you will need to replace the file `mosek.lic` with your own license file (or paste the content of your license file into the existing `mosek.lic` file).
+**To use your license in this implementation**, save your `mosek.lic` somewhere on your machine (do not commit it to git) and point MOSEK at it using an environment variable:
+
+- `export MOSEKLM_LICENSE_FILE="/absolute/path/to/mosek.lic"`
+
+If you want to keep the license file in the repo directory for convenience, create a local `mosek.lic` from `mosek.lic.example` (it is ignored by git) and set:
+
+- `export MOSEKLM_LICENSE_FILE="$PWD/mosek.lic"`
 
 *MOSEK is a state-of-the-art optimization solver, used for solving large-scale convex optimization problems efficiently. It supports a variety of optimization problem types, including linear programming (LP), quadratic programming (QP), second-order cone programming (SOCP), and semidefinite programming (SDP).* 
