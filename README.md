@@ -16,7 +16,7 @@ Finally, helper files are `ciris_plant_visualizer` and `visualization_utils`.
 Installation steps follow
 
 ### Installation
-This repository uses Drake's Python bindings (`pydrake`). Drake's pre-built Docker images are being discontinued upstream, so the recommended setup is now via `pip` wheels.
+This repository uses Drake's Python bindings (`pydrake`). Drake's pre-built Docker images are being discontinued from June 2026, so the recommended setup is now via `pip`.
 
 Important Drake pip notes:
 - Drake wheels require `pip >= 20.3`.
