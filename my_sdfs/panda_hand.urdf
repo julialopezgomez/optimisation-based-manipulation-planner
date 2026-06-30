@@ -142,13 +142,19 @@
     <axis xyz="0 1 0"/>
     <limit effort="20" lower="-0.045" upper="0.0" velocity="0.2" drake:acceleration="1.0"/>
   </joint>
-  <joint name="panda_finger_joint2" type="prismatic">
+  <joint name="panda_finger_joint2" type="fixed">
+    <parent link="panda_hand"/>
+    <child link="panda_leftfinger"/>
+    <origin rpy="0 0 0" xyz="0 0 0.0584"/>
+  </joint>
+  <!-- <joint name="panda_finger_joint2" type="prismatic">
     <parent link="panda_hand"/>
     <child link="panda_leftfinger"/>
     <origin rpy="0 0 0" xyz="0 0 0.0584"/>
     <axis xyz="0 1 0"/>
     <limit effort="20" lower="0.0" upper="0.045" velocity="0.2" drake:acceleration="1.0"/>
-  </joint>
+  </joint> -->
+
   <link name="panda_finger_tip_center"/>
   <joint name="_frame_weld1" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0.112"/>
