@@ -143,6 +143,7 @@
     <limit effort="20" lower="-0.045" upper="0.0" velocity="0.2" drake:acceleration="1.0"/>
   </joint>
   <joint name="panda_finger_joint2" type="fixed">
+    <!-- Locked at q_grasp[panda_finger_joint2] = 0.024 m. -->
     <parent link="panda_hand"/>
     <child link="panda_leftfinger"/>
     <origin rpy="0 0 0" xyz="0 0.024 0.0584"/>
@@ -167,16 +168,6 @@
       <hardwareInterface>PositionJointInterface</hardwareInterface>
     </joint>
     <actuator name="panda_finger_motor1">
-      <hardwareInterface>PositionJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-  <transmission name="panda_finger_tran2">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="panda_finger_joint2">
-      <hardwareInterface>PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="panda_finger_motor2">
       <hardwareInterface>PositionJointInterface</hardwareInterface>
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
