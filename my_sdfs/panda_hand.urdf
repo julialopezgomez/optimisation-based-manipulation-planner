@@ -145,7 +145,7 @@
   <joint name="panda_finger_joint2" type="fixed">
     <parent link="panda_hand"/>
     <child link="panda_leftfinger"/>
-    <origin rpy="0 0 0" xyz="0 0 0.0584"/>
+    <origin rpy="0 0 0" xyz="0 0.024 0.0584"/>
   </joint>
   <!-- <joint name="panda_finger_joint2" type="prismatic">
     <parent link="panda_hand"/>
