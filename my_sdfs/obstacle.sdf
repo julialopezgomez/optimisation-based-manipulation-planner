@@ -24,8 +24,8 @@
       <visual name="visual_obs">
         <geometry>
           <cylinder>
-            <radius>0.007</radius>
-            <length>0.025</length> <!-- Reduced height for a bottle cap -->
+            <radius>0.005</radius>
+            <length>0.015</length> <!-- Reduced height for a bottle cap -->
           </cylinder>
         </geometry>
         <material>
@@ -35,8 +35,8 @@
       <collision name="collision_obs">
         <geometry>
           <cylinder>
-            <radius>0.007</radius>
-            <length>0.025</length> <!-- Same height for collision -->
+            <radius>0.005</radius>
+            <length>0.015</length> <!-- Same height for collision -->
           </cylinder>
         </geometry>
       </collision>

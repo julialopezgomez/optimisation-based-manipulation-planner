@@ -11,6 +11,7 @@ import visualization_utils as viz_utils
 import pydrake.symbolic as sym
 from pydrake.all import MeshcatVisualizer, StartMeshcat, DiagramBuilder, \
     AddMultibodyPlantSceneGraph, TriangleSurfaceMesh, Rgba, SurfaceTriangle, Sphere
+from pydrake.geometry import MeshcatVisualizerParams
 from scipy.linalg import null_space
 from scipy.spatial import ConvexHull
 import time
@@ -62,7 +63,11 @@ class CIrisPlantVisualizer:
         self.meshcat_task_space = StartMeshcat()
         self.meshcat_task_space.Delete()
         self.visualizer_task_space = MeshcatVisualizer.AddToBuilder(
-            self.builder, self.scene_graph, self.meshcat_task_space)
+            self.builder,
+            self.scene_graph,
+            self.meshcat_task_space,
+            params=MeshcatVisualizerParams(role=self.viz_role),
+        )
 
         # Create the task space diagram and context
         # - a diagram in drake is a collection of connected systems
