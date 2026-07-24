@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Dict, Any, Literal, List
 
 
 Array = np.ndarray
@@ -68,21 +68,26 @@ def clip_interval_with_linear_ineq(
     g_bar = np.asarray(g_bar, dtype=float).reshape(-1)
     a = np.asarray(a, dtype=float).reshape(-1)
 
-    for gi, ai in zip(g_bar, a):
+    for gi, ai in zip(g_bar, a): # iterate over each linear inequality
         if abs(ai) < tol:
             # Constraint does not depend on beta.
             # If already violated, interval becomes empty.
-            if gi > 0:
-                return 1.0, 0.0
+            
+            if gi > 0: # if a is 0, and g_bar > 0, then the constraint is violated already
+                return 1.0, 0.0     # so we return an empty interval (beta_low > beta_up)
             continue
 
-        beta_boundary = -gi / ai
+        beta_boundary = -gi / ai  # beta_i = -gi / ai
 
         if ai > 0:
-            # Need beta <= beta_boundary.
+            # Need beta <= beta_boundary. 
+            # beta_up <= -gi / ai
+            # upper bound must be <= beta_boundary
             beta_up = min(beta_up, beta_boundary)
-        else:
+        else: # ai < 0
             # Need beta >= beta_boundary.
+            # beta_lo >= -gi / ai
+            # lower bound must be >= beta_boundary
             beta_lo = max(beta_lo, beta_boundary)
 
         if beta_lo > beta_up:
@@ -103,11 +108,19 @@ def clip_interval_with_box_bounds(
     Clip beta interval so that:
 
         lower <= x + beta d <= upper
+        
+        this is equivalent to two linear inequalities of the form (g_bar) + beta (a) <= 0:
+        
+        1. (lower - x) + beta (-d) <= 0
+        2. (x - upper) + beta (d) <= 0
+        
+    "along this random direction d, starting from x, how far can we go before hitting the bounds for any of the variables?"
+        
     """
     x = np.asarray(x, dtype=float)
     d = np.asarray(d, dtype=float)
 
-    # lower bound: lower - x - beta d <= 0
+    # lower bound: (lower - x) + beta (-d) <= 0
     beta_lo, beta_up = clip_interval_with_linear_ineq(
         beta_lo,
         beta_up,
@@ -115,7 +128,7 @@ def clip_interval_with_box_bounds(
         a=-d,
     )
 
-    # upper bound: x - upper + beta d <= 0
+    # upper bound: (x - upper) + beta (d) <= 0
     beta_lo, beta_up = clip_interval_with_linear_ineq(
         beta_lo,
         beta_up,
@@ -158,6 +171,7 @@ def nonlinear_hit_and_run_step(
     rng: np.random.Generator,
     options: NHROptions,
     extra_check: Optional[Callable[[Array], bool]] = None,
+    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
 ) -> tuple[Array, Dict[str, Any]]:
     """
     One Nonlinear Metropolis-Adjusted Hit-and-Run step.
@@ -185,6 +199,12 @@ def nonlinear_hit_and_run_step(
 
     # Algorithm 3, line 2: random direction.
     d = rng.normal(size=dim)
+
+    # Optional equality handling: project the random direction into
+    # the tangent space of h(x)=0 before normalising it.
+    if direction_projector is not None:
+        d = np.asarray(direction_projector(x, d), dtype=float)
+
     d_norm = np.linalg.norm(d)
 
     if d_norm < 1e-12:
@@ -197,6 +217,7 @@ def nonlinear_hit_and_run_step(
     beta_up = options.delta_max
 
     # Algorithm 3, line 4: clip with box bounds.
+    # for clipping on the variable bounds lower <= x <= upper
     beta_lo, beta_up = clip_interval_with_box_bounds(
         x=x,
         d=d,
@@ -207,11 +228,15 @@ def nonlinear_hit_and_run_step(
     )
 
     # Algorithm 3, line 5: optional clip with linearisation at x.
+    # for clipping on the nonlinear inequalities g(x) <= 0
     if options.use_initial_linear_clip and beta_lo <= beta_up:
         gx = np.asarray(g(x), dtype=float)
         Gx = np.asarray(Jg_eval(x), dtype=float)
         ax = Gx @ d
 
+
+        # g(x + beta d) ≈ g(x) + Jg(x) (x + beta d) <= 0
+        # (g(x)) + beta (Jg(x) d) <= 0
         beta_lo, beta_up = clip_interval_with_linear_ineq(
             beta_lo=beta_lo,
             beta_up=beta_up,
@@ -253,6 +278,8 @@ def nonlinear_hit_and_run_step(
             # accept if log(u) < f(x) - f(y).
             log_accept_ratio = fx - fy
 
+
+            # lower (better) energy f(y) means higher acceptance probability.
             if np.log(rng.uniform()) < min(0.0, log_accept_ratio):
                 return y, {
                     "accepted": True,
@@ -314,9 +341,12 @@ def nhr_sample(
     f: Optional[Callable[[Array], float]] = None,
     extra_check: Optional[Callable[[Array], bool]] = None,
     options: Optional[NHROptions] = None,
+    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
     Run Nonlinear Metropolis-Adjusted Hit-and-Run.
+    
+    This corresponds to lines 9-13 of Algorithm 1 in the paper.
 
     Parameters
     ----------
@@ -401,6 +431,7 @@ def nhr_sample(
             rng=rng,
             options=options,
             extra_check=extra_check,
+            direction_projector=direction_projector,
         )
 
         info["step"] = step
@@ -425,3 +456,500 @@ def nhr_sample(
             )
 
     return np.asarray(samples), diagnostics
+
+# -----------------------------------------------------------------------------
+# Equality handling for NHR
+# -----------------------------------------------------------------------------
+
+def make_equality_tube_inequalities(
+    g: Callable[[Array], Array],
+    h: Callable[[Array], Array],
+    equality_tol: float,
+) -> Callable[[Array], Array]:
+    """
+    Convert equalities h(x)=0 into epsilon-margin inequalities:
+
+        h(x) - eps <= 0
+       -h(x) - eps <= 0
+
+    and concatenate them with the original inequalities g(x)<=0.
+    """
+    def g_total(x: Array) -> Array:
+        gx = np.asarray(g(x), dtype=float).reshape(-1)
+        hx = np.asarray(h(x), dtype=float).reshape(-1)
+        return np.concatenate([gx, hx - equality_tol, -hx - equality_tol])
+
+    return g_total
+
+
+def make_equality_tube_jacobian(
+    Jg: Optional[Callable[[Array], Array]],
+    Jh: Optional[Callable[[Array], Array]],
+    g: Callable[[Array], Array],
+    h: Callable[[Array], Array],
+    finite_difference_step: float = 1e-6,
+) -> Callable[[Array], Array]:
+    """
+    Jacobian for the concatenated inequality vector
+    [g(x), h(x)-eps, -h(x)-eps].
+    """
+    def J_total(x: Array) -> Array:
+        Jg_x = (
+            finite_difference_jacobian(g, x, finite_difference_step)
+            if Jg is None
+            else np.asarray(Jg(x), dtype=float)
+        )
+        Jh_x = (
+            finite_difference_jacobian(h, x, finite_difference_step)
+            if Jh is None
+            else np.asarray(Jh(x), dtype=float)
+        )
+        return np.vstack([Jg_x, Jh_x, -Jh_x])
+
+    return J_total
+
+
+def project_direction_to_equality_tangent(
+    d: Array,
+    Jh_x: Array,
+    regularization: float = 1e-8,
+) -> Array:
+    """
+    Project a direction into the tangent space of h(x)=0.
+
+    Tangent projection:
+
+        d_tan = (I - P_h) d
+        P_h = J_h^T (J_h J_h^T + reg I)^(-1) J_h
+
+    This removes the part of d that immediately changes the equalities.
+    """
+    d = np.asarray(d, dtype=float).reshape(-1)
+    Jh_x = np.asarray(Jh_x, dtype=float)
+
+    # If there are no equalities, the tangent space is the whole space.
+    if Jh_x.size == 0:
+        return d
+
+    # If there is only one equality, make sure Jh_x is 2D for the matrix operations.
+    if Jh_x.ndim == 1:
+        Jh_x = Jh_x.reshape(1, -1)
+
+    m = Jh_x.shape[0] # number of equalities
+    
+    A = Jh_x @ Jh_x.T + regularization * np.eye(m) # (J_h @ J_h^T + reg I)
+    
+    # np.linalg.solve(A, Jh_x @ d) solves A y = Jh_x @ d for y
+    # y = (J_h J_h^T + reg I)^(-1) J_h d
+    # normal_component = J_h^T (J_h J_h^T + reg I)^(-1) J_h d
+    normal_component = Jh_x.T @ np.linalg.solve(A, Jh_x @ d) 
+    
+    # tangent_component = d - normal_component
+    return d - normal_component # d_tan = (I - P_h) * d = d - P_h * d
+
+
+def make_tangent_direction_projector(
+    h: Callable[[Array], Array],
+    Jh: Optional[Callable[[Array], Array]] = None,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+) -> Callable[[Array, Array], Array]:
+    """
+    Returns a function direction_projector(x, d) that projects d into
+    the tangent space of h(x)=0.
+    """
+    def direction_projector(x: Array, d: Array) -> Array:
+        Jh_x = (
+            finite_difference_jacobian(h, x, finite_difference_step)
+            if Jh is None
+            else np.asarray(Jh(x), dtype=float)
+        )
+        return project_direction_to_equality_tangent(
+            d=d,
+            Jh_x=Jh_x,
+            regularization=regularization,
+        )
+
+    return direction_projector
+
+
+def slack_reduce_equalities(
+    x: Array,
+    h: Callable[[Array], Array],
+    Jh: Optional[Callable[[Array], Array]] = None,
+    lower: Optional[Array] = None,
+    upper: Optional[Array] = None,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+    max_iters: int = 10,
+    tol: float = 1e-8,
+) -> Array:
+    """
+    Gauss-Newton projection/slack-reduction step for equalities h(x)=0.
+
+    This is useful after sampling in an epsilon tube if you want samples
+    closer to the exact manifold.
+    
+    This corresponds to moving in the direction of the negative derivative of F_01(x) = s(x)^T*s(x) 
+    where s(x) is the slack vector for constraint violation.
+        
+        s(x) = (RELU(g(x)), abs(h(x)))
+    
+    since NHR already handles inequalities, we only need to reduce the slack for equalities h(x)=0. So:
+    
+        s(x) = abs(h(x))
+    
+    The update is either through Gradient Descent or Gauss-Newton. Here, we use Gauss-Newton (geometry aware):
+    Gauss-Newton step:
+        −α * (∇^2F(x) + λI)^(-1) @ ∇F(x)
+        
+        where ∇^2F(x) is the Hessian of F(x) and λI is the regularisation term to ensure positive definiteness.
+        
+        ∇^2F(x) ≈ J_h(x)^T @ J_h(x)  (Gauss-Newton approximation)
+        ∇F(x) = J_h(x)^T @ h(x)
+        
+        so the update becomes:
+        dx = -α * (J_h(x)^T @ J_h(x) + λI)^(-1) @ J_h(x)^T @ h(x)
+    """
+    x = np.asarray(x, dtype=float).copy()
+
+    for _ in range(max_iters):
+        hx = np.asarray(h(x), dtype=float).reshape(-1)
+        
+        # If the equalities are already satisfied within tolerance, we can stop early.
+        if np.linalg.norm(hx, ord=np.inf) <= tol:
+            break
+
+        # Compute Jacobian of h at x, either using provided Jh or finite differences.
+        Jh_x = (
+            finite_difference_jacobian(h, x, finite_difference_step)
+            if Jh is None
+            else np.asarray(Jh(x), dtype=float)
+        )
+        if Jh_x.ndim == 1:
+            Jh_x = Jh_x.reshape(1, -1)
+
+
+        m = Jh_x.shape[0] # number of equalities
+        
+        # Compute the projection matrix P_h = J_h^T (J_h J_h^T + reg I)^(-1) J_h = J_h^T A^{-1} J_h
+        A = Jh_x @ Jh_x.T + regularization * np.eye(m)
+        
+        # Solve A y = h(x) for y, then compute the update dx = -J_h^T y = -J_h^T @ A^{-1} @ h(x)
+        dx = -Jh_x.T @ np.linalg.solve(A, hx)
+        x = x + dx
+
+        if lower is not None or upper is not None:
+            if lower is not None:
+                x = np.maximum(x, np.asarray(lower, dtype=float))
+            if upper is not None:
+                x = np.minimum(x, np.asarray(upper, dtype=float))
+
+    return x
+
+
+def nhr_sample_with_equalities(
+    x0: Array,
+    g: Callable[[Array], Array],
+    h: Callable[[Array], Array],
+    lower: Array,
+    upper: Array,
+    Jg: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    f: Optional[Callable[[Array], float]] = None,
+    extra_check: Optional[Callable[[Array], bool]] = None,
+    options: Optional[NHROptions] = None,
+    equality_tol: float = 1e-4,
+    project_samples_to_manifold: bool = False,
+    projection_iters: int = 10,
+) -> tuple[Array, list[Dict[str, Any]]]:
+    """
+    NHR with the two equality modifications described in the paper:
+
+    1. choose random directions tangent to h(x)=0;
+    2. turn h(x)=0 into an epsilon-margin inequality tube.
+
+    Optionally, project returned samples back to h(x)=0 using Gauss-Newton
+    slack reduction.
+    """
+    if options is None:
+        options = NHROptions()
+
+    g_total = make_equality_tube_inequalities(g, h, equality_tol)
+    J_total = make_equality_tube_jacobian(
+        Jg=Jg,
+        Jh=Jh,
+        g=g,
+        h=h,
+        finite_difference_step=options.finite_difference_step,
+    )
+    direction_projector = make_tangent_direction_projector(
+        h=h,
+        Jh=Jh,
+        finite_difference_step=options.finite_difference_step,
+    )
+
+    samples, diagnostics = nhr_sample(
+        x0=x0,
+        g=g_total,
+        lower=lower,
+        upper=upper,
+        Jg=J_total,
+        f=f,
+        extra_check=extra_check,
+        options=options,
+        direction_projector=direction_projector,
+    )
+
+    if project_samples_to_manifold and len(samples) > 0:
+        projected = []
+        for x in samples:
+            xp = slack_reduce_equalities(
+                x=x,
+                h=h,
+                Jh=Jh,
+                lower=lower,
+                upper=upper,
+                finite_difference_step=options.finite_difference_step,
+                max_iters=projection_iters,
+                tol=options.constraint_tol,
+            )
+            if is_feasible(xp, g_total, options.constraint_tol, extra_check):
+                projected.append(xp)
+        samples = np.asarray(projected)
+
+    return samples, diagnostics
+
+
+# -----------------------------------------------------------------------------
+# Restart seeding
+# -----------------------------------------------------------------------------
+
+RestartStrategy = Literal["uniform", "distance", "direction"]
+
+
+@dataclass
+class RestartOptions:
+    num_restarts: int = 10
+    strategy: RestartStrategy = "uniform"
+    candidates_per_restart: int = 50
+    random_seed: int = 0
+    keep_failed_phase1_seeds: bool = False
+
+
+def sample_uniform_box(lower: Array, upper: Array, rng: np.random.Generator) -> Array:
+    lower = np.asarray(lower, dtype=float)
+    upper = np.asarray(upper, dtype=float)
+    return lower + rng.random(size=lower.shape) * (upper - lower)
+
+
+def gauss_newton_slack_step(
+    x: Array,
+    g: Callable[[Array], Array],
+    Jg: Optional[Callable[[Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+) -> Array:
+    """
+    Prototype Gauss-Newton slack step used by the direction-based restart seed.
+
+    For inequalities, only positive violations max(g(x),0) are included.
+    For equalities, h(x) is included directly.
+    """
+    x = np.asarray(x, dtype=float)
+
+    residuals = []
+    jacobians = []
+
+    gx = np.asarray(g(x), dtype=float).reshape(-1)
+    active = gx > 0.0
+    if np.any(active):
+        Jg_x = (
+            finite_difference_jacobian(g, x, finite_difference_step)
+            if Jg is None
+            else np.asarray(Jg(x), dtype=float)
+        )
+        residuals.append(gx[active])
+        jacobians.append(Jg_x[active, :])
+
+    if h is not None:
+        hx = np.asarray(h(x), dtype=float).reshape(-1)
+        if len(hx) > 0:
+            Jh_x = (
+                finite_difference_jacobian(h, x, finite_difference_step)
+                if Jh is None
+                else np.asarray(Jh(x), dtype=float)
+            )
+            residuals.append(hx)
+            jacobians.append(Jh_x)
+
+    if not residuals:
+        return np.zeros_like(x)
+
+    r = np.concatenate(residuals)
+    J = np.vstack(jacobians)
+    m = J.shape[0]
+
+    # Minimum-norm Gauss-Newton correction for J dx ≈ -r.
+    A = J @ J.T + regularization * np.eye(m)
+    dx = -J.T @ np.linalg.solve(A, r)
+    return dx
+
+
+def choose_restart_seed(
+    lower: Array,
+    upper: Array,
+    rng: np.random.Generator,
+    D: Optional[Array] = None,
+    strategy: RestartStrategy = "uniform",
+    candidates_per_restart: int = 50,
+    slack_step: Optional[Callable[[Array], Array]] = None,
+) -> Array:
+    """
+    Choose a restart seed using one of the three strategies in Sec. 3.3:
+
+    uniform:    sample x ~ U[l,u]
+    distance:   sample candidates and choose the one furthest from D
+    direction:  choose candidate whose slack step is least aligned with
+                directions toward existing samples D
+    """
+    lower = np.asarray(lower, dtype=float)
+    upper = np.asarray(upper, dtype=float)
+
+    if strategy == "uniform" or D is None or len(D) == 0:
+        return sample_uniform_box(lower, upper, rng)
+
+    candidates = np.vstack([
+        sample_uniform_box(lower, upper, rng)
+        for _ in range(candidates_per_restart)
+    ])
+    D = np.asarray(D, dtype=float).reshape(-1, lower.size)
+
+    if strategy == "distance":
+        # score_i = min_y ||y - x_i||. Choose max score.
+        scores = []
+        for x_i in candidates:
+            distances = np.linalg.norm(D - x_i, axis=1)
+            scores.append(np.min(distances))
+        return candidates[int(np.argmax(scores))]
+
+    if strategy == "direction":
+        if slack_step is None:
+            raise ValueError("direction restart seeding requires slack_step(x).")
+
+        scores = []
+        for x_i in candidates:
+            delta_i = np.asarray(slack_step(x_i), dtype=float)
+            delta_norm = np.linalg.norm(delta_i)
+
+            if delta_norm < 1e-12:
+                # No predicted movement; prefer it only if far from data.
+                scores.append(-np.inf)
+                continue
+
+            dirs = D - x_i
+            dir_norms = np.linalg.norm(dirs, axis=1)
+            valid = dir_norms > 1e-12
+
+            if not np.any(valid):
+                scores.append(-np.inf)
+                continue
+
+            alignments = (dirs[valid] @ delta_i) / (dir_norms[valid] * delta_norm)
+            # Paper: choose argmin_i max_y alignment.
+            scores.append(np.max(alignments))
+
+        return candidates[int(np.argmin(scores))]
+
+    raise ValueError(f"Unknown restart strategy: {strategy}")
+
+
+def restarting_nhr_sample(
+    phase1: Callable[[Array], Optional[Array]],
+    g: Callable[[Array], Array],
+    lower: Array,
+    upper: Array,
+    Jg: Optional[Callable[[Array], Array]] = None,
+    f: Optional[Callable[[Array], float]] = None,
+    extra_check: Optional[Callable[[Array], bool]] = None,
+    nhr_options: Optional[NHROptions] = None,
+    restart_options: Optional[RestartOptions] = None,
+    slack_step: Optional[Callable[[Array], Array]] = None,
+) -> tuple[Array, list[Dict[str, Any]]]:
+    """
+    Outer restart loop around nhr_sample.
+
+    phase1(seed) should implement your IK/slack-reduction phase and return
+    a feasible x0, or None if Phase I fails.
+    """
+    if nhr_options is None:
+        nhr_options = NHROptions(verbose=False)
+    if restart_options is None:
+        restart_options = RestartOptions()
+
+    rng = np.random.default_rng(restart_options.random_seed)
+
+    all_samples: List[Array] = []
+    all_info: list[Dict[str, Any]] = []
+    D = np.empty((0, len(lower)))
+
+    for r in range(restart_options.num_restarts):
+        seed = choose_restart_seed(
+            lower=lower,
+            upper=upper,
+            rng=rng,
+            D=D,
+            strategy=restart_options.strategy,
+            candidates_per_restart=restart_options.candidates_per_restart,
+            slack_step=slack_step,
+        )
+
+        x0 = phase1(seed)
+        if x0 is None:
+            all_info.append({"restart": r, "status": "phase1_failed", "seed": seed})
+            continue
+
+        try:
+            # Make each chain reproducible but different.
+            opts_r = NHROptions(**vars(nhr_options))
+            opts_r.random_seed = int(rng.integers(0, 2**31 - 1))
+
+            samples_r, diag_r = nhr_sample(
+                x0=x0,
+                g=g,
+                lower=lower,
+                upper=upper,
+                Jg=Jg,
+                f=f,
+                extra_check=extra_check,
+                options=opts_r,
+            )
+        except ValueError as e:
+            all_info.append({
+                "restart": r,
+                "status": "nhr_failed",
+                "seed": seed,
+                "x0": x0,
+                "error": str(e),
+            })
+            continue
+
+        if len(samples_r) > 0:
+            all_samples.append(samples_r)
+            D = np.vstack([D, samples_r])
+
+        all_info.append({
+            "restart": r,
+            "status": "success",
+            "seed": seed,
+            "x0": x0,
+            "num_samples": len(samples_r),
+            "diagnostics": diag_r,
+        })
+
+    if len(all_samples) == 0:
+        return np.empty((0, len(lower))), all_info
+
+    return np.vstack(all_samples), all_info
