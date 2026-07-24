@@ -976,6 +976,10 @@ def restarting_nhr_sample(
     return np.vstack(all_samples), all_info
 
 
+# -----------------------------------------------------------------------------
+# Plotting and saving artifacts
+# -----------------------------------------------------------------------------
+
 def save_joint_sample_artifacts(
     samples: Array,
     diagnostics: list[Dict[str, Any]],
