@@ -1,9 +1,30 @@
-import numpy as np
+import json
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Callable, Optional, Dict, Any, Literal, List
+
+import numpy as np
 
 
 Array = np.ndarray
+
+
+def _json_safe(value: Any) -> Any:
+    """Convert NumPy-heavy objects into JSON-serializable Python values."""
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, (np.floating, np.integer)):
+        return value.item()
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, dict):
+        return {str(key): _json_safe(val) for key, val in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, Path):
+        return str(value)
+    return value
 
 
 @dataclass
@@ -953,3 +974,191 @@ def restarting_nhr_sample(
         return np.empty((0, len(lower))), all_info
 
     return np.vstack(all_samples), all_info
+
+
+def save_joint_sample_artifacts(
+    samples: Array,
+    diagnostics: list[Dict[str, Any]],
+    lower: Optional[Array] = None,
+    upper: Optional[Array] = None,
+    joint_names: Optional[List[str]] = None,
+    options: Optional[NHROptions] = None,
+    output_root: str | Path = "joint_samples_plots",
+    note: Optional[str] = None,
+    timestamp: Optional[str] = None,
+    bins: int = 30,
+    show: bool = True,
+) -> Path:
+    """
+    Save per-joint histograms, a Gaussian fit overlay, and a JSON debug report.
+
+    The output layout is:
+
+        joint_samples_plots/<timestamp>/
+            joint_name.png
+            info.json
+
+    Parameters
+    ----------
+    samples:
+        Sample matrix with shape (num_samples, num_joints).
+    diagnostics:
+        Step-by-step diagnostics returned by `nhr_sample` or
+        `restarting_nhr_sample`.
+    lower, upper:
+        Optional joint limits to draw as vertical lines.
+    joint_names:
+        Optional list of names for the histogram titles and filenames.
+    options:
+        Optional `NHROptions` instance to include in the report.
+    output_root:
+        Root directory used to store timestamped outputs.
+    note:
+        Free-form note to include in the report.
+    timestamp:
+        Optional run label. If omitted, the current time is used.
+    bins:
+        Histogram bin count.
+    show:
+        If True, display each figure inline with `plt.show()`.
+    """
+
+    import matplotlib.pyplot as plt
+    from scipy.stats import norm
+
+    samples = np.asarray(samples, dtype=float)
+    if samples.ndim != 2:
+        raise ValueError(f"Expected samples to be a 2D array, got shape {samples.shape}.")
+
+    num_samples, num_joints = samples.shape
+    if joint_names is None:
+        joint_names = [f"q{i}" for i in range(num_joints)]
+    elif len(joint_names) != num_joints:
+        raise ValueError(
+            f"joint_names has length {len(joint_names)} but samples has {num_joints} columns."
+        )
+
+    if lower is not None:
+        lower = np.asarray(lower, dtype=float).reshape(-1)
+    if upper is not None:
+        upper = np.asarray(upper, dtype=float).reshape(-1)
+
+    if lower is not None and len(lower) != num_joints:
+        raise ValueError(f"lower has length {len(lower)} but samples has {num_joints} columns.")
+    if upper is not None and len(upper) != num_joints:
+        raise ValueError(f"upper has length {len(upper)} but samples has {num_joints} columns.")
+
+    run_stamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_root = Path(output_root)
+    run_dir = output_root / run_stamp
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    def safe_filename(name: str) -> str:
+        cleaned = "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in name)
+        return cleaned or "joint"
+
+    joint_reports = []
+
+    for idx, joint_name in enumerate(joint_names):
+        values = samples[:, idx]
+        mean = float(np.mean(values))
+        std = float(np.std(values, ddof=1)) if num_samples > 1 else 0.0
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        _, bin_edges, _ = ax.hist(
+            values,
+            bins=bins,
+            density=False,
+            alpha=0.7,
+            color="#4c78a8",
+            edgecolor="white",
+            label="Samples",
+        )
+
+        if std > 0 and len(bin_edges) > 1:
+            x = np.linspace(bin_edges[0], bin_edges[-1], 400)
+            bin_width = bin_edges[1] - bin_edges[0]
+            pdf = norm.pdf(x, loc=mean, scale=std) * len(values) * bin_width
+            ax.plot(x, pdf, color="#f58518", linewidth=2.5, label="Gaussian fit")
+
+        ax.axvline(mean, color="#54a24b", linestyle="--", linewidth=2, label=f"Mean = {mean:.4f}")
+        ax.axvline(mean - std, color="#72b7b2", linestyle=":", linewidth=2, label=f"Std = {std:.4f}")
+        ax.axvline(mean + std, color="#72b7b2", linestyle=":", linewidth=2)
+
+        lower_limit = None if lower is None else float(lower[idx])
+        upper_limit = None if upper is None else float(upper[idx])
+
+        if lower_limit is not None:
+            ax.axvline(
+                lower_limit,
+                color="#e45756",
+                linestyle="-.",
+                linewidth=2,
+                label=f"Lower limit = {lower_limit:.4f}",
+            )
+        if upper_limit is not None:
+            ax.axvline(
+                upper_limit,
+                color="#b279a2",
+                linestyle="-.",
+                linewidth=2,
+                label=f"Upper limit = {upper_limit:.4f}",
+            )
+
+        ax.set_title(f"Joint Samples: {joint_name}")
+        ax.set_xlabel("Joint value")
+        ax.set_ylabel("Frequency")
+        ax.grid(True, alpha=0.25)
+        ax.legend(loc="best", fontsize=9)
+        fig.tight_layout()
+
+        file_name = f"{safe_filename(joint_name)}.png"
+        fig.savefig(run_dir / file_name, dpi=200, bbox_inches="tight")
+        if show:
+            plt.show()
+        plt.close(fig)
+
+        joint_reports.append({
+            "joint_index": idx,
+            "joint_name": joint_name,
+            "file_name": file_name,
+            "mean": mean,
+            "std": std,
+            "min": float(np.min(values)),
+            "max": float(np.max(values)),
+            "lower_limit": lower_limit,
+            "upper_limit": upper_limit,
+        })
+
+    info = {
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "run_stamp": run_stamp,
+        "output_root": str(output_root),
+        "run_dir": str(run_dir),
+        "note": note,
+        "num_samples": int(num_samples),
+        "num_joints": int(num_joints),
+        "joint_names": joint_names,
+        "options": _json_safe(vars(options)) if options is not None else None,
+        "sample_summary": {
+            "mean": np.mean(samples, axis=0),
+            "std": np.std(samples, axis=0, ddof=1) if num_samples > 1 else np.zeros(num_joints),
+            "min": np.min(samples, axis=0),
+            "max": np.max(samples, axis=0),
+        },
+        "limits": {
+            "lower": lower,
+            "upper": upper,
+        },
+        "joint_reports": joint_reports,
+        "diagnostics": _json_safe(diagnostics),
+    }
+
+    with open(run_dir / "info.json", "w", encoding="utf-8") as f:
+        json.dump(_json_safe(info), f, indent=2, sort_keys=True)
+
+    if note:
+        print(f"NHR note: {note}")
+    print(f"Saved joint sample artifacts to {run_dir}")
+
+    return run_dir
