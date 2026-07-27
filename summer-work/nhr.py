@@ -363,11 +363,20 @@ def nhr_sample(
     extra_check: Optional[Callable[[Array], bool]] = None,
     options: Optional[NHROptions] = None,
     direction_projector: Optional[Callable[[Array, Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    equality_tol: float = 1e-4,
+    project_samples_to_manifold: bool = False,
+    projection_iters: int = 10,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
     Run Nonlinear Metropolis-Adjusted Hit-and-Run.
-    
-    This corresponds to lines 9-13 of Algorithm 1 in the paper.
+
+    This is the single public entry point for sampling with or without
+    equality constraints. When equalities are provided via ``h`` and ``Jh``,
+    the implementation first converts them into an epsilon-tube of
+    inequalities, projects proposal directions onto the local tangent space,
+    and can optionally project the returned samples back onto the manifold.
 
     Parameters
     ----------
@@ -395,6 +404,22 @@ def nhr_sample(
 
     options:
         NHROptions.
+
+    h:
+        Optional equality constraint function with h(x) = 0.
+
+    Jh:
+        Optional Jacobian of h. If None, finite differences are used.
+
+    equality_tol:
+        Tube width used to turn h(x)=0 into h(x) in [-tol, tol].
+
+    project_samples_to_manifold:
+        If True, project each accepted sample back near h(x)=0 with a
+        Gauss-Newton step after sampling.
+
+    projection_iters:
+        Number of Gauss-Newton iterations used for optional projection.
 
     Returns
     -------
@@ -424,9 +449,35 @@ def nhr_sample(
     if not np.all((x >= lower) & (x <= upper)):
         raise ValueError("x0 must be inside the box bounds.")
 
+    # Build the inequality/equality evaluation path once. If no equalities are
+    # supplied, the sampler runs exactly as before. Otherwise, the equalities
+    # are converted into a margin tube so the existing feasibility checks can
+    # be reused without branching inside the main loop.
+    if h is None:
+        g_eval = g
+        J_eval = Jg
+        active_direction_projector = direction_projector
+    else:
+        g_eval = make_equality_tube_inequalities(g, h, equality_tol)
+        J_eval = make_equality_tube_jacobian(
+            Jg=Jg,
+            Jh=Jh,
+            g=g,
+            h=h,
+            finite_difference_step=options.finite_difference_step,
+        )
+        if direction_projector is None:
+            active_direction_projector = make_tangent_direction_projector(
+                h=h,
+                Jh=Jh,
+                finite_difference_step=options.finite_difference_step,
+            )
+        else:
+            active_direction_projector = direction_projector
+
     if not is_feasible(
         x,
-        g=g,
+        g=g_eval,
         constraint_tol=options.constraint_tol,
         extra_check=extra_check,
     ):
@@ -444,15 +495,15 @@ def nhr_sample(
     for step in range(total_steps):
         x, info = nonlinear_hit_and_run_step(
             x=x,
-            g=g,
-            Jg=Jg,
+            g=g_eval,
+            Jg=J_eval,
             f=f,
             lower=lower,
             upper=upper,
             rng=rng,
             options=options,
             extra_check=extra_check,
-            direction_projector=direction_projector,
+            direction_projector=active_direction_projector,
         )
 
         info["step"] = step
@@ -463,7 +514,7 @@ def nhr_sample(
             if (step - options.burn_in) % options.thinning == 0:
                 if is_feasible(
                     x,
-                    g=g,
+                    g=g_eval,
                     constraint_tol=options.constraint_tol,
                     extra_check=extra_check,
                 ):
@@ -475,6 +526,26 @@ def nhr_sample(
                 f"samples {len(samples):05d}/{options.num_samples} | "
                 f"last: {info['reason']}"
             )
+
+    if project_samples_to_manifold and h is not None and len(samples) > 0:
+        # After sampling in the equality tube, project the accepted points back
+        # toward the exact manifold h(x)=0. This keeps the returned samples
+        # aligned with the equalities without changing the main sampler loop.
+        projected = []
+        for x in samples:
+            xp = slack_reduce_equalities(
+                x=x,
+                h=h,
+                Jh=Jh,
+                lower=lower,
+                upper=upper,
+                finite_difference_step=options.finite_difference_step,
+                max_iters=projection_iters,
+                tol=options.constraint_tol,
+            )
+            if is_feasible(xp, g_eval, options.constraint_tol, extra_check):
+                projected.append(xp)
+        samples = np.asarray(projected)
 
     return np.asarray(samples), diagnostics
 
@@ -685,61 +756,27 @@ def nhr_sample_with_equalities(
     projection_iters: int = 10,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
-    NHR with the two equality modifications described in the paper:
+    Backward-compatible wrapper around the single equality-aware sampler.
 
-    1. choose random directions tangent to h(x)=0;
-    2. turn h(x)=0 into an epsilon-margin inequality tube.
-
-    Optionally, project returned samples back to h(x)=0 using Gauss-Newton
-    slack reduction.
+    The implementation now lives in ``nhr_sample`` so that the equality path is
+    managed in one place with a shared comment block and a single set of
+    optional arguments.
     """
-    if options is None:
-        options = NHROptions()
-
-    g_total = make_equality_tube_inequalities(g, h, equality_tol)
-    J_total = make_equality_tube_jacobian(
-        Jg=Jg,
-        Jh=Jh,
-        g=g,
-        h=h,
-        finite_difference_step=options.finite_difference_step,
-    )
-    direction_projector = make_tangent_direction_projector(
-        h=h,
-        Jh=Jh,
-        finite_difference_step=options.finite_difference_step,
-    )
-
-    samples, diagnostics = nhr_sample(
+    return nhr_sample(
         x0=x0,
-        g=g_total,
+        g=g,
         lower=lower,
         upper=upper,
-        Jg=J_total,
+        Jg=Jg,
         f=f,
         extra_check=extra_check,
         options=options,
-        direction_projector=direction_projector,
+        h=h,
+        Jh=Jh,
+        equality_tol=equality_tol,
+        project_samples_to_manifold=project_samples_to_manifold,
+        projection_iters=projection_iters,
     )
-
-    if project_samples_to_manifold and len(samples) > 0:
-        projected = []
-        for x in samples:
-            xp = slack_reduce_equalities(
-                x=x,
-                h=h,
-                Jh=Jh,
-                lower=lower,
-                upper=upper,
-                finite_difference_step=options.finite_difference_step,
-                max_iters=projection_iters,
-                tol=options.constraint_tol,
-            )
-            if is_feasible(xp, g_total, options.constraint_tol, extra_check):
-                projected.append(xp)
-        samples = np.asarray(projected)
-
-    return samples, diagnostics
 
 
 # -----------------------------------------------------------------------------
@@ -898,9 +935,14 @@ def restarting_nhr_sample(
     nhr_options: Optional[NHROptions] = None,
     restart_options: Optional[RestartOptions] = None,
     slack_step: Optional[Callable[[Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    equality_tol: float = 1e-4,
+    project_samples_to_manifold: bool = False,
+    projection_iters: int = 10,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
-    Outer restart loop around nhr_sample.
+    Outer restart loop around the single sampler entry point.
 
     phase1(seed) should implement your IK/slack-reduction phase and return
     a feasible x0, or None if Phase I fails.
@@ -946,6 +988,11 @@ def restarting_nhr_sample(
                 f=f,
                 extra_check=extra_check,
                 options=opts_r,
+                h=h,
+                Jh=Jh,
+                equality_tol=equality_tol,
+                project_samples_to_manifold=project_samples_to_manifold,
+                projection_iters=projection_iters,
             )
         except ValueError as e:
             all_info.append({
@@ -974,6 +1021,47 @@ def restarting_nhr_sample(
         return np.empty((0, len(lower))), all_info
 
     return np.vstack(all_samples), all_info
+
+
+def restarting_nhr_sample_with_equalities(
+    phase1: Callable[[Array], Optional[Array]],
+    g: Callable[[Array], Array],
+    h: Callable[[Array], Array],
+    lower: Array,
+    upper: Array,
+    Jg: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    f: Optional[Callable[[Array], float]] = None,
+    extra_check: Optional[Callable[[Array], bool]] = None,
+    nhr_options: Optional[NHROptions] = None,
+    restart_options: Optional[RestartOptions] = None,
+    slack_step: Optional[Callable[[Array], Array]] = None,
+    equality_tol: float = 1e-4,
+    project_samples_to_manifold: bool = False,
+    projection_iters: int = 10,
+) -> tuple[Array, list[Dict[str, Any]]]:
+    """
+    Backward-compatible wrapper around the single equality-aware restart loop.
+    """
+    return restarting_nhr_sample(
+        phase1=phase1,
+        g=g,
+        lower=lower,
+        upper=upper,
+        Jg=Jg,
+        f=f,
+        extra_check=extra_check,
+        nhr_options=nhr_options,
+        restart_options=restart_options,
+        slack_step=slack_step,
+        h=h,
+        Jh=Jh,
+        equality_tol=equality_tol,
+        project_samples_to_manifold=project_samples_to_manifold,
+        projection_iters=projection_iters,
+    )
+
+
 
 
 # -----------------------------------------------------------------------------
