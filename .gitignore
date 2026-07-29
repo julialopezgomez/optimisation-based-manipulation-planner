@@ -1,3 +1,4 @@
 mosek.lic
 __pycache__/
 *.pyc
+summer-work/joint-samples_plots/*
