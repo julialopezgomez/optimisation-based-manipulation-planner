@@ -872,6 +872,9 @@ def choose_restart_seed(
     distance:   sample candidates and choose the one furthest from D
     direction:  choose candidate whose slack step is least aligned with
                 directions toward existing samples D
+                
+    D is the set of previously accepted samples, shape (num_samples, dim).
+    slack_step(x) 
     """
     lower = np.asarray(lower, dtype=float)
     upper = np.asarray(upper, dtype=float)
@@ -946,6 +949,8 @@ def restarting_nhr_sample(
 
     phase1(seed) should implement your IK/slack-reduction phase and return
     a feasible x0, or None if Phase I fails.
+    
+    slack_step(x) only needed for direction-based restart seeding. It should return a Gauss-Newton slack step
     """
     if nhr_options is None:
         nhr_options = NHROptions(verbose=False)
