@@ -193,6 +193,7 @@ def nonlinear_hit_and_run_step(
     options: NHROptions,
     extra_check: Optional[Callable[[Array], bool]] = None,
     direction_projector: Optional[Callable[[Array, Array], Array]] = None,
+    corrector: Optional[Callable[[Array], Array]] = None,
 ) -> tuple[Array, Dict[str, Any]]:
     """
     One Nonlinear Metropolis-Adjusted Hit-and-Run step.
@@ -206,6 +207,17 @@ def nonlinear_hit_and_run_step(
     5. sample candidate y = x + beta d
     6. if y feasible, accept/reject using MH
     7. if y infeasible, linearise violated constraints at y and shrink interval
+
+    corrector(y), if given, is a predictor-corrector "retraction": applied
+    to each candidate y right after it's proposed, before it's evaluated
+    against g/feasibility. A direction that's only tangent to a very tight
+    constraint to first order can still drift off it over an actual
+    (non-infinitesimal) step, once curvature matters more than the
+    constraint's own tolerance - the initial linear clip then optimistically
+    opens up beta's interval, and most proposals end up needing many
+    shrink-and-retry cycles (or exhausting max_inner_tries) to claw back to
+    feasibility. Nudging y directly toward the feasible set first avoids
+    relying on shrink-and-retry alone to fix that up.
     """
 
     x = np.asarray(x, dtype=float)
@@ -280,17 +292,27 @@ def nonlinear_hit_and_run_step(
         beta = rng.uniform(beta_lo, beta_up)
         y = x + beta * d
 
-        gy = np.asarray(g(y), dtype=float)
+        # y_eval is what actually gets checked/accepted: the corrector may
+        # nudge it off the x + beta*d line to rescue a candidate that's
+        # only tangent to a tight constraint to first order. The shrink
+        # logic below, however, must keep using the *uncorrected* y - it
+        # relies on x + beta'*d being the exact parametrization along d,
+        # which the corrector's offset would otherwise invalidate.
+        y_eval = y
+        if corrector is not None:
+            y_eval = np.clip(corrector(y), lower, upper)
+
+        gy = np.asarray(g(y_eval), dtype=float)
 
         # Boolean checks that are not differentiable, e.g. preliminary grasp checker.
         passes_extra = True
         if extra_check is not None:
-            passes_extra = bool(extra_check(y))
+            passes_extra = bool(extra_check(y_eval))
 
         # Algorithm 3, line 10.
         if np.all(gy <= options.constraint_tol) and passes_extra:
             fx = float(f(x))
-            fy = float(f(y))
+            fy = float(f(y_eval))
 
             # Algorithm 3, line 11:
             # accept with probability min(1, exp(-f(y)) / exp(-f(x))).
@@ -302,7 +324,7 @@ def nonlinear_hit_and_run_step(
 
             # lower (better) energy f(y) means higher acceptance probability.
             if np.log(rng.uniform()) < min(0.0, log_accept_ratio):
-                return y, {
+                return y_eval, {
                     "accepted": True,
                     "reason": "mh_accept",
                     "inner_try": inner_try,
@@ -323,15 +345,17 @@ def nonlinear_hit_and_run_step(
         # Algorithm 3, line 14:
         # If nonlinear inequalities are violated, linearise at y and shrink interval.
         #
-        # Linearisation around y:
+        # Linearisation around y (the uncorrected predictor point, so that
+        # x + beta'*d remains the exact parametrization being solved for):
         #   g(x + beta d) ≈ g(y) + Jg(y) (x + beta d - y)
         #                 = [g(y) + Jg(y)(x - y)] + beta [Jg(y)d]
-        violated = gy > options.constraint_tol
+        gy_predictor = np.asarray(g(y), dtype=float) if corrector is not None else gy
+        violated = gy_predictor > options.constraint_tol
 
         if np.any(violated):
             Gy = np.asarray(Jg_eval(y), dtype=float)
 
-            g_bar = gy[violated] + Gy[violated, :] @ (x - y)
+            g_bar = gy_predictor[violated] + Gy[violated, :] @ (x - y)
             a = Gy[violated, :] @ d
 
             beta_lo, beta_up = clip_interval_with_linear_ineq(
@@ -368,6 +392,7 @@ def nhr_sample(
     equality_tol: float = 1e-4,
     project_samples_to_manifold: bool = False,
     projection_iters: int = 10,
+    corrector: Optional[Callable[[Array], Array]] = None,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
     Run Nonlinear Metropolis-Adjusted Hit-and-Run.
@@ -420,6 +445,13 @@ def nhr_sample(
 
     projection_iters:
         Number of Gauss-Newton iterations used for optional projection.
+
+    corrector:
+        Optional corrector(y) applied to each candidate before it's
+        evaluated, nudging it toward feasibility. If None and h is
+        provided, a default is built from g/Jg/h/Jh via
+        make_gauss_newton_corrector. Pass corrector=lambda y: y (or any
+        no-op) to disable this explicitly.
 
     Returns
     -------
@@ -475,6 +507,17 @@ def nhr_sample(
         else:
             active_direction_projector = direction_projector
 
+    if corrector is None and h is not None:
+        active_corrector = make_gauss_newton_corrector(
+            g=g,
+            Jg=Jg,
+            h=h,
+            Jh=Jh,
+            finite_difference_step=options.finite_difference_step,
+        )
+    else:
+        active_corrector = corrector
+
     if not is_feasible(
         x,
         g=g_eval,
@@ -504,6 +547,7 @@ def nhr_sample(
             options=options,
             extra_check=extra_check,
             direction_projector=active_direction_projector,
+            corrector=active_corrector,
         )
 
         info["step"] = step
@@ -659,6 +703,67 @@ def make_tangent_direction_projector(
         return project_direction_to_equality_tangent(
             d=d,
             Jh_x=Jh_x,
+            regularization=regularization,
+        )
+
+    return direction_projector
+
+
+def make_active_set_direction_projector(
+    g: Callable[[Array], Array],
+    Jg: Optional[Callable[[Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    active_tol: float = 1e-3,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+) -> Callable[[Array, Array], Array]:
+    """
+    Returns direction_projector(x, d) that projects d tangent to h(x)=0
+    (as in make_tangent_direction_projector) AND tangent to whichever
+    rows of g(x)<=0 are currently within active_tol of their boundary.
+
+    A hit-and-run step moves every coordinate at once along one shared
+    step length. If d is tangent to h but not to a very tight g row
+    (e.g. a sub-millimetre bound), that row still forces the step length
+    to near zero on almost every draw - clip_interval_with_linear_ineq
+    has no room to work with - even along directions that are otherwise
+    completely free. Treating the active g rows as local equalities and
+    projecting them out too uses the exact same formula the paper gives
+    for h, P = J^T (J J^T + reg I)^-1 J, just with J = [Jh; Jg_active]
+    stacked instead of Jh alone, so proposals stay tangent to whatever
+    is currently binding and the box/linear clip that follows can take
+    a real step.
+    """
+    def direction_projector(x: Array, d: Array) -> Array:
+        rows = []
+
+        if h is not None:
+            Jh_x = (
+                finite_difference_jacobian(h, x, finite_difference_step)
+                if Jh is None
+                else np.asarray(Jh(x), dtype=float)
+            )
+            if Jh_x.size:
+                rows.append(np.atleast_2d(Jh_x))
+
+        gx = np.asarray(g(x), dtype=float).reshape(-1)
+        active = gx >= -active_tol
+        if np.any(active):
+            Jg_x = (
+                finite_difference_jacobian(g, x, finite_difference_step)
+                if Jg is None
+                else np.asarray(Jg(x), dtype=float)
+            )
+            rows.append(np.atleast_2d(Jg_x)[active, :])
+
+        if not rows:
+            return d
+
+        J_active = np.vstack(rows)
+        return project_direction_to_equality_tangent(
+            d=d,
+            Jh_x=J_active,
             regularization=regularization,
         )
 
@@ -856,6 +961,51 @@ def gauss_newton_slack_step(
     return dx
 
 
+def make_gauss_newton_corrector(
+    g: Callable[[Array], Array],
+    Jg: Optional[Callable[[Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    iters: int = 2,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+) -> Callable[[Array], Array]:
+    """
+    Returns corrector(y) that nudges a candidate point toward feasibility
+    (g(y)<=0, h(y)=0) using a few Gauss-Newton slack steps.
+
+    This is the predictor-corrector counterpart to
+    make_active_set_direction_projector: the direction projector makes a
+    proposal tangent to whatever's currently binding, but that's only a
+    first-order guarantee, so an actual (non-infinitesimal) step along it
+    can still drift off a very tight constraint once curvature matters
+    more than the constraint's own tolerance. Rather than relying purely
+    on nonlinear_hit_and_run_step's shrink-and-retry to claw back to
+    feasibility, this applies gauss_newton_slack_step - the same
+    combined g/h correction already used for restart seeding - a couple
+    of times to pull the candidate back toward the feasible set before
+    it's evaluated.
+    """
+    def corrector(y: Array) -> Array:
+        y = np.asarray(y, dtype=float).copy()
+        for _ in range(iters):
+            dx = gauss_newton_slack_step(
+                x=y,
+                g=g,
+                Jg=Jg,
+                h=h,
+                Jh=Jh,
+                finite_difference_step=finite_difference_step,
+                regularization=regularization,
+            )
+            if not np.any(dx):
+                break
+            y = y + dx
+        return y
+
+    return corrector
+
+
 def choose_restart_seed(
     lower: Array,
     upper: Array,
@@ -943,14 +1093,24 @@ def restarting_nhr_sample(
     equality_tol: float = 1e-4,
     project_samples_to_manifold: bool = False,
     projection_iters: int = 10,
+    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
+    corrector: Optional[Callable[[Array], Array]] = None,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
     Outer restart loop around the single sampler entry point.
 
     phase1(seed) should implement your IK/slack-reduction phase and return
     a feasible x0, or None if Phase I fails.
-    
+
     slack_step(x) only needed for direction-based restart seeding. It should return a Gauss-Newton slack step
+
+    direction_projector(x, d), if given, is forwarded to every per-restart
+    call to nhr_sample. Leave it as None to keep nhr_sample's default
+    behaviour (auto-build a tangent-to-h projector when h is provided).
+
+    corrector(y), if given, is likewise forwarded to every per-restart call
+    to nhr_sample. Leave it as None to keep nhr_sample's default behaviour
+    (auto-build a Gauss-Newton g/h corrector when h is provided).
     """
     if nhr_options is None:
         nhr_options = NHROptions(verbose=False)
@@ -998,6 +1158,8 @@ def restarting_nhr_sample(
                 equality_tol=equality_tol,
                 project_samples_to_manifold=project_samples_to_manifold,
                 projection_iters=projection_iters,
+                direction_projector=direction_projector,
+                corrector=corrector,
             )
         except ValueError as e:
             all_info.append({
@@ -1044,6 +1206,8 @@ def restarting_nhr_sample_with_equalities(
     equality_tol: float = 1e-4,
     project_samples_to_manifold: bool = False,
     projection_iters: int = 10,
+    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
+    corrector: Optional[Callable[[Array], Array]] = None,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
     Backward-compatible wrapper around the single equality-aware restart loop.
@@ -1064,6 +1228,8 @@ def restarting_nhr_sample_with_equalities(
         equality_tol=equality_tol,
         project_samples_to_manifold=project_samples_to_manifold,
         projection_iters=projection_iters,
+        direction_projector=direction_projector,
+        corrector=corrector,
     )
 
 
