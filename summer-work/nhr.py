@@ -1,3 +1,16 @@
+"""
+Nonlinear Metropolis-Adjusted Hit-and-Run (NHR), ported from the reference
+C++ implementation (rai's src/Optim/NLP_Sampler.cpp, commit 8547d438,
+accompanying Toussaint/Braun/Ortiz-Haro's "NLP Sampling" paper) rather than
+the paper's own simplified pseudocode. The two differ in one important way:
+the reference's hit-and-run step uses a lenient "doesn't get worse" accept
+criterion, paired with a separate, conditional Gauss-Newton cleanup step -
+not the paper's strict-feasibility-per-step design.
+
+Equality constraints are handled throughout via tangent-space direction
+projection plus a walk-only epsilon-margin tube, matching the reference.
+"""
+
 import json
 from dataclasses import dataclass
 from datetime import datetime
@@ -27,23 +40,94 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
+# -----------------------------------------------------------------------------
+# Options
+# -----------------------------------------------------------------------------
+
 @dataclass
 class NHROptions:
+    """
+    Ports NLP_Sampler_Options (src/Optim/NLP_Sampler.h), with names adapted
+    to this project's style. Field comments note which reference field
+    each one ports.
+    """
     num_samples: int = 1000
     burn_in: int = 100
     thinning: int = 1
 
-    delta_max: float = 0.1
-    constraint_tol: float = 1e-8
+    delta_max: Optional[float] = None
+    # step_hit_and_run's box-clip half-width is 2*delta_max, matching the
+    # reference's LineSampler(2.*opt.slackMaxStep). Left as None, it
+    # defaults to slack_max_step below (the reference's actual, conflated
+    # behaviour); set it explicitly to decouple the two roles.
 
-    max_inner_tries: int = 50
-    use_initial_linear_clip: bool = True
+    walk_margin: float = 0.1           # ports hitRunEqMargin
+    eps_slack_increase: float = 0.05   # ports opt.eps
+
+    penalty_mu: float = 1.0            # ports opt.penaltyMu
+    slack_step_alpha: float = 1.0      # ports opt.slackStepAlpha
+    slack_max_step: float = 0.1        # ports opt.slackMaxStep
+    slack_reg_lambda: float = 1e-2     # ports opt.slackRegLambda
+
+    good_err_tol: float = 0.01         # ports the hardcoded 0.01 in run_downhill/run_interior
+    downhill_max_steps: int = 50       # ports opt.downhillMaxSteps
+    hit_and_run_inner_tries: int = 10  # ports the hardcoded 10 in step_hit_and_run
+
+    interior_method: Literal["HR", "mRRT"] = "HR"
+    # Which interior-sampling method run_interior uses. "HR" is
+    # step_hit_and_run (Nonlinear Metropolis-Adjusted Hit-and-Run), the
+    # default and the only method this project used before. "mRRT" is
+    # Manifold-RRT (Algorithm 4): instead of a constraint-respecting line
+    # search from the current point, it jumps to the nearest previously
+    # visited point and takes one fixed-size step from there toward a
+    # random target, tangent-projected at that anchor - inequalities are
+    # only handled afterward via the same conditional cleanup HR uses, so
+    # a single very tight inequality can't collapse the whole step the
+    # way it can for HR's shared-beta line search. Per the paper's own
+    # results, mRRT tends to outperform HR specifically on problems
+    # dominated by hard equality constraints (the robotics category) -
+    # this project's grasp problem is exactly that shape.
+    interior_noise_sigma: float = 0.1  # ports opt.interiorNoiseSigma - mRRT's fixed step size
+
+    constraint_tol: Optional[float] = None
+    # Final per-row tolerance for is_feasible()/manifold-projection
+    # filtering - NOT the walk's internal margin (that's walk_margin).
+    # Left as None, defaults to good_err_tol: run_interior only ever
+    # certifies a recorded sample's *combined* slack sum is <=
+    # good_err_tol, so a per-row gate much tighter than that (e.g. a
+    # fixed 1e-8) would reject almost every sample no cleanup step was
+    # ever asked to satisfy - g in particular is never separately
+    # polished by project_samples_to_manifold (only h is, via
+    # slack_reduce_equalities). Set explicitly for a stricter/looser
+    # final filter independent of the walk's own internal tolerance.
 
     finite_difference_step: float = 1e-6
     random_seed: int = 0
 
     verbose: bool = True
 
+    def __post_init__(self):
+        if self.delta_max is None:
+            self.delta_max = self.slack_max_step
+        if self.constraint_tol is None:
+            self.constraint_tol = self.good_err_tol
+
+
+RestartStrategy = Literal["uniform", "distance", "direction"]
+
+
+@dataclass
+class RestartOptions:
+    num_restarts: int = 10
+    strategy: RestartStrategy = "uniform"
+    candidates_per_restart: int = 50
+    random_seed: int = 0
+    keep_failed_phase1_seeds: bool = False
+
+
+# -----------------------------------------------------------------------------
+# Pure math primitives
+# -----------------------------------------------------------------------------
 
 def finite_difference_jacobian(
     fun: Callable[[Array], Array],
@@ -84,31 +168,22 @@ def clip_interval_with_linear_ineq(
 
         g_bar + beta * a <= 0
 
-    This is the core hit-and-run clipping operation.
+    This is the core hit-and-run clipping operation (ports LineSampler::clip_beta).
     """
     g_bar = np.asarray(g_bar, dtype=float).reshape(-1)
     a = np.asarray(a, dtype=float).reshape(-1)
 
-    for gi, ai in zip(g_bar, a): # iterate over each linear inequality
+    for gi, ai in zip(g_bar, a):
         if abs(ai) < tol:
-            # Constraint does not depend on beta.
-            # If already violated, interval becomes empty.
-            
-            if gi > 0: # if a is 0, and g_bar > 0, then the constraint is violated already
-                return 1.0, 0.0     # so we return an empty interval (beta_low > beta_up)
+            if gi > 0:
+                return 1.0, 0.0
             continue
 
-        beta_boundary = -gi / ai  # beta_i = -gi / ai
+        beta_boundary = -gi / ai
 
         if ai > 0:
-            # Need beta <= beta_boundary. 
-            # beta_up <= -gi / ai
-            # upper bound must be <= beta_boundary
             beta_up = min(beta_up, beta_boundary)
-        else: # ai < 0
-            # Need beta >= beta_boundary.
-            # beta_lo >= -gi / ai
-            # lower bound must be >= beta_boundary
+        else:
             beta_lo = max(beta_lo, beta_boundary)
 
         if beta_lo > beta_up:
@@ -126,523 +201,16 @@ def clip_interval_with_box_bounds(
     beta_up: float,
 ) -> tuple[float, float]:
     """
-    Clip beta interval so that:
-
-        lower <= x + beta d <= upper
-        
-        this is equivalent to two linear inequalities of the form (g_bar) + beta (a) <= 0:
-        
-        1. (lower - x) + beta (-d) <= 0
-        2. (x - upper) + beta (d) <= 0
-        
-    "along this random direction d, starting from x, how far can we go before hitting the bounds for any of the variables?"
-        
+    Clip beta interval so that lower <= x + beta*d <= upper, i.e. two
+    linear inequalities (lower-x)+beta(-d)<=0 and (x-upper)+beta(d)<=0.
     """
     x = np.asarray(x, dtype=float)
     d = np.asarray(d, dtype=float)
 
-    # lower bound: (lower - x) + beta (-d) <= 0
-    beta_lo, beta_up = clip_interval_with_linear_ineq(
-        beta_lo,
-        beta_up,
-        g_bar=lower - x,
-        a=-d,
-    )
-
-    # upper bound: (x - upper) + beta (d) <= 0
-    beta_lo, beta_up = clip_interval_with_linear_ineq(
-        beta_lo,
-        beta_up,
-        g_bar=x - upper,
-        a=d,
-    )
+    beta_lo, beta_up = clip_interval_with_linear_ineq(beta_lo, beta_up, g_bar=lower - x, a=-d)
+    beta_lo, beta_up = clip_interval_with_linear_ineq(beta_lo, beta_up, g_bar=x - upper, a=d)
 
     return beta_lo, beta_up
-
-
-def is_feasible(
-    x: Array,
-    g: Callable[[Array], Array],
-    constraint_tol: float = 1e-8,
-    extra_check: Optional[Callable[[Array], bool]] = None,
-) -> bool:
-    """
-    Feasible means:
-        g(x) <= constraint_tol
-    plus optional extra boolean checks.
-    """
-    gx = np.asarray(g(x), dtype=float)
-
-    if np.any(gx > constraint_tol):
-        return False
-
-    if extra_check is not None and not extra_check(x):
-        return False
-
-    return True
-
-
-def nonlinear_hit_and_run_step(
-    x: Array,
-    g: Callable[[Array], Array],
-    Jg: Optional[Callable[[Array], Array]],
-    f: Callable[[Array], float],
-    lower: Array,
-    upper: Array,
-    rng: np.random.Generator,
-    options: NHROptions,
-    extra_check: Optional[Callable[[Array], bool]] = None,
-    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
-    corrector: Optional[Callable[[Array], Array]] = None,
-) -> tuple[Array, Dict[str, Any]]:
-    """
-    One Nonlinear Metropolis-Adjusted Hit-and-Run step.
-
-    This follows Algorithm 3 from Toussaint et al.:
-
-    1. sample random direction d
-    2. initialise beta interval [-delta_max, delta_max]
-    3. clip interval using box bounds
-    4. optionally clip using linearisation at current x
-    5. sample candidate y = x + beta d
-    6. if y feasible, accept/reject using MH
-    7. if y infeasible, linearise violated constraints at y and shrink interval
-
-    corrector(y), if given, is a predictor-corrector "retraction": applied
-    to each candidate y right after it's proposed, before it's evaluated
-    against g/feasibility. A direction that's only tangent to a very tight
-    constraint to first order can still drift off it over an actual
-    (non-infinitesimal) step, once curvature matters more than the
-    constraint's own tolerance - the initial linear clip then optimistically
-    opens up beta's interval, and most proposals end up needing many
-    shrink-and-retry cycles (or exhausting max_inner_tries) to claw back to
-    feasibility. Nudging y directly toward the feasible set first avoids
-    relying on shrink-and-retry alone to fix that up.
-    """
-
-    x = np.asarray(x, dtype=float)
-    dim = len(x)
-
-    if Jg is None:
-        Jg_eval = lambda z: finite_difference_jacobian(
-            g, z, step=options.finite_difference_step
-        )
-    else:
-        Jg_eval = Jg
-
-    # Algorithm 3, line 2: random direction.
-    d = rng.normal(size=dim)
-
-    # Optional equality handling: project the random direction into
-    # the tangent space of h(x)=0 before normalising it.
-    if direction_projector is not None:
-        d = np.asarray(direction_projector(x, d), dtype=float)
-
-    d_norm = np.linalg.norm(d)
-
-    if d_norm < 1e-12:
-        return x, {"accepted": False, "reason": "zero_direction"}
-
-    d = d / d_norm
-
-    # Algorithm 3, line 3.
-    beta_lo = -options.delta_max
-    beta_up = options.delta_max
-
-    # Algorithm 3, line 4: clip with box bounds.
-    # for clipping on the variable bounds lower <= x <= upper
-    beta_lo, beta_up = clip_interval_with_box_bounds(
-        x=x,
-        d=d,
-        lower=lower,
-        upper=upper,
-        beta_lo=beta_lo,
-        beta_up=beta_up,
-    )
-
-    # Algorithm 3, line 5: optional clip with linearisation at x.
-    # for clipping on the nonlinear inequalities g(x) <= 0
-    if options.use_initial_linear_clip and beta_lo <= beta_up:
-        gx = np.asarray(g(x), dtype=float)
-        Gx = np.asarray(Jg_eval(x), dtype=float)
-        ax = Gx @ d
-
-
-        # g(x + beta d) ≈ g(x) + Jg(x) (x + beta d) <= 0
-        # (g(x)) + beta (Jg(x) d) <= 0
-        beta_lo, beta_up = clip_interval_with_linear_ineq(
-            beta_lo=beta_lo,
-            beta_up=beta_up,
-            g_bar=gx,
-            a=ax,
-        )
-
-    # Algorithm 3, line 6: inner loop.
-    for inner_try in range(options.max_inner_tries):
-
-        # Algorithm 3, line 7.
-        if beta_lo > beta_up:
-            return x, {
-                "accepted": False,
-                "reason": "empty_interval",
-                "inner_try": inner_try,
-            }
-
-        # Algorithm 3, line 8.
-        beta = rng.uniform(beta_lo, beta_up)
-        y = x + beta * d
-
-        # y_eval is what actually gets checked/accepted: the corrector may
-        # nudge it off the x + beta*d line to rescue a candidate that's
-        # only tangent to a tight constraint to first order. The shrink
-        # logic below, however, must keep using the *uncorrected* y - it
-        # relies on x + beta'*d being the exact parametrization along d,
-        # which the corrector's offset would otherwise invalidate.
-        y_eval = y
-        if corrector is not None:
-            y_eval = np.clip(corrector(y), lower, upper)
-
-        gy = np.asarray(g(y_eval), dtype=float)
-
-        # Boolean checks that are not differentiable, e.g. preliminary grasp checker.
-        passes_extra = True
-        if extra_check is not None:
-            passes_extra = bool(extra_check(y_eval))
-
-        # Algorithm 3, line 10.
-        if np.all(gy <= options.constraint_tol) and passes_extra:
-            fx = float(f(x))
-            fy = float(f(y_eval))
-
-            # Algorithm 3, line 11:
-            # accept with probability min(1, exp(-f(y)) / exp(-f(x))).
-            #
-            # In log form:
-            # accept if log(u) < f(x) - f(y).
-            log_accept_ratio = fx - fy
-
-
-            # lower (better) energy f(y) means higher acceptance probability.
-            if np.log(rng.uniform()) < min(0.0, log_accept_ratio):
-                return y_eval, {
-                    "accepted": True,
-                    "reason": "mh_accept",
-                    "inner_try": inner_try,
-                    "beta": beta,
-                    "f_old": fx,
-                    "f_new": fy,
-                }
-
-            return x, {
-                "accepted": False,
-                "reason": "mh_reject",
-                "inner_try": inner_try,
-                "beta": beta,
-                "f_old": fx,
-                "f_new": fy,
-            }
-
-        # Algorithm 3, line 14:
-        # If nonlinear inequalities are violated, linearise at y and shrink interval.
-        #
-        # Linearisation around y (the uncorrected predictor point, so that
-        # x + beta'*d remains the exact parametrization being solved for):
-        #   g(x + beta d) ≈ g(y) + Jg(y) (x + beta d - y)
-        #                 = [g(y) + Jg(y)(x - y)] + beta [Jg(y)d]
-        gy_predictor = np.asarray(g(y), dtype=float) if corrector is not None else gy
-        violated = gy_predictor > options.constraint_tol
-
-        if np.any(violated):
-            Gy = np.asarray(Jg_eval(y), dtype=float)
-
-            g_bar = gy_predictor[violated] + Gy[violated, :] @ (x - y)
-            a = Gy[violated, :] @ d
-
-            beta_lo, beta_up = clip_interval_with_linear_ineq(
-                beta_lo=beta_lo,
-                beta_up=beta_up,
-                g_bar=g_bar,
-                a=a,
-            )
-        else:
-            # This case means g is okay but extra_check failed.
-            # Since extra_check has no gradient, we cannot clip intelligently.
-            # We simply keep trying along the same interval.
-            continue
-
-    return x, {
-        "accepted": False,
-        "reason": "max_inner_tries",
-        "inner_try": options.max_inner_tries,
-    }
-
-
-def nhr_sample(
-    x0: Array,
-    g: Callable[[Array], Array],
-    lower: Array,
-    upper: Array,
-    Jg: Optional[Callable[[Array], Array]] = None,
-    f: Optional[Callable[[Array], float]] = None,
-    extra_check: Optional[Callable[[Array], bool]] = None,
-    options: Optional[NHROptions] = None,
-    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
-    h: Optional[Callable[[Array], Array]] = None,
-    Jh: Optional[Callable[[Array], Array]] = None,
-    equality_tol: float = 1e-4,
-    project_samples_to_manifold: bool = False,
-    projection_iters: int = 10,
-    corrector: Optional[Callable[[Array], Array]] = None,
-) -> tuple[Array, list[Dict[str, Any]]]:
-    """
-    Run Nonlinear Metropolis-Adjusted Hit-and-Run.
-
-    This is the single public entry point for sampling with or without
-    equality constraints. When equalities are provided via ``h`` and ``Jh``,
-    the implementation first converts them into an epsilon-tube of
-    inequalities, projects proposal directions onto the local tangent space,
-    and can optionally project the returned samples back onto the manifold.
-
-    Parameters
-    ----------
-    x0:
-        Initial feasible point. For your project this could be q_full from IK.
-
-    g:
-        Function returning all nonlinear inequalities.
-        Feasible means g(x) <= 0.
-
-    lower, upper:
-        Box bounds on x.
-
-    Jg:
-        Jacobian of g. Shape: (num_constraints, dim).
-        If None, finite differences are used.
-
-    f:
-        Energy/cost. If None, uniform sampling over feasible set is used.
-
-    extra_check:
-        Optional non-differentiable boolean checker.
-        Example: grasp_checker(x), collision_checker(x).
-        Use this for prototyping only; if possible, convert checks to smooth g(x).
-
-    options:
-        NHROptions.
-
-    h:
-        Optional equality constraint function with h(x) = 0.
-
-    Jh:
-        Optional Jacobian of h. If None, finite differences are used.
-
-    equality_tol:
-        Tube width used to turn h(x)=0 into h(x) in [-tol, tol].
-
-    project_samples_to_manifold:
-        If True, project each accepted sample back near h(x)=0 with a
-        Gauss-Newton step after sampling.
-
-    projection_iters:
-        Number of Gauss-Newton iterations used for optional projection.
-
-    corrector:
-        Optional corrector(y) applied to each candidate before it's
-        evaluated, nudging it toward feasibility. If None and h is
-        provided, a default is built from g/Jg/h/Jh via
-        make_gauss_newton_corrector. Pass corrector=lambda y: y (or any
-        no-op) to disable this explicitly.
-
-    Returns
-    -------
-    samples:
-        Array of feasible samples, shape (num_samples, dim).
-
-    diagnostics:
-        List of dictionaries describing each NHR step.
-    """
-
-    if options is None:
-        options = NHROptions()
-
-    if f is None:
-        f = lambda x: 0.0
-
-    x = np.asarray(x0, dtype=float).copy()
-    lower = np.asarray(lower, dtype=float)
-    upper = np.asarray(upper, dtype=float)
-
-    if x.shape != lower.shape or x.shape != upper.shape:
-        raise ValueError("x0, lower, and upper must have the same shape.")
-
-    if not np.all(lower <= upper):
-        raise ValueError("All lower bounds must be <= upper bounds.")
-
-    if not np.all((x >= lower) & (x <= upper)):
-        raise ValueError("x0 must be inside the box bounds.")
-
-    # Build the inequality/equality evaluation path once. If no equalities are
-    # supplied, the sampler runs exactly as before. Otherwise, the equalities
-    # are converted into a margin tube so the existing feasibility checks can
-    # be reused without branching inside the main loop.
-    if h is None:
-        g_eval = g
-        J_eval = Jg
-        active_direction_projector = direction_projector
-    else:
-        g_eval = make_equality_tube_inequalities(g, h, equality_tol)
-        J_eval = make_equality_tube_jacobian(
-            Jg=Jg,
-            Jh=Jh,
-            g=g,
-            h=h,
-            finite_difference_step=options.finite_difference_step,
-        )
-        if direction_projector is None:
-            active_direction_projector = make_tangent_direction_projector(
-                h=h,
-                Jh=Jh,
-                finite_difference_step=options.finite_difference_step,
-            )
-        else:
-            active_direction_projector = direction_projector
-
-    if corrector is None and h is not None:
-        active_corrector = make_gauss_newton_corrector(
-            g=g,
-            Jg=Jg,
-            h=h,
-            Jh=Jh,
-            finite_difference_step=options.finite_difference_step,
-        )
-    else:
-        active_corrector = corrector
-
-    if not is_feasible(
-        x,
-        g=g_eval,
-        constraint_tol=options.constraint_tol,
-        extra_check=extra_check,
-    ):
-        raise ValueError(
-            "x0 is not feasible. Run IK / Phase-I slack minimisation first."
-        )
-
-    rng = np.random.default_rng(options.random_seed)
-
-    samples = []
-    diagnostics = []
-
-    total_steps = options.burn_in + options.num_samples * options.thinning
-
-    for step in range(total_steps):
-        x, info = nonlinear_hit_and_run_step(
-            x=x,
-            g=g_eval,
-            Jg=J_eval,
-            f=f,
-            lower=lower,
-            upper=upper,
-            rng=rng,
-            options=options,
-            extra_check=extra_check,
-            direction_projector=active_direction_projector,
-            corrector=active_corrector,
-        )
-
-        info["step"] = step
-        info["is_burn_in"] = step < options.burn_in
-        diagnostics.append(info)
-
-        if step >= options.burn_in:
-            if (step - options.burn_in) % options.thinning == 0:
-                if is_feasible(
-                    x,
-                    g=g_eval,
-                    constraint_tol=options.constraint_tol,
-                    extra_check=extra_check,
-                ):
-                    samples.append(x.copy())
-
-        if options.verbose and step % max(1, total_steps // 10) == 0:
-            print(
-                f"step {step:05d}/{total_steps} | "
-                f"samples {len(samples):05d}/{options.num_samples} | "
-                f"last: {info['reason']}"
-            )
-
-    if project_samples_to_manifold and h is not None and len(samples) > 0:
-        # After sampling in the equality tube, project the accepted points back
-        # toward the exact manifold h(x)=0. This keeps the returned samples
-        # aligned with the equalities without changing the main sampler loop.
-        projected = []
-        for x in samples:
-            xp = slack_reduce_equalities(
-                x=x,
-                h=h,
-                Jh=Jh,
-                lower=lower,
-                upper=upper,
-                finite_difference_step=options.finite_difference_step,
-                max_iters=projection_iters,
-                tol=options.constraint_tol,
-            )
-            if is_feasible(xp, g_eval, options.constraint_tol, extra_check):
-                projected.append(xp)
-        samples = np.asarray(projected)
-
-    return np.asarray(samples), diagnostics
-
-# -----------------------------------------------------------------------------
-# Equality handling for NHR
-# -----------------------------------------------------------------------------
-
-def make_equality_tube_inequalities(
-    g: Callable[[Array], Array],
-    h: Callable[[Array], Array],
-    equality_tol: float,
-) -> Callable[[Array], Array]:
-    """
-    Convert equalities h(x)=0 into epsilon-margin inequalities:
-
-        h(x) - eps <= 0
-       -h(x) - eps <= 0
-
-    and concatenate them with the original inequalities g(x)<=0.
-    """
-    def g_total(x: Array) -> Array:
-        gx = np.asarray(g(x), dtype=float).reshape(-1)
-        hx = np.asarray(h(x), dtype=float).reshape(-1)
-        return np.concatenate([gx, hx - equality_tol, -hx - equality_tol])
-
-    return g_total
-
-
-def make_equality_tube_jacobian(
-    Jg: Optional[Callable[[Array], Array]],
-    Jh: Optional[Callable[[Array], Array]],
-    g: Callable[[Array], Array],
-    h: Callable[[Array], Array],
-    finite_difference_step: float = 1e-6,
-) -> Callable[[Array], Array]:
-    """
-    Jacobian for the concatenated inequality vector
-    [g(x), h(x)-eps, -h(x)-eps].
-    """
-    def J_total(x: Array) -> Array:
-        Jg_x = (
-            finite_difference_jacobian(g, x, finite_difference_step)
-            if Jg is None
-            else np.asarray(Jg(x), dtype=float)
-        )
-        Jh_x = (
-            finite_difference_jacobian(h, x, finite_difference_step)
-            if Jh is None
-            else np.asarray(Jh(x), dtype=float)
-        )
-        return np.vstack([Jg_x, Jh_x, -Jh_x])
-
-    return J_total
 
 
 def project_direction_to_equality_tangent(
@@ -658,191 +226,692 @@ def project_direction_to_equality_tangent(
         d_tan = (I - P_h) d
         P_h = J_h^T (J_h J_h^T + reg I)^(-1) J_h
 
-    This removes the part of d that immediately changes the equalities.
+    Algebraically equivalent to the reference's pinv(Jh^T Jh) formulation
+    (get_rnd_direction), just inverting the smaller m x m Gram matrix
+    (m = number of equality rows) instead of an n x n pseudo-inverse -
+    more efficient when m << n, and already regularized for rank-deficiency.
     """
     d = np.asarray(d, dtype=float).reshape(-1)
     Jh_x = np.asarray(Jh_x, dtype=float)
 
-    # If there are no equalities, the tangent space is the whole space.
     if Jh_x.size == 0:
         return d
 
-    # If there is only one equality, make sure Jh_x is 2D for the matrix operations.
     if Jh_x.ndim == 1:
         Jh_x = Jh_x.reshape(1, -1)
 
-    m = Jh_x.shape[0] # number of equalities
-    
-    A = Jh_x @ Jh_x.T + regularization * np.eye(m) # (J_h @ J_h^T + reg I)
-    
-    # np.linalg.solve(A, Jh_x @ d) solves A y = Jh_x @ d for y
-    # y = (J_h J_h^T + reg I)^(-1) J_h d
-    # normal_component = J_h^T (J_h J_h^T + reg I)^(-1) J_h d
-    normal_component = Jh_x.T @ np.linalg.solve(A, Jh_x @ d) 
-    
-    # tangent_component = d - normal_component
-    return d - normal_component # d_tan = (I - P_h) * d = d - P_h * d
+    m = Jh_x.shape[0]
+    A = Jh_x @ Jh_x.T + regularization * np.eye(m)
+    normal_component = Jh_x.T @ np.linalg.solve(A, Jh_x @ d)
+
+    return d - normal_component
 
 
-def make_tangent_direction_projector(
-    h: Callable[[Array], Array],
-    Jh: Optional[Callable[[Array], Array]] = None,
-    finite_difference_step: float = 1e-6,
-    regularization: float = 1e-8,
-) -> Callable[[Array, Array], Array]:
+# -----------------------------------------------------------------------------
+# Evaluation model - ports NLP_Walker::Eval
+# -----------------------------------------------------------------------------
+
+@dataclass
+class Eval:
     """
-    Returns a function direction_projector(x, d) that projects d into
-    the tangent space of h(x)=0.
+    Ports NLP_Walker::Eval (src/Optim/NLP_Sampler.h) as a plain data
+    container - no methods/side effects, and no phi/featureTypes
+    indirection (unnecessary here: g/h are already separately-typed
+    callables in this project, unlike the reference's generic NLP).
     """
-    def direction_projector(x: Array, d: Array) -> Array:
-        Jh_x = (
-            finite_difference_jacobian(h, x, finite_difference_step)
-            if Jh is None
-            else np.asarray(Jh(x), dtype=float)
-        )
-        return project_direction_to_equality_tangent(
-            d=d,
-            Jh_x=Jh_x,
-            regularization=regularization,
-        )
-
-    return direction_projector
+    x: Array
+    g: Array     # inequality features, shape (m_g,)
+    Jg: Array    # shape (m_g, n)
+    h: Array     # equality features, shape (m_h,) - empty array if no equalities
+    Jh: Array    # shape (m_h, n)
+    s: Array     # slack: ReLU(g) concatenated with |h| (sign-corrected), shape (m_g+m_h,)
+    Js: Array    # Jacobian of s, rows zeroed/sign-flipped to match
+    gpos: Array  # ReLU(g) only, captured before h is appended (ports ev.gpos)
+    err: float   # sum(s) - the aggregate infeasibility scalar
 
 
-def make_active_set_direction_projector(
+def evaluate_point(
+    x: Array,
     g: Callable[[Array], Array],
+    Jg: Callable[[Array], Array],
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+) -> Eval:
+    """
+    Ports Eval::eval(). Pure function: computes the slack vector
+    s = (ReLU(g), |h|) and its Jacobian, plus the aggregate infeasibility
+    scalar err = sum(s).
+    """
+    x = np.asarray(x, dtype=float)
+    n = len(x)
+
+    gx = np.asarray(g(x), dtype=float).reshape(-1)
+    Jgx = np.asarray(Jg(x), dtype=float).reshape(len(gx), n)
+
+    if h is not None:
+        hx = np.asarray(h(x), dtype=float).reshape(-1)
+        Jhx = np.asarray(Jh(x), dtype=float).reshape(len(hx), n)
+    else:
+        hx = np.zeros(0)
+        Jhx = np.zeros((0, n))
+
+    s = np.where(gx > 0.0, gx, 0.0)
+    Js = Jgx.copy()
+    Js[gx <= 0.0, :] = 0.0
+    gpos = s.copy()
+
+    s = np.concatenate([s, hx])
+    Js = np.vstack([Js, Jhx])
+    neg = np.zeros(len(s), dtype=bool)
+    neg[len(gx):] = hx < 0.0
+    s[neg] *= -1.0
+    Js[neg, :] *= -1.0
+
+    return Eval(x=x, g=gx, Jg=Jgx, h=hx, Jh=Jhx, s=s, Js=Js, gpos=gpos, err=float(np.sum(s)))
+
+
+def apply_equality_margin(ev: Eval, margin: float) -> tuple[Array, Array]:
+    """
+    Ports Eval::convert_eq_to_ineq(margin). Returns (g_aug, Jg_aug), the
+    inequality set augmented with h(x) turned into a +-margin tube:
+
+        h(x) - margin <= 0
+       -h(x) - margin <= 0
+
+    Deliberately non-mutating (the reference mutates ev.g/Jg in place) so
+    callers never have to reason about what ev.g means before vs. after
+    this call.
+    """
+    if ev.h.size == 0 or margin <= 0.0:
+        return ev.g, ev.Jg
+    g_aug = np.concatenate([ev.g, ev.h - margin, -ev.h - margin])
+    Jg_aug = np.vstack([ev.Jg, ev.Jh, -ev.Jh])
+    return g_aug, Jg_aug
+
+
+def sample_random_tangent_direction(
+    x: Array,
+    Jh: Optional[Callable[[Array], Array]],
+    rng: np.random.Generator,
+    regularization: float = 1e-8,
+) -> Array:
+    """
+    Ports get_rnd_direction(). Draws d ~ N(0,I); if Jh is given, projects d
+    into the tangent space of h(x)=0. Always returns a unit vector.
+    """
+    d = rng.normal(size=len(x))
+
+    if Jh is not None:
+        Jh_x = np.asarray(Jh(x), dtype=float)
+        if Jh_x.size:
+            d = project_direction_to_equality_tangent(d, Jh_x, regularization)
+
+    d_norm = np.linalg.norm(d)
+    if d_norm < 1e-12:
+        raise ValueError(
+            "Random direction collapsed to zero after tangent projection - "
+            "the equality constraints leave no free directions at this x."
+        )
+    return d / d_norm
+
+
+def gauss_newton_slack_delta(s: Array, Js: Array, n: int, penalty_mu: float, lam: float) -> Array:
+    """
+    Pure helper: the numerator of step_GaussNewton's slack-mode direction.
+
+        Hinv = inv(2*penalty_mu*Js^T@Js + lam*I)
+        delta = -2*penalty_mu*Hinv@Js^T@s
+    """
+    if s.size == 0:
+        return np.zeros(n)
+    H = 2.0 * penalty_mu * (Js.T @ Js) + lam * np.eye(n)
+    Hinv = np.linalg.inv(H)
+    return -2.0 * penalty_mu * (Hinv @ (Js.T @ s))
+
+
+def apply_trust_region(delta: Array, alpha: float, max_step: float) -> Array:
+    """
+    Pure helper, ports step_GaussNewton's step-size adaptation: scale by
+    alpha, then if the result exceeds max_step, rescale to norm exactly
+    max_step (a single rescale, not iterative shrinking).
+    """
+    delta = delta * alpha
+    length = np.linalg.norm(delta)
+    if length > max_step and length > 0:
+        delta = delta * (max_step / length)
+    return delta
+
+
+# -----------------------------------------------------------------------------
+# Walker state and stepping - ports NLP_Walker
+# -----------------------------------------------------------------------------
+
+@dataclass
+class ProblemFns:
+    """Bundles the problem definition so it isn't threaded as many separate
+    positional args through every step_* function below."""
+    g: Callable[[Array], Array]
+    Jg: Callable[[Array], Array]
+    lower: Array
+    upper: Array
+    h: Optional[Callable[[Array], Array]] = None
+    Jh: Optional[Callable[[Array], Array]] = None
+    f: Optional[Callable[[Array], float]] = None
+    extra_check: Optional[Callable[[Array], bool]] = None
+
+
+@dataclass
+class WalkerState:
+    """Ports NLP_Walker's mutable (x, ev, ev_stored, evals) state."""
+    x: Array
+    ev: Eval
+    ev_stored: Optional[Eval] = None
+    evals: int = 0
+
+    @classmethod
+    def initialize(cls, x0: Array, problem: ProblemFns) -> "WalkerState":
+        x0 = np.asarray(x0, dtype=float).copy()
+        ev = evaluate_point(x0, problem.g, problem.Jg, problem.h, problem.Jh)
+        return cls(x=x0, ev=ev, ev_stored=None, evals=1)
+
+
+def ensure_eval(state: WalkerState, problem: ProblemFns) -> Eval:
+    """
+    Ports ensure_eval()/Eval::eval's memoization: if state.ev is already at
+    (within 1e-10 of) state.x, returns it unchanged; otherwise recomputes.
+    Drake FK is the dominant cost this project cares about, so this cache
+    is load-bearing, not an afterthought.
+    """
+    if state.ev is not None and np.max(np.abs(state.ev.x - state.x)) < 1e-10:
+        return state.ev
+    state.ev = evaluate_point(state.x, problem.g, problem.Jg, problem.h, problem.Jh)
+    state.evals += 1
+    return state.ev
+
+
+def store_eval(state: WalkerState, problem: ProblemFns) -> None:
+    """state.ev_stored = ensure_eval(state, problem) (a snapshot)."""
+    state.ev_stored = ensure_eval(state, problem)
+
+
+def bound_clip(state: WalkerState, problem: ProblemFns) -> None:
+    """Ports bound_clip(): plain per-coordinate clamp of x into [lower, upper]."""
+    state.x = np.clip(state.x, problem.lower, problem.upper)
+
+
+def step_gauss_newton(
+    state: WalkerState,
+    problem: ProblemFns,
+    slack_mode: bool = True,
+    penalty_mu: float = 1.0,
+    alpha: Optional[float] = None,
+    max_step: Optional[float] = None,
+    lam: float = 1e-2,
+    options: Optional[NHROptions] = None,
+) -> None:
+    """
+    Ports NLP_Walker::step_GaussNewton (slack-mode only - this project has
+    no sos/energy residual to port the other branch for). A single damped
+    Gauss-Newton step toward zero slack, capped by a trust region. Always
+    "succeeds" in the sense the reference does - no internal accept/reject,
+    the caller decides what to do with the result.
+    """
+    ensure_eval(state, problem)
+    ev = state.ev
+
+    if alpha is None:
+        alpha = options.slack_step_alpha if options is not None else 1.0
+    if max_step is None:
+        max_step = options.slack_max_step if options is not None else 0.1
+
+    delta = gauss_newton_slack_delta(ev.s, ev.Js, len(state.x), penalty_mu, lam)
+    delta = apply_trust_region(delta, alpha, max_step)
+
+    state.x = state.x + delta  # new array - never mutate state.x in place (see WalkerState note below)
+    ensure_eval(state, problem)
+
+
+def step_hit_and_run(
+    state: WalkerState,
+    problem: ProblemFns,
+    options: NHROptions,
+    rng: np.random.Generator,
+) -> Dict[str, Any]:
+    """
+    Ports NLP_Walker::step_hit_and_run() - the core sampling step:
+
+    1. Sample a direction, tangent to h(x)=0 if h is given.
+    2. Clip [beta_lo, beta_up] using box bounds, then repeatedly using the
+       current point's linearised inequalities (equalities folded in as a
+       +-walk_margin tube, looser than the tolerance used to judge a final
+       sample).
+    3. Each trial moves x by a sampled beta *from wherever the previous
+       trial left it* - a chained walk, not independent retries from a
+       fixed anchor - and accepts as soon as the worst inequality
+       violation is no worse than at the start and total slack hasn't
+       grown by more than eps_slack_increase: a lenient "doesn't get
+       worse" criterion, not strict feasibility.
+    4. If all tries are exhausted without accepting, reverts to the exact
+       state before this call.
+
+    Returns a diagnostics dict; state.x/state.ev are updated in place.
+    """
+    store_eval(state, problem)
+    ev = state.ev
+    ev_stored = state.ev_stored
+
+    g_aug, Jg_aug = apply_equality_margin(ev, options.walk_margin)
+    g0 = max(np.max(g_aug), 0.0) if g_aug.size else 0.0
+    s0 = ev.s  # raw slack at the start - NOT re-derived after the margin conversion
+
+    direction = sample_random_tangent_direction(state.x, problem.Jh, rng)
+
+    beta_lo, beta_up = -2.0 * options.delta_max, 2.0 * options.delta_max
+    beta_lo, beta_up = clip_interval_with_box_bounds(
+        x=state.x, d=direction, lower=problem.lower, upper=problem.upper,
+        beta_lo=beta_lo, beta_up=beta_up,
+    )
+
+    reason = "exhausted_tries"
+    for inner_try in range(options.hit_and_run_inner_tries):
+        # ev.x == state.x always holds here (ensure_eval() below keeps them
+        # in sync every iteration), so this linearisation-recentring term
+        # is always ~0 - kept anyway to mirror the reference's actual
+        # behaviour exactly, not a "simplified" reinterpretation of it.
+        beta_lo, beta_up = clip_interval_with_linear_ineq(
+            beta_lo=beta_lo, beta_up=beta_up,
+            g_bar=g_aug + Jg_aug @ (state.x - ev.x),
+            a=Jg_aug @ direction,
+        )
+        if beta_lo >= beta_up:
+            reason = "empty_interval"
+            break
+
+        beta = rng.uniform(beta_lo, beta_up)
+        state.x = state.x + beta * direction  # chained: not reset between tries
+        ev = ensure_eval(state, problem)
+        g_aug, Jg_aug = apply_equality_margin(ev, options.walk_margin)
+
+        ineq_ok = (g_aug.size == 0) or (np.max(g_aug) <= g0)
+        slack_ok = np.sum(ev.s) <= np.sum(s0) + options.eps_slack_increase
+
+        if ineq_ok and slack_ok:
+            if problem.f is not None:
+                f_new = float(problem.f(state.x))
+                f_old = float(problem.f(ev_stored.x))
+                if f_new < f_old or np.log(rng.uniform()) < (f_old - f_new):
+                    return {"accepted": True, "reason": "mh_accept", "inner_try": inner_try}
+                state.x, state.ev = ev_stored.x, ev_stored
+                return {"accepted": False, "reason": "mh_reject", "inner_try": inner_try}
+            return {"accepted": True, "reason": "accepted", "inner_try": inner_try}
+
+    state.x, state.ev = ev_stored.x, ev_stored
+    return {"accepted": False, "reason": reason, "inner_try": options.hit_and_run_inner_tries}
+
+
+def run_downhill(state: WalkerState, problem: ProblemFns, options: NHROptions) -> bool:
+    """
+    Ports NLP_Walker::run_downhill(): a damped Gauss-Newton descent toward
+    feasibility, with a Wolfe-style step-size adaptation (shrink alpha and
+    revert on a slack increase; otherwise grow alpha, capped at 1) - without
+    this adaptation it's just a fixed-step GN loop with no safety net.
+    """
+    ensure_eval(state, problem)
+    alpha = options.slack_step_alpha
+
+    for _ in range(options.downhill_max_steps):
+        store_eval(state, problem)
+        step_gauss_newton(
+            state, problem, slack_mode=True, penalty_mu=options.penalty_mu,
+            alpha=alpha, max_step=options.slack_max_step, lam=options.slack_reg_lambda,
+        )
+        bound_clip(state, problem)
+        # No ensure_eval() here - a faithful quirk of the reference: the
+        # Wolfe check below can transiently use the pre-clip evaluation,
+        # self-healing on the next iteration's store_eval() call.
+
+        if state.ev.err > state.ev_stored.err:
+            alpha *= 0.5
+            state.x, state.ev = state.ev_stored.x, state.ev_stored
+        else:
+            alpha = min(1.0, alpha * 1.2)
+
+        if state.ev.err <= options.good_err_tol:
+            return True
+
+    return False
+
+
+@dataclass
+class ManifoldTree:
+    """
+    Minimal growing nearest-neighbor store for mRRT: parallel lists of
+    visited anchor points and their local equality-tangent projection
+    matrices. Ports the ANN + annPh bookkeeping in run_interior's
+    manifoldRRT branch. Brute-force nearest-neighbor is fine at the
+    sample counts this project uses (hundreds to low thousands per
+    restart).
+    """
+    points: List[Array]
+    projectors: List[Array]
+
+    @classmethod
+    def empty(cls) -> "ManifoldTree":
+        return cls(points=[], projectors=[])
+
+    def append(self, x: Array, Jh_x: Optional[Array], regularization: float = 1e-6) -> None:
+        n = len(x)
+        if Jh_x is not None and np.asarray(Jh_x).size:
+            Jh_x = np.atleast_2d(np.asarray(Jh_x, dtype=float))
+            m = Jh_x.shape[0]
+            A = Jh_x @ Jh_x.T + regularization * np.eye(m)
+            P = np.eye(n) - Jh_x.T @ np.linalg.solve(A, Jh_x)
+        else:
+            P = np.eye(n)
+        self.points.append(np.asarray(x, dtype=float).copy())
+        self.projectors.append(P)
+
+    def nearest(self, x_target: Array) -> tuple[Array, Array]:
+        pts = np.asarray(self.points)
+        d2 = np.sum((pts - x_target) ** 2, axis=1)
+        p = int(np.argmin(d2))
+        return self.points[p], self.projectors[p]
+
+
+def mrrt_step(
+    state: WalkerState,
+    problem: ProblemFns,
+    options: NHROptions,
+    rng: np.random.Generator,
+    tree: ManifoldTree,
+) -> Dict[str, Any]:
+    """
+    Ports run_interior's manifoldRRT branch: sample a uniform random
+    target in the box, find the nearest already-visited anchor, and take
+    one fixed-size (interior_noise_sigma) step from that anchor toward
+    the target, projected tangent to h(x)=0 as evaluated at the anchor
+    (not re-evaluated at the walker's current position). Inequalities are
+    not consulted at all when building this step - only run_interior's
+    shared conditional Gauss-Newton cleanup handles them, afterward.
+    """
+    x_target = sample_uniform_box(problem.lower, problem.upper, rng)
+    anchor, Ph = tree.nearest(x_target)
+
+    direction = Ph @ (x_target - anchor)
+    length = np.linalg.norm(direction)
+    if length < 1e-12:
+        state.x = anchor.copy()
+        ensure_eval(state, problem)
+        return {"accepted": True, "reason": "mrrt_zero_length"}
+
+    state.x = anchor + direction * (options.interior_noise_sigma / length)
+    ensure_eval(state, problem)
+    return {"accepted": True, "reason": "mrrt_step"}
+
+
+def run_interior(
+    state: WalkerState, problem: ProblemFns, options: NHROptions, rng: np.random.Generator,
+) -> tuple[Array, list[Dict[str, Any]]]:
+    """
+    Ports NLP_Walker::run_interior(): the two-phase-per-iteration interior
+    sampling loop. Each iteration takes one lenient hit-and-run step, then
+    - only if that step's result isn't already "good" - applies one
+    conditional Gauss-Newton cleanup step. A point is only ever recorded
+    as a sample if it's good (and past burn-in), independent of whether
+    the hit-and-run step itself was "accepted".
+    """
+    burn_in = max(options.burn_in, 0)
+    sample_steps = max(options.num_samples, 1)
+    interior_steps = burn_in + sample_steps - 1
+
+    samples: List[Array] = []
+    diagnostics: List[Dict[str, Any]] = []
+
+    use_mrrt = options.interior_method == "mRRT"
+    tree = ManifoldTree.empty() if use_mrrt else None
+
+    t = 0
+    while True:
+        ensure_eval(state, problem)
+        good = state.ev.err <= options.good_err_tol
+        if good and problem.extra_check is not None:
+            good = good and bool(problem.extra_check(state.x))
+
+        if use_mrrt:
+            Jh_x = problem.Jh(state.x) if problem.Jh is not None else None
+            tree.append(state.x, Jh_x)
+
+        if good and t >= burn_in:
+            samples.append(state.x.copy())
+
+        if t >= interior_steps:
+            diagnostics.append({"step": t, "is_burn_in": t < burn_in, "err": state.ev.err, "good": good})
+            break
+
+        if use_mrrt:
+            step_info = mrrt_step(state, problem, options, rng, tree)
+        else:
+            step_info = step_hit_and_run(state, problem, options, rng)
+
+        ensure_eval(state, problem)
+        good_pre_cleanup = state.ev.err <= options.good_err_tol
+        cleanup_ran = False
+        if options.slack_step_alpha > 0 and not good_pre_cleanup:
+            step_gauss_newton(
+                state, problem, slack_mode=True, penalty_mu=options.penalty_mu,
+                alpha=1.0, max_step=options.slack_max_step, lam=options.slack_reg_lambda,
+            )
+            bound_clip(state, problem)
+            cleanup_ran = True
+
+        ensure_eval(state, problem)  # present here (unlike run_downhill), matching the reference
+
+        diagnostics.append({
+            "step": t, "is_burn_in": t < burn_in,
+            "hr_accepted": step_info["accepted"], "hr_reason": step_info["reason"],
+            "cleanup_ran": cleanup_ran, "err": state.ev.err,
+        })
+
+        if options.verbose and t % max(1, (interior_steps + 1) // 10) == 0:
+            print(f"step {t:05d}/{interior_steps} | samples {len(samples):05d} | "
+                  f"err {state.ev.err:.3e} | last: {step_info['reason']}")
+
+        t += 1
+
+    return np.asarray(samples), diagnostics
+
+
+def _default_jacobian(
+    fn: Optional[Callable[[Array], Array]],
+    value_fn: Optional[Callable[[Array], Array]],
+    step: float,
+) -> Optional[Callable[[Array], Array]]:
+    """If fn is None and value_fn is given, fall back to a finite-difference
+    Jacobian of value_fn. Otherwise returns fn unchanged."""
+    if fn is not None or value_fn is None:
+        return fn
+    return lambda z: finite_difference_jacobian(value_fn, z, step=step)
+
+
+def run_downhill_phase1(
+    seed: Array,
+    g: Callable[[Array], Array],
+    lower: Array,
+    upper: Array,
+    options: NHROptions,
     Jg: Optional[Callable[[Array], Array]] = None,
     h: Optional[Callable[[Array], Array]] = None,
     Jh: Optional[Callable[[Array], Array]] = None,
-    active_tol: float = 1e-3,
-    finite_difference_step: float = 1e-6,
-    regularization: float = 1e-8,
-) -> Callable[[Array, Array], Array]:
+) -> Optional[Array]:
     """
-    Returns direction_projector(x, d) that projects d tangent to h(x)=0
-    (as in make_tangent_direction_projector) AND tangent to whichever
-    rows of g(x)<=0 are currently within active_tol of their boundary.
-
-    A hit-and-run step moves every coordinate at once along one shared
-    step length. If d is tangent to h but not to a very tight g row
-    (e.g. a sub-millimetre bound), that row still forces the step length
-    to near zero on almost every draw - clip_interval_with_linear_ineq
-    has no room to work with - even along directions that are otherwise
-    completely free. Treating the active g rows as local equalities and
-    projecting them out too uses the exact same formula the paper gives
-    for h, P = J^T (J J^T + reg I)^-1 J, just with J = [Jh; Jg_active]
-    stacked instead of Jh alone, so proposals stay tangent to whatever
-    is currently binding and the box/linear clip that follows can take
-    a real step.
+    Native Phase 1: ports run_downhill() as a phase1(seed)->Optional[Array]
+    callable, matching the shape restarting_nhr_sample already expects. No
+    IK/Drake-specific dependency - only needs g/Jg/h/Jh.
     """
-    def direction_projector(x: Array, d: Array) -> Array:
-        rows = []
+    Jg_eval = _default_jacobian(Jg, g, options.finite_difference_step)
+    Jh_eval = _default_jacobian(Jh, h, options.finite_difference_step)
 
-        if h is not None:
-            Jh_x = (
-                finite_difference_jacobian(h, x, finite_difference_step)
-                if Jh is None
-                else np.asarray(Jh(x), dtype=float)
-            )
-            if Jh_x.size:
-                rows.append(np.atleast_2d(Jh_x))
+    problem = ProblemFns(g=g, Jg=Jg_eval, lower=lower, upper=upper, h=h, Jh=Jh_eval)
+    seed = np.clip(np.asarray(seed, dtype=float), lower, upper)
+    state = WalkerState.initialize(seed, problem)
 
-        gx = np.asarray(g(x), dtype=float).reshape(-1)
-        active = gx >= -active_tol
-        if np.any(active):
-            Jg_x = (
-                finite_difference_jacobian(g, x, finite_difference_step)
-                if Jg is None
-                else np.asarray(Jg(x), dtype=float)
-            )
-            rows.append(np.atleast_2d(Jg_x)[active, :])
-
-        if not rows:
-            return d
-
-        J_active = np.vstack(rows)
-        return project_direction_to_equality_tangent(
-            d=d,
-            Jh_x=J_active,
-            regularization=regularization,
-        )
-
-    return direction_projector
+    if run_downhill(state, problem, options):
+        return state.x.copy()
+    return None
 
 
-def slack_reduce_equalities(
+# -----------------------------------------------------------------------------
+# Public sampling entry points
+# -----------------------------------------------------------------------------
+
+def is_feasible(
     x: Array,
-    h: Callable[[Array], Array],
+    g: Callable[[Array], Array],
+    constraint_tol: float = 1e-8,
+    h: Optional[Callable[[Array], Array]] = None,
+    equality_tol: float = 1e-4,
+    extra_check: Optional[Callable[[Array], bool]] = None,
+) -> bool:
+    """
+    Feasible means g(x) <= constraint_tol, and (if h is given)
+    |h(x)| <= equality_tol, plus optional extra boolean checks.
+    """
+    gx = np.asarray(g(x), dtype=float)
+    if np.any(gx > constraint_tol):
+        return False
+
+    if h is not None:
+        hx = np.asarray(h(x), dtype=float)
+        if np.any(np.abs(hx) > equality_tol):
+            return False
+
+    if extra_check is not None and not extra_check(x):
+        return False
+
+    return True
+
+
+def nhr_sample(
+    x0: Array,
+    g: Callable[[Array], Array],
+    lower: Array,
+    upper: Array,
+    Jg: Optional[Callable[[Array], Array]] = None,
+    f: Optional[Callable[[Array], float]] = None,
+    extra_check: Optional[Callable[[Array], bool]] = None,
+    options: Optional[NHROptions] = None,
+    h: Optional[Callable[[Array], Array]] = None,
     Jh: Optional[Callable[[Array], Array]] = None,
-    lower: Optional[Array] = None,
-    upper: Optional[Array] = None,
-    finite_difference_step: float = 1e-6,
-    regularization: float = 1e-8,
-    max_iters: int = 10,
-    tol: float = 1e-8,
-) -> Array:
+    equality_tol: float = 1e-4,
+    project_samples_to_manifold: bool = False,
+    projection_iters: int = 10,
+) -> tuple[Array, list[Dict[str, Any]]]:
     """
-    Gauss-Newton projection/slack-reduction step for equalities h(x)=0.
+    Run Nonlinear Metropolis-Adjusted Hit-and-Run, following the reference
+    implementation's actual two-phase-per-iteration interior sampling loop
+    (run_interior): a lenient hit-and-run step, a conditional Gauss-Newton
+    cleanup, and recording only points that are actually good.
 
-    This is useful after sampling in an epsilon tube if you want samples
-    closer to the exact manifold.
-    
-    This corresponds to moving in the direction of the negative derivative of F_01(x) = s(x)^T*s(x) 
-    where s(x) is the slack vector for constraint violation.
-        
-        s(x) = (RELU(g(x)), abs(h(x)))
-    
-    since NHR already handles inequalities, we only need to reduce the slack for equalities h(x)=0. So:
-    
-        s(x) = abs(h(x))
-    
-    The update is either through Gradient Descent or Gauss-Newton. Here, we use Gauss-Newton (geometry aware):
-    Gauss-Newton step:
-        −α * (∇^2F(x) + λI)^(-1) @ ∇F(x)
-        
-        where ∇^2F(x) is the Hessian of F(x) and λI is the regularisation term to ensure positive definiteness.
-        
-        ∇^2F(x) ≈ J_h(x)^T @ J_h(x)  (Gauss-Newton approximation)
-        ∇F(x) = J_h(x)^T @ h(x)
-        
-        so the update becomes:
-        dx = -α * (J_h(x)^T @ J_h(x) + λI)^(-1) @ J_h(x)^T @ h(x)
+    x0 must already be near-feasible (run Phase 1 first - e.g.
+    run_downhill_phase1 for a native, Drake-free downhill Phase 1).
+
+    Parameters
+    ----------
+    x0: initial near-feasible point.
+    g, Jg: inequalities g(x)<=0 and their Jacobian (finite-difference if Jg is None).
+    lower, upper: box bounds on x.
+    f: optional scalar energy; if None, uniform sampling over the feasible set.
+    extra_check: optional non-differentiable boolean checker; gates only
+        whether a point that's already "good" gets recorded as a sample.
+    options: NHROptions.
+    h, Jh: optional equality constraints h(x)=0 and their Jacobian.
+    equality_tol: tolerance used only for the optional post-hoc
+        project_samples_to_manifold filtering (via is_feasible) - NOT the
+        walk's own margin (options.walk_margin).
+    project_samples_to_manifold: if True, project each recorded sample
+        back toward h(x)=0 with slack_reduce_equalities, keeping it only
+        if it's still feasible afterward.
+    projection_iters: Gauss-Newton iterations used for that projection.
+
+    Returns
+    -------
+    samples: array of recorded samples, shape (n_samples, dim).
+    diagnostics: list of dicts describing each interior-sampling iteration.
     """
-    x = np.asarray(x, dtype=float).copy()
+    if options is None:
+        options = NHROptions()
 
-    for _ in range(max_iters):
-        hx = np.asarray(h(x), dtype=float).reshape(-1)
-        
-        # If the equalities are already satisfied within tolerance, we can stop early.
-        if np.linalg.norm(hx, ord=np.inf) <= tol:
-            break
+    Jg_eval = _default_jacobian(Jg, g, options.finite_difference_step)
+    Jh_eval = _default_jacobian(Jh, h, options.finite_difference_step)
 
-        # Compute Jacobian of h at x, either using provided Jh or finite differences.
-        Jh_x = (
-            finite_difference_jacobian(h, x, finite_difference_step)
-            if Jh is None
-            else np.asarray(Jh(x), dtype=float)
+    x0 = np.asarray(x0, dtype=float).copy()
+    lower = np.asarray(lower, dtype=float)
+    upper = np.asarray(upper, dtype=float)
+
+    if x0.shape != lower.shape or x0.shape != upper.shape:
+        raise ValueError("x0, lower, and upper must have the same shape.")
+    if not np.all(lower <= upper):
+        raise ValueError("All lower bounds must be <= upper bounds.")
+    if not np.all((x0 >= lower) & (x0 <= upper)):
+        raise ValueError("x0 must be inside the box bounds.")
+
+    problem = ProblemFns(g=g, Jg=Jg_eval, lower=lower, upper=upper, h=h, Jh=Jh_eval, f=f, extra_check=extra_check)
+    state = WalkerState.initialize(x0, problem)
+
+    if state.ev.err > options.good_err_tol:
+        raise ValueError(
+            f"x0 is not feasible enough (err={state.ev.err:.3g} > "
+            f"good_err_tol={options.good_err_tol}). Run Phase 1 first."
         )
-        if Jh_x.ndim == 1:
-            Jh_x = Jh_x.reshape(1, -1)
 
+    rng = np.random.default_rng(options.random_seed)
+    samples, diagnostics = run_interior(state, problem, options, rng)
 
-        m = Jh_x.shape[0] # number of equalities
-        
-        # Compute the projection matrix P_h = J_h^T (J_h J_h^T + reg I)^(-1) J_h = J_h^T A^{-1} J_h
-        A = Jh_x @ Jh_x.T + regularization * np.eye(m)
-        
-        # Solve A y = h(x) for y, then compute the update dx = -J_h^T y = -J_h^T @ A^{-1} @ h(x)
-        dx = -Jh_x.T @ np.linalg.solve(A, hx)
-        x = x + dx
+    if options.thinning > 1 and len(samples):
+        samples = samples[::options.thinning]
 
-        if lower is not None or upper is not None:
-            if lower is not None:
-                x = np.maximum(x, np.asarray(lower, dtype=float))
-            if upper is not None:
-                x = np.minimum(x, np.asarray(upper, dtype=float))
+    if project_samples_to_manifold and len(samples) > 0:
+        projected = []
+        for sample in samples:
+            polished = sample
+            if h is not None:
+                polished = slack_reduce_equalities(
+                    x=polished, h=h, Jh=Jh_eval, lower=lower, upper=upper,
+                    finite_difference_step=options.finite_difference_step,
+                    max_iters=projection_iters, tol=options.constraint_tol,
+                )
 
-    return x
+            # slack_reduce_equalities only targets h. run_interior's own
+            # cleanup only ever certified a recorded sample's *combined*
+            # slack sum was <= good_err_tol, not each row's own tolerance -
+            # so g can still be meaningfully violated here. Polish the full
+            # slack (g and h together) with the same conditional
+            # Gauss-Newton step run_interior's cleanup uses, so the final
+            # is_feasible check below has something it was actually asked
+            # to satisfy. Always spend the full iteration budget rather
+            # than early-exiting on options.constraint_tol - that's the
+            # same tolerance is_feasible checks against below, and (with
+            # its default now tied to good_err_tol, see NHROptions) every
+            # recorded sample already satisfies it on entry, which would
+            # make this loop a no-op right when it's needed most. A few
+            # extra GN steps past convergence are cheap: the step size
+            # itself shrinks to ~0 once the slack does.
+            polish_state = WalkerState.initialize(polished, problem)
+            for _ in range(projection_iters):
+                step_gauss_newton(
+                    polish_state, problem, slack_mode=True, penalty_mu=options.penalty_mu,
+                    alpha=1.0, max_step=options.slack_max_step, lam=options.slack_reg_lambda,
+                )
+                bound_clip(polish_state, problem)
+                ensure_eval(polish_state, problem)
+            polished = polish_state.x
+
+            if is_feasible(polished, g, options.constraint_tol, h=h,
+                            equality_tol=equality_tol, extra_check=extra_check):
+                projected.append(polished)
+        samples = np.asarray(projected)
+
+    return samples, diagnostics
 
 
 def nhr_sample_with_equalities(
@@ -860,45 +929,17 @@ def nhr_sample_with_equalities(
     project_samples_to_manifold: bool = False,
     projection_iters: int = 10,
 ) -> tuple[Array, list[Dict[str, Any]]]:
-    """
-    Backward-compatible wrapper around the single equality-aware sampler.
-
-    The implementation now lives in ``nhr_sample`` so that the equality path is
-    managed in one place with a shared comment block and a single set of
-    optional arguments.
-    """
+    """Backward-compatible wrapper around nhr_sample's equality-aware path."""
     return nhr_sample(
-        x0=x0,
-        g=g,
-        lower=lower,
-        upper=upper,
-        Jg=Jg,
-        f=f,
-        extra_check=extra_check,
-        options=options,
-        h=h,
-        Jh=Jh,
-        equality_tol=equality_tol,
-        project_samples_to_manifold=project_samples_to_manifold,
-        projection_iters=projection_iters,
+        x0=x0, g=g, lower=lower, upper=upper, Jg=Jg, f=f, extra_check=extra_check,
+        options=options, h=h, Jh=Jh, equality_tol=equality_tol,
+        project_samples_to_manifold=project_samples_to_manifold, projection_iters=projection_iters,
     )
 
 
 # -----------------------------------------------------------------------------
 # Restart seeding
 # -----------------------------------------------------------------------------
-
-RestartStrategy = Literal["uniform", "distance", "direction"]
-
-
-@dataclass
-class RestartOptions:
-    num_restarts: int = 10
-    strategy: RestartStrategy = "uniform"
-    candidates_per_restart: int = 50
-    random_seed: int = 0
-    keep_failed_phase1_seeds: bool = False
-
 
 def sample_uniform_box(lower: Array, upper: Array, rng: np.random.Generator) -> Array:
     lower = np.asarray(lower, dtype=float)
@@ -916,10 +957,9 @@ def gauss_newton_slack_step(
     regularization: float = 1e-8,
 ) -> Array:
     """
-    Prototype Gauss-Newton slack step used by the direction-based restart seed.
-
-    For inequalities, only positive violations max(g(x),0) are included.
-    For equalities, h(x) is included directly.
+    Standalone Gauss-Newton slack step used by the direction-based restart
+    seed strategy: for inequalities, only positive violations max(g(x),0)
+    are included; for equalities, h(x) is included directly.
     """
     x = np.asarray(x, dtype=float)
 
@@ -955,55 +995,9 @@ def gauss_newton_slack_step(
     J = np.vstack(jacobians)
     m = J.shape[0]
 
-    # Minimum-norm Gauss-Newton correction for J dx ≈ -r.
     A = J @ J.T + regularization * np.eye(m)
     dx = -J.T @ np.linalg.solve(A, r)
     return dx
-
-
-def make_gauss_newton_corrector(
-    g: Callable[[Array], Array],
-    Jg: Optional[Callable[[Array], Array]] = None,
-    h: Optional[Callable[[Array], Array]] = None,
-    Jh: Optional[Callable[[Array], Array]] = None,
-    iters: int = 2,
-    finite_difference_step: float = 1e-6,
-    regularization: float = 1e-8,
-) -> Callable[[Array], Array]:
-    """
-    Returns corrector(y) that nudges a candidate point toward feasibility
-    (g(y)<=0, h(y)=0) using a few Gauss-Newton slack steps.
-
-    This is the predictor-corrector counterpart to
-    make_active_set_direction_projector: the direction projector makes a
-    proposal tangent to whatever's currently binding, but that's only a
-    first-order guarantee, so an actual (non-infinitesimal) step along it
-    can still drift off a very tight constraint once curvature matters
-    more than the constraint's own tolerance. Rather than relying purely
-    on nonlinear_hit_and_run_step's shrink-and-retry to claw back to
-    feasibility, this applies gauss_newton_slack_step - the same
-    combined g/h correction already used for restart seeding - a couple
-    of times to pull the candidate back toward the feasible set before
-    it's evaluated.
-    """
-    def corrector(y: Array) -> Array:
-        y = np.asarray(y, dtype=float).copy()
-        for _ in range(iters):
-            dx = gauss_newton_slack_step(
-                x=y,
-                g=g,
-                Jg=Jg,
-                h=h,
-                Jh=Jh,
-                finite_difference_step=finite_difference_step,
-                regularization=regularization,
-            )
-            if not np.any(dx):
-                break
-            y = y + dx
-        return y
-
-    return corrector
 
 
 def choose_restart_seed(
@@ -1016,15 +1010,15 @@ def choose_restart_seed(
     slack_step: Optional[Callable[[Array], Array]] = None,
 ) -> Array:
     """
-    Choose a restart seed using one of the three strategies in Sec. 3.3:
+    Choose a restart seed using one of the three strategies in Sec. 3.3 of
+    the paper:
 
     uniform:    sample x ~ U[l,u]
     distance:   sample candidates and choose the one furthest from D
     direction:  choose candidate whose slack step is least aligned with
                 directions toward existing samples D
-                
+
     D is the set of previously accepted samples, shape (num_samples, dim).
-    slack_step(x) 
     """
     lower = np.asarray(lower, dtype=float)
     upper = np.asarray(upper, dtype=float)
@@ -1039,7 +1033,6 @@ def choose_restart_seed(
     D = np.asarray(D, dtype=float).reshape(-1, lower.size)
 
     if strategy == "distance":
-        # score_i = min_y ||y - x_i||. Choose max score.
         scores = []
         for x_i in candidates:
             distances = np.linalg.norm(D - x_i, axis=1)
@@ -1056,7 +1049,6 @@ def choose_restart_seed(
             delta_norm = np.linalg.norm(delta_i)
 
             if delta_norm < 1e-12:
-                # No predicted movement; prefer it only if far from data.
                 scores.append(-np.inf)
                 continue
 
@@ -1069,7 +1061,6 @@ def choose_restart_seed(
                 continue
 
             alignments = (dirs[valid] @ delta_i) / (dir_norms[valid] * delta_norm)
-            # Paper: choose argmin_i max_y alignment.
             scores.append(np.max(alignments))
 
         return candidates[int(np.argmin(scores))]
@@ -1093,24 +1084,15 @@ def restarting_nhr_sample(
     equality_tol: float = 1e-4,
     project_samples_to_manifold: bool = False,
     projection_iters: int = 10,
-    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
-    corrector: Optional[Callable[[Array], Array]] = None,
 ) -> tuple[Array, list[Dict[str, Any]]]:
     """
     Outer restart loop around the single sampler entry point.
 
-    phase1(seed) should implement your IK/slack-reduction phase and return
-    a feasible x0, or None if Phase I fails.
+    phase1(seed) should return a feasible x0, or None if Phase I fails -
+    e.g. run_downhill_phase1 for a native Gauss-Newton downhill Phase I
+    with no IK dependency.
 
-    slack_step(x) only needed for direction-based restart seeding. It should return a Gauss-Newton slack step
-
-    direction_projector(x, d), if given, is forwarded to every per-restart
-    call to nhr_sample. Leave it as None to keep nhr_sample's default
-    behaviour (auto-build a tangent-to-h projector when h is provided).
-
-    corrector(y), if given, is likewise forwarded to every per-restart call
-    to nhr_sample. Leave it as None to keep nhr_sample's default behaviour
-    (auto-build a Gauss-Newton g/h corrector when h is provided).
+    slack_step(x) only needed for direction-based restart seeding.
     """
     if nhr_options is None:
         nhr_options = NHROptions(verbose=False)
@@ -1125,10 +1107,7 @@ def restarting_nhr_sample(
 
     for r in range(restart_options.num_restarts):
         seed = choose_restart_seed(
-            lower=lower,
-            upper=upper,
-            rng=rng,
-            D=D,
+            lower=lower, upper=upper, rng=rng, D=D,
             strategy=restart_options.strategy,
             candidates_per_restart=restart_options.candidates_per_restart,
             slack_step=slack_step,
@@ -1140,35 +1119,16 @@ def restarting_nhr_sample(
             continue
 
         try:
-            # Make each chain reproducible but different.
             opts_r = NHROptions(**vars(nhr_options))
             opts_r.random_seed = int(rng.integers(0, 2**31 - 1))
 
             samples_r, diag_r = nhr_sample(
-                x0=x0,
-                g=g,
-                lower=lower,
-                upper=upper,
-                Jg=Jg,
-                f=f,
-                extra_check=extra_check,
-                options=opts_r,
-                h=h,
-                Jh=Jh,
-                equality_tol=equality_tol,
-                project_samples_to_manifold=project_samples_to_manifold,
-                projection_iters=projection_iters,
-                direction_projector=direction_projector,
-                corrector=corrector,
+                x0=x0, g=g, lower=lower, upper=upper, Jg=Jg, f=f, extra_check=extra_check,
+                options=opts_r, h=h, Jh=Jh, equality_tol=equality_tol,
+                project_samples_to_manifold=project_samples_to_manifold, projection_iters=projection_iters,
             )
         except ValueError as e:
-            all_info.append({
-                "restart": r,
-                "status": "nhr_failed",
-                "seed": seed,
-                "x0": x0,
-                "error": str(e),
-            })
+            all_info.append({"restart": r, "status": "nhr_failed", "seed": seed, "x0": x0, "error": str(e)})
             continue
 
         if len(samples_r) > 0:
@@ -1176,12 +1136,8 @@ def restarting_nhr_sample(
             D = np.vstack([D, samples_r])
 
         all_info.append({
-            "restart": r,
-            "status": "success",
-            "seed": seed,
-            "x0": x0,
-            "num_samples": len(samples_r),
-            "diagnostics": diag_r,
+            "restart": r, "status": "success", "seed": seed, "x0": x0,
+            "num_samples": len(samples_r), "diagnostics": diag_r,
         })
 
     if len(all_samples) == 0:
@@ -1206,33 +1162,207 @@ def restarting_nhr_sample_with_equalities(
     equality_tol: float = 1e-4,
     project_samples_to_manifold: bool = False,
     projection_iters: int = 10,
-    direction_projector: Optional[Callable[[Array, Array], Array]] = None,
-    corrector: Optional[Callable[[Array], Array]] = None,
 ) -> tuple[Array, list[Dict[str, Any]]]:
-    """
-    Backward-compatible wrapper around the single equality-aware restart loop.
-    """
+    """Backward-compatible wrapper around the single equality-aware restart loop."""
     return restarting_nhr_sample(
-        phase1=phase1,
-        g=g,
-        lower=lower,
-        upper=upper,
-        Jg=Jg,
-        f=f,
-        extra_check=extra_check,
-        nhr_options=nhr_options,
-        restart_options=restart_options,
-        slack_step=slack_step,
-        h=h,
-        Jh=Jh,
-        equality_tol=equality_tol,
-        project_samples_to_manifold=project_samples_to_manifold,
-        projection_iters=projection_iters,
-        direction_projector=direction_projector,
-        corrector=corrector,
+        phase1=phase1, g=g, lower=lower, upper=upper, Jg=Jg, f=f, extra_check=extra_check,
+        nhr_options=nhr_options, restart_options=restart_options, slack_step=slack_step,
+        h=h, Jh=Jh, equality_tol=equality_tol,
+        project_samples_to_manifold=project_samples_to_manifold, projection_iters=projection_iters,
     )
 
 
+def per_restart_spread(
+    samples: Array, restart_info: list[Dict[str, Any]], idx: int,
+) -> list[Dict[str, Any]]:
+    """
+    For each successful restart, report the within-chain std/mean/range of
+    samples[:, idx] for that restart's own chain.
+
+    If within-chain std is tiny while across-restart means are spread over
+    a wide range, the walk isn't mixing locally - the pooled histogram's
+    apparent coverage is coming from restart diversity, not from the
+    random walk itself.
+    """
+    offset = 0
+    rows = []
+    for info in restart_info:
+        if info["status"] != "success":
+            continue
+        n = info["num_samples"]
+        chain = samples[offset:offset + n, idx]
+        offset += n
+        if n == 0:
+            continue
+        rows.append({
+            "restart": info["restart"], "n": n,
+            "mean": float(np.mean(chain)), "std": float(np.std(chain)),
+            "range": float(np.ptp(chain)),
+        })
+    return rows
+
+
+# -----------------------------------------------------------------------------
+# Manifold projection / superseded helpers
+# -----------------------------------------------------------------------------
+
+def slack_reduce_equalities(
+    x: Array,
+    h: Callable[[Array], Array],
+    Jh: Optional[Callable[[Array], Array]] = None,
+    lower: Optional[Array] = None,
+    upper: Optional[Array] = None,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+    max_iters: int = 10,
+    tol: float = 1e-8,
+) -> Array:
+    """
+    Gauss-Newton projection/slack-reduction step for equalities h(x)=0.
+
+    Useful after sampling in an epsilon tube if you want samples closer to
+    the exact manifold - used by nhr_sample's optional
+    project_samples_to_manifold polish.
+
+        dx = -J_h(x)^T @ (J_h(x)@J_h(x)^T + reg I)^(-1) @ h(x)
+    """
+    x = np.asarray(x, dtype=float).copy()
+
+    for _ in range(max_iters):
+        hx = np.asarray(h(x), dtype=float).reshape(-1)
+
+        if np.linalg.norm(hx, ord=np.inf) <= tol:
+            break
+
+        Jh_x = (
+            finite_difference_jacobian(h, x, finite_difference_step)
+            if Jh is None
+            else np.asarray(Jh(x), dtype=float)
+        )
+        if Jh_x.ndim == 1:
+            Jh_x = Jh_x.reshape(1, -1)
+
+        m = Jh_x.shape[0]
+        A = Jh_x @ Jh_x.T + regularization * np.eye(m)
+        dx = -Jh_x.T @ np.linalg.solve(A, hx)
+        x = x + dx
+
+        if lower is not None:
+            x = np.maximum(x, np.asarray(lower, dtype=float))
+        if upper is not None:
+            x = np.minimum(x, np.asarray(upper, dtype=float))
+
+    return x
+
+
+def make_tangent_direction_projector(
+    h: Callable[[Array], Array],
+    Jh: Optional[Callable[[Array], Array]] = None,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+) -> Callable[[Array, Array], Array]:
+    """
+    Returns direction_projector(x, d) that projects d into the tangent
+    space of h(x)=0.
+
+    SUPERSEDED: nhr_sample/restarting_nhr_sample no longer take a
+    direction_projector hook - step_hit_and_run always projects tangent to
+    h internally (sample_random_tangent_direction), matching the
+    reference. Kept here only for ad hoc experimentation.
+    """
+    def direction_projector(x: Array, d: Array) -> Array:
+        Jh_x = (
+            finite_difference_jacobian(h, x, finite_difference_step)
+            if Jh is None
+            else np.asarray(Jh(x), dtype=float)
+        )
+        return project_direction_to_equality_tangent(d=d, Jh_x=Jh_x, regularization=regularization)
+
+    return direction_projector
+
+
+def make_active_set_direction_projector(
+    g: Callable[[Array], Array],
+    Jg: Optional[Callable[[Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    active_tol: float = 1e-3,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+) -> Callable[[Array, Array], Array]:
+    """
+    Returns direction_projector(x, d) that projects d tangent to h(x)=0
+    AND tangent to whichever rows of g(x)<=0 are currently within
+    active_tol of their boundary.
+
+    SUPERSEDED: this was a heuristic bolted onto the old strict-accept
+    step to survive very tight inequalities. The new step_hit_and_run's
+    lenient accept criterion solves the same problem structurally, so this
+    is no longer wired into nhr_sample/restarting_nhr_sample. Kept here
+    only for ad hoc experimentation.
+    """
+    def direction_projector(x: Array, d: Array) -> Array:
+        rows = []
+
+        if h is not None:
+            Jh_x = (
+                finite_difference_jacobian(h, x, finite_difference_step)
+                if Jh is None
+                else np.asarray(Jh(x), dtype=float)
+            )
+            if Jh_x.size:
+                rows.append(np.atleast_2d(Jh_x))
+
+        gx = np.asarray(g(x), dtype=float).reshape(-1)
+        active = gx >= -active_tol
+        if np.any(active):
+            Jg_x = (
+                finite_difference_jacobian(g, x, finite_difference_step)
+                if Jg is None
+                else np.asarray(Jg(x), dtype=float)
+            )
+            rows.append(np.atleast_2d(Jg_x)[active, :])
+
+        if not rows:
+            return d
+
+        J_active = np.vstack(rows)
+        return project_direction_to_equality_tangent(d=d, Jh_x=J_active, regularization=regularization)
+
+    return direction_projector
+
+
+def make_gauss_newton_corrector(
+    g: Callable[[Array], Array],
+    Jg: Optional[Callable[[Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    iters: int = 2,
+    finite_difference_step: float = 1e-6,
+    regularization: float = 1e-8,
+) -> Callable[[Array], Array]:
+    """
+    Returns corrector(y) that nudges a candidate point toward feasibility
+    using a few Gauss-Newton slack steps.
+
+    SUPERSEDED: this was a per-micro-step retraction bolted onto the old
+    strict-accept step. run_interior's conditional step_gauss_newton
+    cleanup now does this at the right granularity (once per outer
+    iteration, only when needed). Kept here only for ad hoc experimentation.
+    """
+    def corrector(y: Array) -> Array:
+        y = np.asarray(y, dtype=float).copy()
+        for _ in range(iters):
+            dx = gauss_newton_slack_step(
+                x=y, g=g, Jg=Jg, h=h, Jh=Jh,
+                finite_difference_step=finite_difference_step, regularization=regularization,
+            )
+            if not np.any(dx):
+                break
+            y = y + dx
+        return y
+
+    return corrector
 
 
 # -----------------------------------------------------------------------------
