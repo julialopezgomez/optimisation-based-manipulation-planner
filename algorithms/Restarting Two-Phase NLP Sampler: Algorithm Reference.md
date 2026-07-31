@@ -1,6 +1,6 @@
 # Restarting Two-Phase NLP Sampler. Algorithm Guide
 
-This document summarises the algorithm and implementation choices for the NHR / mRRT sampler, as implemented in `summer-work/nhr.py` and exercised in `summer-work/nhr_standalone_test.py`. It is intended to be a quick reference for how the algorithm maps to the code, what options are available, and how to run it.
+This document summarises the algorithm and implementation choices for the NHR / mRRT sampler, as implemented in `algorithms/nhr.py` and exercised in `algorithms/nhr_standalone_test.py`. It is intended to be a quick reference for how the algorithm maps to the code, what options are available, and how to run it.
 
 The implementation is based on the two-phase sampling algorithm described in the following paper:  
 
@@ -62,7 +62,7 @@ RESTARTING TWO-PHASE NLP SAMPLER
 
 ## How to Run the NHR / mRRT Sampler
 
-Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to the actual code in `summer-work/nhr.py` (the library) and `summer-work/nhr_standalone_test.py` (a runnable harness against the real Panda+cap grasp problem, with no meshcat/IRIS/GCS overhead).
+Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to the actual code in `algorithms/nhr.py` (the library) and `algorithms/nhr_standalone_test.py` (a runnable harness against the real Panda+cap grasp problem, with no meshcat/IRIS/GCS overhead).
 
 ### Algorithm → code map
 
@@ -75,14 +75,14 @@ Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to t
 
 ### Quick start
 
-- `cd summer-work`
+- `cd algorithms`
 - Smoke test (fast, just checks nothing is broken):
   `python nhr_standalone_test.py --num-samples 20 --burn-in 10 --num-restarts 2 --quiet --no-plots`
 - Real run with NHR (default) and plots:
   `python nhr_standalone_test.py --num-restarts 30 --num-samples 500`
 - Same, but with mRRT instead:
   `python nhr_standalone_test.py --interior-method mRRT --num-restarts 30 --num-samples 500`
-- Output goes to `summer-work/joint_samples_plots/<timestamp>/`: one PNG histogram per joint, plus `info.json` with every diagnostic.
+- Output goes to `algorithms/joint_samples_plots/<timestamp>/`: one PNG histogram per joint, plus `info.json` with every diagnostic.
 
 ### CLI flags (`nhr_standalone_test.py`)
 
@@ -98,7 +98,7 @@ Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to t
 | `--seed` | 0 | RNG seed, for reproducibility |
 | `--quiet` | off | suppress per-step progress prints |
 | `--no-plots` | off | skip saving histograms (useful for quick iteration) |
-| `--output-root` | `summer-work/joint_samples_plots` | where plots/`info.json` are written |
+| `--output-root` | `algorithms/joint_samples_plots` | where plots/`info.json` are written |
 
 ### `NHROptions` fields (the sampler's internals)
 
