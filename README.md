@@ -3,9 +3,7 @@
 This is the code repository for my MInf 2 project: Optimisation-Based Manipulation Planner in Convex Decompositions of C-free.
 
 ### Walkthrough
-The main files of interest are `full_pipeline.ipynb`, `manipulation_planner_3dof.ipynb` and `manipulation_planner_4dof.ipynb` from the main directory. The former contains the full pipeline step by step through our manipulation algorithm, while the two latter files include an object-oriented-programming implementation embeeding the planner in a class, and providing example usages. One file contains constraints for a 3 DOF task, and the otherone with a 4 DOF task.
-
-The files within the testing directory have been used for testing and implementing the elements of this planner individually.
+See [STRUCTURE.md](STRUCTURE.md) for a full map of the repo - what lives where, what depends on what, and where to find things as the project grows beyond the original 3/4-DOF planner into the NHR/mRRT sampling and IRIS-ZO/clique-cover work.
 
 The my_sdfs directory contains the sdf files we have used to define our scene.
 
