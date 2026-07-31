@@ -57,7 +57,7 @@ RESTARTING TWO-PHASE NLP SAMPLER
 ```
 
 > **What this project actually implements**. \
-> The above diagram is the paper's full design space. `nhr.py` only implements **1 (Gauss-Newton downhill)** and **2B (NHR / mRRT)** — none of Phase II-A's relaxed-energy MCMC family (Langevin/MALA/Riemannian Langevin) exists in this codebase. See [[nhr_code_walkthrough]] for exactly what was built and how it maps to the code.
+> The above diagram is the paper's full design space. `nhr.py` only implements **1 (Gauss-Newton downhill)** and **2B (NHR / mRRT)** — none of Phase II-A's relaxed-energy MCMC family (Langevin/MALA/Riemannian Langevin) exists in this codebase. See `nhr_code_walkthrough.md` for exactly what was built and how it maps to the code.
 
 
 ## How to Run the NHR / mRRT Sampler
