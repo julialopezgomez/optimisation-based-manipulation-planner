@@ -1,6 +1,6 @@
 # `nhr.py` Code Walkthrough
 
-A section-by-section guide to `algorithms/nhr.py`, in the same order as the file, meant to be read side-by-side with the source. For *how to run it*, see the separate user guide; this doc is about *what each piece does and why it's shaped that way*.
+A section-by-section guide to `algorithms/nhr/nhr.py`, in the same order as the file, meant to be read side-by-side with the source. For *how to run it*, see the separate user guide; this doc is about *what each piece does and why it's shaped that way*.
 
 `nhr.py` is a from-scratch Python port of the reference C++ sampler behind Toussaint/Braun/Ortiz-Haro's "NLP Sampling" paper (`rai`'s `src/Optim/NLP_Sampler.cpp`), not the paper's own simplified pseudocode — the two differ in one important way (see "Key design decisions" below). It implements a **restarting two-phase sampler**: Phase I finds one feasible point per restart (Gauss-Newton downhill), Phase II explores the feasible set from there using one of two interchangeable interior methods (NHR or mRRT).
 
