@@ -1,0 +1,4 @@
+# Auto-requests @julialopezgomez as reviewer on every PR that touches any file -
+# including PRs opened by claude[bot] after it finishes an issue. GitHub excludes
+# a PR's own author from this request, so it has no effect on your own PRs.
+* @julialopezgomez
