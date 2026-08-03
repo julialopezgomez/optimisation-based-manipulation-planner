@@ -82,7 +82,7 @@ Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to t
   `python nhr_standalone_test.py --num-restarts 30 --num-samples 500`
 - Same, but with mRRT instead:
   `python nhr_standalone_test.py --interior-method mRRT --num-restarts 30 --num-samples 500`
-- Output goes to `algorithms/joint_samples_plots/<timestamp>/`: one PNG histogram per joint, plus `info.json` with every diagnostic.
+- Output goes to `artifacts/joint_samples_plots/<timestamp>/`: one PNG histogram per joint, plus `info.json` with every diagnostic.
 
 ### CLI flags (`nhr_standalone_test.py`)
 
@@ -98,7 +98,7 @@ Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to t
 | `--seed` | 0 | RNG seed, for reproducibility |
 | `--quiet` | off | suppress per-step progress prints |
 | `--no-plots` | off | skip saving histograms (useful for quick iteration) |
-| `--output-root` | `algorithms/joint_samples_plots` | where plots/`info.json` are written |
+| `--output-root` | `artifacts/joint_samples_plots` | where plots/`info.json` are written |
 
 ### `NHROptions` fields (the sampler's internals)
 

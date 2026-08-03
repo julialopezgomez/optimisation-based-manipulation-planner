@@ -292,7 +292,7 @@ def parse_args():
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--quiet", action="store_true")
     p.add_argument("--no-plots", action="store_true")
-    p.add_argument("--output-root", default=str(Path(__file__).resolve().parent / "joint_samples_plots"))
+    p.add_argument("--output-root", default=str(PROJECT_ROOT / "artifacts" / "joint_samples_plots"))
     return p.parse_args()
 
 
