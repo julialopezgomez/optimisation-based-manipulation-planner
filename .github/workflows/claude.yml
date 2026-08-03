@@ -42,15 +42,21 @@ jobs:
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"
 
-          # Grants the `gh pr create` tool so Claude *can* open a real PR after
-          # pushing a fix. Granting the tool alone isn't enough, though - its
-          # default instructions describe leaving a "Create PR" link as the
-          # fallback for when it lacks the permission, and having the tool
-          # available doesn't make it revisit that default - so --append-system-prompt
-          # tells it explicitly to use the tool now that it has it.
+          # Grants the `gh pr create`/`gh pr edit` tools so Claude *can* open a
+          # real PR and request a reviewer after pushing a fix. Granting the
+          # tools alone isn't enough, though - its default instructions describe
+          # leaving a "Create PR" link as the fallback for when it lacks the
+          # permission, and having a tool available doesn't make it revisit that
+          # default - so --append-system-prompt tells it explicitly to use them.
+          #
+          # CODEOWNERS (.github/CODEOWNERS) does NOT reliably auto-request a
+          # review on PRs authored by a GitHub Actions bot identity - a known
+          # GitHub platform limitation, confirmed on PR #31 (empty
+          # reviewRequests despite a correct CODEOWNERS entry and a genuine
+          # bot author) - so the reviewer request has to be explicit too.
           claude_args: |
-            --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(gh pr create:*)"
-            --append-system-prompt "You have Bash(gh pr create:*) permission. After pushing your fix, actually run gh pr create to open the pull request yourself - do not stop at providing a 'Create PR' link for the user to click. Only report the PR URL in your final comment once you have actually created it."
+            --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(gh pr create:*),Bash(gh pr edit:*)"
+            --append-system-prompt "You have Bash(gh pr create:*) and Bash(gh pr edit:*) permission. After pushing your fix: (1) actually run gh pr create to open the pull request yourself - do not stop at providing a 'Create PR' link for the user to click; (2) immediately after, run gh pr edit <pr-number-or-url> --add-reviewer julialopezgomez to request a review - CODEOWNERS does not reliably do this automatically for bot-authored PRs. Only report the PR URL in your final comment once both steps are done."
 
           # Optional: Advanced settings configuration
           # settings: |
