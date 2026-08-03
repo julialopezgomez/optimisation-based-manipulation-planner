@@ -46,7 +46,7 @@ jobs:
           # fix, instead of degrading to a "Create PR" link when it lacks the
           # permission (its own default instructions already say to open one).
           claude_args: |
-            --allowedTools "Bash(gh pr create:*)"
+            --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(gh pr create:*)"
 
           # Optional: Advanced settings configuration
           # settings: |
