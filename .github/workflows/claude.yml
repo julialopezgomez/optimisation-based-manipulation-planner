@@ -6,7 +6,7 @@ on:
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened, assigned]
+    types: [opened, assigned, labeled]
   pull_request_review:
     types: [submitted]
 
@@ -16,7 +16,8 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent-ready') ||
+      (github.event_name == 'issues' && github.event.action != 'labeled' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -42,19 +43,29 @@ jobs:
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"
 
-          # Grants the `gh pr create` tool so Claude opens a real PR after pushing a
-          # fix, instead of degrading to a "Create PR" link when it lacks the
-          # permission (its own default instructions already say to open one).
-          claude_args: |
-            --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(gh pr create:*)"
+          # Triggers when the "agent-ready" label is applied to an issue.
+          # The action does its own internal trigger check independent of the
+          # job-level `if:` above (which only controls whether the job spins
+          # up at all) - its default label_trigger is "claude", so it has to
+          # be pointed at "agent-ready" explicitly or it would silently no-op
+          # even once the job runs.
+          label_trigger: "agent-ready"
 
-          # Optional: Advanced settings configuration
-          # settings: |
-          #   {
-          #     "env": {
-          #       "NODE_ENV": "test"
-          #     }
-          #   }
+          # Grants the `gh pr create`/`gh pr edit` tools so Claude *can* open a
+          # real PR and request a reviewer after pushing a fix. Granting the
+          # tools alone isn't enough, though - its default instructions describe
+          # leaving a "Create PR" link as the fallback for when it lacks the
+          # permission, and having a tool available doesn't make it revisit that
+          # default - so --append-system-prompt tells it explicitly to use them.
+          #
+          # CODEOWNERS (.github/CODEOWNERS) does NOT reliably auto-request a
+          # review on PRs authored by a GitHub Actions bot identity - a known
+          # GitHub platform limitation, confirmed on PR #31 (empty
+          # reviewRequests despite a correct CODEOWNERS entry and a genuine
+          # bot author) - so the reviewer request has to be explicit too.
+          claude_args: |
+            --allowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(gh pr create:*),Bash(gh pr edit:*)"
+            --append-system-prompt "You have Bash(gh pr create:*) and Bash(gh pr edit:*) permission. After pushing your fix: (1) actually run gh pr create to open the pull request yourself - do not stop at providing a 'Create PR' link for the user to click; (2) immediately after, run gh pr edit <pr-number-or-url> --add-reviewer julialopezgomez to request a review - CODEOWNERS does not reliably do this automatically for bot-authored PRs. Only report the PR URL in your final comment once both steps are done."
 
           # Optional: Advanced settings configuration
           # settings: |
