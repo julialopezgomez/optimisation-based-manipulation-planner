@@ -1,5 +1,5 @@
 """
-Standalone harness for validating nhr.py's samplers against the real
+Standalone harness for validating nlp_sampling.py's samplers against the real
 Panda+cap grasp problem, without any of full_arm_nhr.ipynb's IRIS/GCS/
 meshcat machinery (CspaceFreePolytope, CIrisPlantVisualizer,
 ManipulationPlanner). Builds only what h_grasp_eq/g_grasp_ineq actually
@@ -22,7 +22,7 @@ from pydrake.planning import RobotDiagramBuilder
 from pydrake.forwarddiff import jacobian as autodiff_jacobian
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import nhr
+import nlp_sampling
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -185,7 +185,7 @@ def make_joint_limits(plant, idx_f1, idx_f2):
 
 # -----------------------------------------------------------------------------
 # Call-counting wrappers (self-contained Drake-eval-count diagnostic - no
-# nhr.py changes needed, since WalkerState.evals isn't exposed by the
+# nlp_sampling.py changes needed, since WalkerState.evals isn't exposed by the
 # public sampling entry points)
 # -----------------------------------------------------------------------------
 
@@ -203,7 +203,7 @@ class CallCounter:
 # Diagnostics
 # -----------------------------------------------------------------------------
 
-def run_diagnostics(samples, restart_info, lower, upper, joint_names, joint_idx,
+def run_diagnostics(samples, restart_info, lower, upper, joint_names,
                      nhr_options, restart_options, h_grasp_eq, g_grasp_ineq,
                      elapsed, eval_counts, output_root, make_plots):
     num_restarts = restart_options.num_restarts
@@ -223,23 +223,8 @@ def run_diagnostics(samples, restart_info, lower, upper, joint_names, joint_idx,
         per_sample = counter.count / max(len(samples), 1)
         print(f"  {name}: {counter.count} calls total, {per_sample:.1f} per returned sample")
 
-    # Reason-code histogram, pooled across all successful restarts' per-step diagnostics.
-    reason_counts: dict[str, int] = {}
-    for info in successes:
-        for step in info["diagnostics"]:
-            reason = step.get("hr_reason", "?")
-            reason_counts[reason] = reason_counts.get(reason, 0) + 1
-    print()
-    print("reason-code histogram (per interior-sampling step, pooled):")
-    total_steps = sum(reason_counts.values())
-    for reason, count in sorted(reason_counts.items(), key=lambda kv: -kv[1]):
-        print(f"  {reason:20s} {count:6d}  ({100.0 * count / max(total_steps, 1):5.1f}%)")
-
-    cleanup_ran = sum(1 for info in successes for step in info["diagnostics"] if step.get("cleanup_ran"))
-    print(f"  cleanup ran on {cleanup_ran}/{total_steps} steps "
-          f"({100.0 * cleanup_ran / max(total_steps, 1):.1f}%)")
-
-    # Final residual summary.
+    # Final residual summary (grasp-constraint-specific - needs h_grasp_eq/g_grasp_ineq,
+    # so it stays here rather than in nlp_sampling.save_run_analytics_artifacts).
     if len(samples):
         hvals = np.array([h_grasp_eq(q) for q in samples])
         gvals = np.array([g_grasp_ineq(q) for q in samples])
@@ -248,31 +233,16 @@ def run_diagnostics(samples, restart_info, lower, upper, joint_names, joint_idx,
         print(f"  max |h|_inf = {np.max(np.abs(hvals)):.3e}   mean |h|_inf = {np.mean(np.abs(hvals)):.3e}")
         print(f"  max g       = {np.max(gvals):.3e}   (want <= 0)")
 
-    # per_restart_spread for wrist, both fingers, cap, and all arm joints.
-    print()
-    print("per-restart spread (within-chain vs across-restart mean):")
-    tracked = {
-        "wrist (panda_joint7)": joint_idx["idx_wrist"],
-        "finger1": joint_idx["idx_f1"],
-        "finger2": joint_idx["idx_f2"],
-        "cap": joint_idx["idx_cap"],
-        **{f"arm joint {i+1}": idx for i, idx in enumerate(joint_idx["idx_arm"])},
-    }
-    for label, idx in tracked.items():
-        rows = nhr.per_restart_spread(samples, restart_info, idx) if len(samples) else []
-        if not rows:
-            print(f"  {label:24s} no samples")
-            continue
-        within = float(np.median([r["std"] for r in rows]))
-        across = float(np.std([r["mean"] for r in rows]))
-        print(f"  {label:24s} median within-chain std={within:.5f}  across-restart std of means={across:.5f}")
-
+    # Everything else a run reports - reason-code histogram, cleanup-ran
+    # fraction, per-run final residual summary, Phase-1/accept rates,
+    # wall-clock timing - plus per-joint distributions and per_restart_spread
+    # visualized per joint, all in one call.
     if make_plots and len(samples):
-        nhr.save_joint_sample_artifacts(
+        nlp_sampling.save_run_analytics_artifacts(
             samples, restart_info, lower=lower, upper=upper, joint_names=joint_names,
             options=nhr_options, output_root=output_root,
             note=f"standalone harness, interior_method={nhr_options.interior_method}",
-            show=False,
+            show=False, elapsed=elapsed,
         )
 
 
@@ -321,7 +291,7 @@ def main():
     g_counter = CallCounter(g_grasp_ineq)
     eval_counts = {"h_grasp_eq": h_counter, "g_grasp_ineq": g_counter}
 
-    nhr_options = nhr.NHROptions(
+    nhr_options = nlp_sampling.NHROptions(
         num_samples=args.num_samples,
         burn_in=args.burn_in,
         interior_method=args.interior_method,
@@ -329,14 +299,14 @@ def main():
         random_seed=args.seed,
         verbose=not args.quiet,
     )
-    restart_options = nhr.RestartOptions(
+    restart_options = nlp_sampling.RestartOptions(
         num_restarts=args.num_restarts,
         strategy=args.restart_strategy,
         candidates_per_restart=100,
         random_seed=args.seed,
     )
 
-    phase1 = lambda seed: nhr.run_downhill_phase1(
+    phase1 = lambda seed: nlp_sampling.run_downhill_phase1(
         seed, g=g_counter, Jg=g_jacobian_ineq, lower=lower, upper=upper,
         options=nhr_options, h=h_counter, Jh=h_jacobian_eq,
     )
@@ -344,7 +314,7 @@ def main():
     print(f"Sampling: interior_method={args.interior_method}, "
           f"{args.num_restarts} restarts x {args.num_samples} samples...")
     t0 = time.time()
-    samples, restart_info = nhr.restarting_nhr_sample(
+    samples, restart_info = nlp_sampling.restarting_nhr_sample(
         phase1=phase1, g=g_counter, lower=lower, upper=upper, Jg=g_jacobian_ineq,
         nhr_options=nhr_options, restart_options=restart_options,
         h=h_counter, Jh=h_jacobian_eq, equality_tol=args.equality_tol,
@@ -353,7 +323,7 @@ def main():
     elapsed = time.time() - t0
 
     run_diagnostics(
-        samples, restart_info, lower, upper, joint_names, joint_idx,
+        samples, restart_info, lower, upper, joint_names,
         nhr_options, restart_options, h_grasp_eq, g_grasp_ineq,
         elapsed, eval_counts, args.output_root, make_plots=not args.no_plots,
     )

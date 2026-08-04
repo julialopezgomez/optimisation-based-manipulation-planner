@@ -1,8 +1,8 @@
-# `nhr.py` Code Walkthrough
+# `nlp_sampling.py` Code Walkthrough
 
-A section-by-section guide to `algorithms/nhr/nhr.py`, in the same order as the file, meant to be read side-by-side with the source. For *how to run it*, see the separate user guide; this doc is about *what each piece does and why it's shaped that way*.
+A section-by-section guide to `algorithms/nlp_sampling/nlp_sampling.py`, in the same order as the file, meant to be read side-by-side with the source. For *how to run it*, see the separate user guide; this doc is about *what each piece does and why it's shaped that way*.
 
-`nhr.py` is a from-scratch Python port of the reference C++ sampler behind Toussaint/Braun/Ortiz-Haro's "NLP Sampling" paper (`rai`'s `src/Optim/NLP_Sampler.cpp`), not the paper's own simplified pseudocode — the two differ in one important way (see "Key design decisions" below). It implements a **restarting two-phase sampler**: Phase I finds one feasible point per restart (Gauss-Newton downhill), Phase II explores the feasible set from there using one of two interchangeable interior methods (NHR or mRRT).
+`nlp_sampling.py` is a from-scratch Python port of the reference C++ sampler behind Toussaint/Braun/Ortiz-Haro's "NLP Sampling" paper (`rai`'s `src/Optim/NLP_Sampler.cpp`), not the paper's own simplified pseudocode — the two differ in one important way (see "Key design decisions" below). It implements a **restarting two-phase sampler**: Phase I finds one feasible point per restart (Gauss-Newton downhill), Phase II explores the feasible set from there using one of two interchangeable interior methods (NHR or mRRT).
 
 ## Mental model: how a call flows through the file
 
@@ -123,9 +123,11 @@ This is the largest and most important section — the actual stepping mechanics
 - `slack_reduce_equalities(x, h, Jh, lower, upper, ..., max_iters, tol)` (line 1209) — iterative GN projection onto `h(x)=0` only; the first half of `nhr_sample`'s polish step.
 - `make_tangent_direction_projector`, `make_active_set_direction_projector`, `make_gauss_newton_corrector` (lines 1258–1365) — **all three are marked SUPERSEDED in their own docstrings.** They were bolted onto an earlier, stricter-accept version of the sampler to survive tight constraints, and are **no longer called by `nhr_sample`/`restarting_nhr_sample`** (which don't even accept a `direction_projector`/`corrector` argument anymore). `step_hit_and_run`'s built-in tangent projection + lenient accept, and mRRT's decoupled stepping, solve the same problem structurally instead. Kept only for ad hoc experimentation — don't expect to see them on the main call path.
 
-## Plotting and saving artifacts (lines 1372–1557)
+## Plotting and saving artifacts (lines 1372–1744)
 
-- `save_joint_sample_artifacts(samples, diagnostics, lower, upper, joint_names, options, output_root, note, timestamp, bins, show)` (line 1372) — the only function in the file touching matplotlib/scipy. Saves one histogram PNG per joint (mean/std/Gaussian-fit overlay, limit lines) plus a single `info.json` with per-joint stats, the options used, and everything passed via `diagnostics`/`restart_info` (through `_json_safe`). This is what `nhr_standalone_test.py` calls at the end of a run.
+- `_grid_shape(n, max_cols)` / `_draw_joint_histogram(ax, ...)` (lines 1372, 1379) — shared helpers: `_grid_shape` picks a subplot grid (capped at `max_cols` columns) from a panel count; `_draw_joint_histogram` draws one joint's histogram/Gaussian-fit/mean-std-limit markers onto a given `Axes`, so the per-joint saved PNG and the combined inline grid figure render identically without duplicating the plotting logic.
+- `save_joint_sample_artifacts(samples, diagnostics, lower, upper, joint_names, options, output_root, note, timestamp, bins, show)` (line 1430) — saves one histogram PNG per joint (mean/std/Gaussian-fit overlay, limit lines) plus a single `info.json` with per-joint stats, the options used, and everything passed via `diagnostics`/`restart_info` (through `_json_safe`). When `show=True`, all joints are displayed inline as one combined subplot grid (via `_grid_shape`/`_draw_joint_histogram`) instead of one `plt.show()` per joint — the individual per-joint PNGs saved to disk are unaffected.
+- `save_run_analytics_artifacts(samples, restart_info, lower, upper, joint_names, options, output_root, note, timestamp, bins, show, elapsed)` (line 1591) — the one-call preset for everything else a run reports: calls `save_joint_sample_artifacts` for the per-joint distributions, then plots the pooled reason-code histogram and a per-joint grid of `per_restart_spread` (within-chain mean ± std vs. restart), and writes a `run_analytics_summary.json` with the cleanup-ran fraction, accept rate, Phase-1/success counts, a final-residual summary (from each restart's last diagnostic step's `err`), and (if `elapsed` is passed) wall-clock/samples-per-second. This is what `nhr_standalone_test.py`'s `run_diagnostics` calls instead of reimplementing its own plotting.
 
 ---
 

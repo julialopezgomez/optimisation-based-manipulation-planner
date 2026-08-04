@@ -15,21 +15,21 @@ The root of the repo holds the "main" notebooks, in roughly pedagogical/executio
 3. **`full_pipeline.ipynb`** - a separate, more granular, from-scratch pipeline (clique-cover C-free generation -> region certification -> MIQP path -> GCS trajectory) on the same toy scene. Does **not** import or reuse `ManipulationPlanner` from (1)/(2), despite the similar subject matter - it's self-contained.
 4. **`full_arm_blocked_joints_3dof.ipynb`** - the real Panda arm + hand + bottle cap, with most joints locked via a locked URDF (3 active positions) - the "blocked joints" analogue of (1) on the real arm. Yet another inline `ManipulationPlanner` copy. Reads `data/cfree/cfree_drake_1_48.yaml`/`cfree_drake_1_49.yaml`/`path_drake_1_48.npy`.
 5. **`full_arm_blocked_joints_4dof.ipynb`** - same pattern, 4 active positions - the analogue of (2). Reads+writes `data/cfree/cfree_4dof.yaml` and writes `data/cfree/connected_components_4dof.yaml`.
-6. **`full_arm_nhr.ipynb`** - work in progress, the eventual master notebook: integrates the NHR/mRRT sampling library (`algorithms/nhr/nhr.py`) with the full (unblocked) Panda arm + Drake IRIS/GCS machinery to sample grasp poses and plan in the full configuration space. Reads `data/cfree/cfree_full_98coverage.yaml`, produced by `data/generation/full_arm_c_free.ipynb` (see below) - **this is a real pipeline dependency**, even though the generation notebook itself isn't at root.
+6. **`full_arm_nhr.ipynb`** - work in progress, the eventual master notebook: integrates the NHR/mRRT sampling library (`algorithms/nlp_sampling/nlp_sampling.py`) with the full (unblocked) Panda arm + Drake IRIS/GCS machinery to sample grasp poses and plan in the full configuration space. Reads `data/cfree/cfree_full_98coverage.yaml`, produced by `data/generation/full_arm_c_free.ipynb` (see below) - **this is a real pipeline dependency**, even though the generation notebook itself isn't at root.
 
 Root also holds the two shared helper modules imported by nearly everything above (`ciris_plant_visualizer.py`, `visualization_utils.py`) and `my_sdfs/` (shared SDF/URDF scene assets).
 
 ## 3. `algorithms/` - shared, importable code
 
-Two sibling subpackages, each a flat set of modules rather than a package with its own `__init__.py`, so every existing `import nhr` / `from nhr import (...)` keeps working unmodified regardless of where a notebook itself lives:
+Two sibling subpackages, each a flat set of modules rather than a package with its own `__init__.py`, so every existing `import nlp_sampling` / `from nlp_sampling import (...)` keeps working unmodified regardless of where a notebook itself lives:
 
-- **`nhr/`** - the NLP-sampling library and its docs/harness:
-  - **`nhr.py`** - the NLP-sampling library (Nonlinear Hit-and-Run + Manifold-RRT interior methods, two-phase restart sampler). See `nhr_code_walkthrough.md` in this folder for a full function-by-function guide.
-  - **`nhr_standalone_test.py`** - a runnable harness that validates `nhr.py` against the real Panda+cap grasp problem with a minimal Drake plant (no meshcat/IRIS/GCS overhead).
+- **`nlp_sampling/`** - the NLP-sampling library and its docs/harness:
+  - **`nlp_sampling.py`** - the restarting two-phase NLP-sampling library (Nonlinear Hit-and-Run + Manifold-RRT interior methods, two-phase restart sampler) - renamed from `nhr.py` to reflect that `interior_method` selects between both interior methods, not just NHR. See `nhr_code_walkthrough.md` in this folder for a full function-by-function guide.
+  - **`nhr_standalone_test.py`** - a runnable harness that validates `nlp_sampling.py` against the real Panda+cap grasp problem with a minimal Drake plant (no meshcat/IRIS/GCS overhead).
   - **`nhr_code_walkthrough.md`**, **`Restarting Two-Phase NLP Sampler: Algorithm Reference.md`** - docs for the above.
 - **`iris_zo_cliquecover/`** - empty placeholder package for the upcoming IRIS-ZO/clique-cover-with-NLP-sampling reimplementation. See its own `README.md` for the closest existing precedent to build from.
 
-**Standard bootstrap cell** for a new notebook anywhere in the repo that needs `algorithms/nhr/` and/or the root helper modules on `sys.path`:
+**Standard bootstrap cell** for a new notebook anywhere in the repo that needs `algorithms/nlp_sampling/` and/or the root helper modules on `sys.path`:
 
 ```python
 import sys
@@ -42,7 +42,7 @@ def _find_repo_root(start: Path, markers=(".git", "README.md")) -> Path:
     raise RuntimeError(f"Could not locate repo root above {start}")
 
 REPO_ROOT = _find_repo_root(Path.cwd())
-for _p in (REPO_ROOT, REPO_ROOT / "algorithms" / "nhr", REPO_ROOT / "algorithms" / "iris_zo_cliquecover"):
+for _p in (REPO_ROOT, REPO_ROOT / "algorithms" / "nlp_sampling", REPO_ROOT / "algorithms" / "iris_zo_cliquecover"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
@@ -51,13 +51,13 @@ from ciris_plant_visualizer import CIrisPlantVisualizer
 
 This works regardless of how deep the notebook lives - no more editing a `parent = Path.cwd().parent` line every time a file moves. Skip this entirely for notebooks that sit exactly at repo root and only need the root helper modules (they resolve via a plain import with no path manipulation needed).
 
-No proper Python package (`pyproject.toml` + editable install) yet - deliberately deferred until `iris_zo_cliquecover` is mature and there's a second real consumer of `algorithms/` beyond `nhr`. Revisit then.
+No proper Python package (`pyproject.toml` + editable install) yet - deliberately deferred until `iris_zo_cliquecover` is mature and there's a second real consumer of `algorithms/` beyond `nlp_sampling`. Revisit then.
 
 ## 4. `experiments/` - exploratory, prototype, or superseded notebooks
 
 - **`grasping_space.ipynb`** - full 10-DOF unblocked Panda arm scene, similar scope to `data/generation/full_arm_c_free.ipynb` but ~2 weeks older; likely an earlier draft. **This is the closest existing precedent for the upcoming IRIS-ZO/clique-cover work** - it has a markdown header literally titled "Generate C-free for full franka arm with IRIS-ZO." Cross-referenced from `algorithms/iris_zo_cliquecover/README.md`.
 - **`grasping_space_3d.ipynb`** - oldest file in this group, toy WSG-gripper (not the Panda arm) IRIS-ZO/clique-cover exploration. Superseded prototype.
-- **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nhr.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nhr/nhr_standalone_test.py`.
+- **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nlp_sampling.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nlp_sampling/nhr_standalone_test.py`.
 
 ## 5. `data/` - c-free polytope data and the notebook that generates it
 
@@ -70,7 +70,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 
 ## 6. `artifacts/` - ephemeral, gitignored run outputs
 
-- **`artifacts/joint_samples_plots/`** - per-run NHR sampling diagnostics (per-joint histogram PNGs + `info.json`), written by `nhr.save_joint_sample_artifacts(..., output_root=...)`. `full_arm_nhr.ipynb` points `output_root` at `artifacts/joint_samples_plots`, and `algorithms/nhr/nhr_standalone_test.py`'s `--output-root` default now resolves to the same repo-root-anchored `artifacts/joint_samples_plots` (via its existing `PROJECT_ROOT`), regardless of the CLI's working directory.
+- **`artifacts/joint_samples_plots/`** - per-run NHR sampling diagnostics (per-joint histogram PNGs + `info.json`), written by `nlp_sampling.save_joint_sample_artifacts(..., output_root=...)`. `full_arm_nhr.ipynb` points `output_root` at `artifacts/joint_samples_plots`, and `algorithms/nlp_sampling/nhr_standalone_test.py`'s `--output-root` default now resolves to the same repo-root-anchored `artifacts/joint_samples_plots` (via its existing `PROJECT_ROOT`), regardless of the CLI's working directory.
 
 Matched by `**/joint_samples_plots/` in `.gitignore` - new runs are never tracked. (Some older runs predating that gitignore rule are still tracked in git history; that's fine, just legacy.)
 

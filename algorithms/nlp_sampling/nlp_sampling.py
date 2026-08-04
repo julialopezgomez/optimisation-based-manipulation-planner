@@ -1369,6 +1369,64 @@ def make_gauss_newton_corrector(
 # Plotting and saving artifacts
 # -----------------------------------------------------------------------------
 
+def _grid_shape(n: int, max_cols: int = 5) -> tuple[int, int]:
+    """Automatic subplot grid shape for n panels, capped at max_cols columns."""
+    cols = max(1, min(max_cols, n))
+    rows = int(np.ceil(n / cols)) if n > 0 else 1
+    return rows, cols
+
+
+def _draw_joint_histogram(
+    ax,
+    values: Array,
+    joint_name: str,
+    lower_limit: Optional[float],
+    upper_limit: Optional[float],
+    bins: int,
+) -> tuple[float, float]:
+    """Draws one joint's sample histogram + Gaussian fit + mean/std/limit
+    markers onto ax. Shared by the per-joint saved PNGs and the combined
+    grid figure so both paths render identically."""
+    from scipy.stats import norm
+
+    mean = float(np.mean(values))
+    std = float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
+
+    _, bin_edges, _ = ax.hist(
+        values, bins=bins, density=False, alpha=0.7,
+        color="#4c78a8", edgecolor="white", label="Samples",
+    )
+
+    if std > 0 and len(bin_edges) > 1:
+        x = np.linspace(bin_edges[0], bin_edges[-1], 400)
+        bin_width = bin_edges[1] - bin_edges[0]
+        pdf = norm.pdf(x, loc=mean, scale=std) * len(values) * bin_width
+        ax.plot(x, pdf, color="#f58518", linewidth=2.5, label="Gaussian fit")
+
+    ax.axvline(mean, color="#54a24b", linestyle="--", linewidth=2, label=f"Mean = {mean:.4f}")
+    ax.axvline(mean - std, color="#72b7b2", linestyle=":", linewidth=2, label=f"Std = {std:.4f}")
+    ax.axvline(mean + std, color="#72b7b2", linestyle=":", linewidth=2)
+
+    if lower_limit is not None:
+        ax.axvline(
+            lower_limit, color="#e45756", linestyle="-.", linewidth=2,
+            label=f"Lower limit = {lower_limit:.4f}",
+        )
+    if upper_limit is not None:
+        ax.axvline(
+            upper_limit, color="#b279a2", linestyle="-.", linewidth=2,
+            label=f"Upper limit = {upper_limit:.4f}",
+        )
+
+    ax.set_title(f"Joint Samples: {joint_name}")
+    ax.set_xlabel("Joint value")
+    ax.set_ylabel("Frequency")
+    ax.grid(True, alpha=0.25)
+    ax.legend(loc="best", fontsize=8)
+
+    return mean, std
+
+
 def save_joint_sample_artifacts(
     samples: Array,
     diagnostics: list[Dict[str, Any]],
@@ -1417,7 +1475,6 @@ def save_joint_sample_artifacts(
     """
 
     import matplotlib.pyplot as plt
-    from scipy.stats import norm
 
     samples = np.asarray(samples, dtype=float)
     if samples.ndim != 2:
@@ -1452,64 +1509,31 @@ def save_joint_sample_artifacts(
 
     joint_reports = []
 
+    if show:
+        grid_rows, grid_cols = _grid_shape(num_joints)
+        grid_fig, grid_axes = plt.subplots(
+            grid_rows, grid_cols, figsize=(grid_cols * 4.5, grid_rows * 3.5), squeeze=False,
+        )
+        grid_axes_flat = grid_axes.flatten()
+    else:
+        grid_fig, grid_axes_flat = None, None
+
     for idx, joint_name in enumerate(joint_names):
         values = samples[:, idx]
-        mean = float(np.mean(values))
-        std = float(np.std(values, ddof=1)) if num_samples > 1 else 0.0
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-        _, bin_edges, _ = ax.hist(
-            values,
-            bins=bins,
-            density=False,
-            alpha=0.7,
-            color="#4c78a8",
-            edgecolor="white",
-            label="Samples",
-        )
-
-        if std > 0 and len(bin_edges) > 1:
-            x = np.linspace(bin_edges[0], bin_edges[-1], 400)
-            bin_width = bin_edges[1] - bin_edges[0]
-            pdf = norm.pdf(x, loc=mean, scale=std) * len(values) * bin_width
-            ax.plot(x, pdf, color="#f58518", linewidth=2.5, label="Gaussian fit")
-
-        ax.axvline(mean, color="#54a24b", linestyle="--", linewidth=2, label=f"Mean = {mean:.4f}")
-        ax.axvline(mean - std, color="#72b7b2", linestyle=":", linewidth=2, label=f"Std = {std:.4f}")
-        ax.axvline(mean + std, color="#72b7b2", linestyle=":", linewidth=2)
-
         lower_limit = None if lower is None else float(lower[idx])
         upper_limit = None if upper is None else float(upper[idx])
 
-        if lower_limit is not None:
-            ax.axvline(
-                lower_limit,
-                color="#e45756",
-                linestyle="-.",
-                linewidth=2,
-                label=f"Lower limit = {lower_limit:.4f}",
-            )
-        if upper_limit is not None:
-            ax.axvline(
-                upper_limit,
-                color="#b279a2",
-                linestyle="-.",
-                linewidth=2,
-                label=f"Upper limit = {upper_limit:.4f}",
-            )
-
-        ax.set_title(f"Joint Samples: {joint_name}")
-        ax.set_xlabel("Joint value")
-        ax.set_ylabel("Frequency")
-        ax.grid(True, alpha=0.25)
-        ax.legend(loc="best", fontsize=9)
+        # Individual per-joint figure - always saved to disk, never shown.
+        fig, ax = plt.subplots(figsize=(8, 5))
+        mean, std = _draw_joint_histogram(ax, values, joint_name, lower_limit, upper_limit, bins)
         fig.tight_layout()
 
         file_name = f"{safe_filename(joint_name)}.png"
         fig.savefig(run_dir / file_name, dpi=200, bbox_inches="tight")
-        if show:
-            plt.show()
         plt.close(fig)
+
+        if show:
+            _draw_joint_histogram(grid_axes_flat[idx], values, joint_name, lower_limit, upper_limit, bins)
 
         joint_reports.append({
             "joint_index": idx,
@@ -1522,6 +1546,13 @@ def save_joint_sample_artifacts(
             "lower_limit": lower_limit,
             "upper_limit": upper_limit,
         })
+
+    if show:
+        for ax in grid_axes_flat[num_joints:]:
+            ax.axis("off")
+        grid_fig.tight_layout()
+        plt.show()
+        plt.close(grid_fig)
 
     info = {
         "created_at": datetime.now().isoformat(timespec="seconds"),
@@ -1553,5 +1584,161 @@ def save_joint_sample_artifacts(
     if note:
         print(f"NHR note: {note}")
     print(f"Saved joint sample artifacts to {run_dir}")
+
+    return run_dir
+
+
+def save_run_analytics_artifacts(
+    samples: Array,
+    restart_info: list[Dict[str, Any]],
+    lower: Optional[Array] = None,
+    upper: Optional[Array] = None,
+    joint_names: Optional[List[str]] = None,
+    options: Optional[NHROptions] = None,
+    output_root: str | Path = "joint_samples_plots",
+    note: Optional[str] = None,
+    timestamp: Optional[str] = None,
+    bins: int = 30,
+    show: bool = True,
+    elapsed: Optional[float] = None,
+) -> Path:
+    """
+    One-call preset covering the full set of analytics a restarting-sampler
+    run actually reports: per-joint distributions (via
+    save_joint_sample_artifacts), the reason-code histogram, the
+    cleanup-ran fraction, a final-residual summary, Phase-1/accept rates,
+    wall-clock timing, and per_restart_spread visualized (not just returned
+    as data) per joint. Takes the same restart_info shape
+    restarting_nhr_sample returns, so nhr_standalone_test.py,
+    full_arm_nhr.ipynb, and any future caller can call this one method
+    instead of each reimplementing their own diagnostics.
+
+    Parameters
+    ----------
+    samples, lower, upper, joint_names, options, output_root, note,
+    timestamp, bins, show:
+        Same meaning as in save_joint_sample_artifacts.
+    restart_info:
+        Per-restart info list as returned by restarting_nhr_sample - each
+        entry has a "status" ("success"/"phase1_failed"/"nhr_failed") and,
+        for successful restarts, a "diagnostics" list of per-step dicts
+        (as returned by run_interior).
+    elapsed:
+        Optional wall-clock duration (seconds) of the sampling run, used to
+        report a samples/sec rate. Left as None, timing is omitted.
+
+    Returns
+    -------
+    run_dir:
+        The directory (also used by save_joint_sample_artifacts) that all
+        analytics artifacts - per-joint PNGs, reason-code histogram,
+        per-restart-spread grid, info.json, run_analytics_summary.json -
+        were written to.
+    """
+    import matplotlib.pyplot as plt
+
+    run_dir = save_joint_sample_artifacts(
+        samples, restart_info, lower=lower, upper=upper, joint_names=joint_names,
+        options=options, output_root=output_root, note=note, timestamp=timestamp,
+        bins=bins, show=show,
+    )
+
+    samples = np.asarray(samples, dtype=float)
+    num_joints = samples.shape[1] if samples.ndim == 2 else 0
+    if joint_names is None:
+        joint_names = [f"q{i}" for i in range(num_joints)]
+
+    successes = [info for info in restart_info if info.get("status") == "success"]
+    phase1_failed = [info for info in restart_info if info.get("status") == "phase1_failed"]
+    nhr_failed = [info for info in restart_info if info.get("status") == "nhr_failed"]
+
+    reason_counts: Dict[str, int] = {}
+    accept_reasons = {"accepted", "mh_accept"}
+    num_accepted = 0
+    cleanup_ran = 0
+    total_steps = 0
+    final_errs = []
+    for info in successes:
+        diag = info.get("diagnostics", [])
+        for step in diag:
+            reason = step.get("hr_reason", "?")
+            reason_counts[reason] = reason_counts.get(reason, 0) + 1
+            if reason in accept_reasons:
+                num_accepted += 1
+            if step.get("cleanup_ran"):
+                cleanup_ran += 1
+            total_steps += 1
+        if diag:
+            final_errs.append(diag[-1]["err"])
+
+    # Reason-code histogram, pooled across all successful restarts.
+    fig, ax = plt.subplots(figsize=(8, 5))
+    reasons = sorted(reason_counts, key=lambda r: -reason_counts[r])
+    ax.bar(reasons, [reason_counts[r] for r in reasons], color="#4c78a8")
+    ax.set_title("Reason-code histogram (pooled across successful restarts)")
+    ax.set_ylabel("Count")
+    ax.tick_params(axis="x", rotation=30)
+    fig.tight_layout()
+    fig.savefig(run_dir / "reason_code_histogram.png", dpi=200, bbox_inches="tight")
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    # per_restart_spread, visualized per joint in a grid (within-chain mean +- std vs. restart).
+    grid_rows, grid_cols = _grid_shape(num_joints)
+    spread_fig, spread_axes = plt.subplots(
+        grid_rows, grid_cols, figsize=(grid_cols * 4.5, grid_rows * 3.5), squeeze=False,
+    )
+    spread_axes_flat = spread_axes.flatten()
+    for idx, joint_name in enumerate(joint_names):
+        ax = spread_axes_flat[idx]
+        rows = per_restart_spread(samples, restart_info, idx) if len(samples) else []
+        if rows:
+            restarts = [row["restart"] for row in rows]
+            means = [row["mean"] for row in rows]
+            stds = [row["std"] for row in rows]
+            ax.errorbar(restarts, means, yerr=stds, fmt="o", color="#4c78a8", capsize=3, markersize=4)
+        ax.set_title(joint_name, fontsize=9)
+        ax.set_xlabel("restart")
+        ax.set_ylabel("within-chain mean")
+        ax.grid(True, alpha=0.25)
+    for ax in spread_axes_flat[num_joints:]:
+        ax.axis("off")
+    spread_fig.suptitle("Per-restart spread: within-chain mean +- std vs. across-restart mean")
+    spread_fig.tight_layout()
+    spread_fig.savefig(run_dir / "per_restart_spread.png", dpi=200, bbox_inches="tight")
+    if show:
+        plt.show()
+    plt.close(spread_fig)
+
+    summary = {
+        "num_restarts": len(restart_info),
+        "num_success": len(successes),
+        "num_phase1_failed": len(phase1_failed),
+        "num_nhr_failed": len(nhr_failed),
+        "num_samples": int(len(samples)),
+        "total_interior_steps": total_steps,
+        "reason_counts": reason_counts,
+        "accept_rate": (num_accepted / total_steps) if total_steps else None,
+        "cleanup_ran": cleanup_ran,
+        "cleanup_ran_fraction": (cleanup_ran / total_steps) if total_steps else None,
+        "final_residual_summary": {
+            "mean_err": float(np.mean(final_errs)) if final_errs else None,
+            "max_err": float(np.max(final_errs)) if final_errs else None,
+        },
+        "elapsed_seconds": elapsed,
+        "samples_per_second": (len(samples) / elapsed) if elapsed else None,
+    }
+
+    with open(run_dir / "run_analytics_summary.json", "w", encoding="utf-8") as f:
+        json.dump(_json_safe(summary), f, indent=2, sort_keys=True)
+
+    print(
+        f"restarts: {len(successes)}/{len(restart_info)} succeeded "
+        f"({len(phase1_failed)} phase1_failed, {len(nhr_failed)} nhr_failed)"
+    )
+    if elapsed:
+        print(f"wall-clock: {elapsed:.1f}s ({len(samples) / elapsed:.1f} samples/sec)")
+    print(f"Saved run analytics artifacts to {run_dir}")
 
     return run_dir
