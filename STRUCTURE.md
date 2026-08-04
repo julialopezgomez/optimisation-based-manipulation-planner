@@ -58,6 +58,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 - **`grasping_space.ipynb`** - full 10-DOF unblocked Panda arm scene, similar scope to `data/generation/full_arm_c_free.ipynb` but ~2 weeks older; likely an earlier draft. **This is the closest existing precedent for the upcoming IRIS-ZO/clique-cover work** - it has a markdown header literally titled "Generate C-free for full franka arm with IRIS-ZO." Cross-referenced from `algorithms/iris_zo_cliquecover/README.md`.
 - **`grasping_space_3d.ipynb`** - oldest file in this group, toy WSG-gripper (not the Panda arm) IRIS-ZO/clique-cover exploration. Superseded prototype.
 - **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nlp_sampling.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nlp_sampling/nhr_standalone_test.py`.
+- **`legacy_testing/`** - formerly the top-level `testing/` directory (see §7); merged in here as a frozen historical archive, separated from the notebooks above since it's older and untouched since April 2025.
 
 ## 5. `data/` - c-free polytope data and the notebook that generates it
 
@@ -74,9 +75,9 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 
 Matched by `**/joint_samples_plots/` in `.gitignore` - new runs are never tracked. (Some older runs predating that gitignore rule are still tracked in git history; that's fine, just legacy.)
 
-## 7. `testing/` and `legacy/`
+## 7. `experiments/legacy_testing/` and `legacy/`
 
-- **`testing/`** - dormant since a single squashed commit in April 2025 (untouched since). Early toy-gripper IRIS/clique-cover/QP explorations, with its own (now stale) copies of `ciris_plant_visualizer.py`/`my_sdfs/`. Left completely untouched by this reorg - it's self-contained and touching it buys nothing. If reviving any of it, check it against the current root `ciris_plant_visualizer.py`/`my_sdfs/` first, since the copies have drifted.
+- **`experiments/legacy_testing/`** - formerly the top-level `testing/` directory; untouched since April 2025. Early toy-gripper IRIS/clique-cover/QP/MIQP explorations, with its own (now stale) copies of `ciris_plant_visualizer.py`/`visualization_utils.py`/`my_sdfs/`. These local copies were kept as-is rather than repointed at the shared root versions. If reviving any of it, check it against the current root `ciris_plant_visualizer.py`/`my_sdfs/` first for that reason.
 - **`legacy/`** - the prior Docker-based dev setup, preserved for reference per the main README.
 
 ## 8. Shared root helpers
@@ -101,6 +102,4 @@ No git-flow ceremony, just enough separation that risky work can't destabilize w
 Flagged during the reorg, deliberately left alone (pure reorg = moves + mechanical path fixes only, no logic changes):
 
 - **`ManipulationPlanner` is copy-pasted**, not shared: at least 5 near-identical inline definitions exist (`manipulation_planner_3dof.ipynb`, `manipulation_planner_4dof.ipynb`, `full_arm_blocked_joints_3dof.ipynb`, `full_arm_blocked_joints_4dof.ipynb`, `data/generation/full_arm_c_free.ipynb`, `full_arm_nhr.ipynb`), with real drift between copies (e.g. only some perform a Mosek-license-file validity check in `__init__`). Worth deduplicating into a shared module once there's a stable interface to converge on.
-- **Hardcoded absolute URDF URLs**: `full_arm_blocked_joints_3dof.ipynb`, `full_arm_blocked_joints_4dof.ipynb` reference `file:///home/julialopezgomez/optimisation-based-manipulation-planner/my_sdfs/panda_arm_locked.urdf` (and hand) - fragile/non-portable across machines or users, though not broken by this reorg (fully absolute, doesn't depend on the notebook's own location).
-- **Locked-URDF reproducibility bug**: `full_arm_blocked_joints_3dof.ipynb` and `full_arm_blocked_joints_4dof.ipynb` both load `my_sdfs/panda_arm_locked.urdf`, but that single on-disk file only supports one joint-locking configuration at a time (currently only `panda_joint7` is `revolute`, the rest `fixed`) - the two notebooks are not simultaneously reproducible from today's file. Likely needs two separate locked-URDF files.
 - **`full_pipeline.ipynb` doesn't use `ManipulationPlanner`** at all, despite the similar subject matter to (1)/(2) above - it's an independent implementation. Worth being aware of before treating a future `ManipulationPlanner` dedup as automatically wiring `full_pipeline.ipynb` in too.
