@@ -24,9 +24,9 @@ Root also holds the two shared helper modules imported by nearly everything abov
 Two sibling subpackages, each a flat set of modules rather than a package with its own `__init__.py`, so every existing `import nlp_sampling` / `from nlp_sampling import (...)` keeps working unmodified regardless of where a notebook itself lives:
 
 - **`nlp_sampling/`** - the NLP-sampling library and its docs/harness:
-  - **`nlp_sampling.py`** - the restarting two-phase NLP-sampling library (Nonlinear Hit-and-Run + Manifold-RRT interior methods, two-phase restart sampler) - renamed from `nhr.py` to reflect that `interior_method` selects between both interior methods, not just NHR. See `nhr_code_walkthrough.md` in this folder for a full function-by-function guide.
-  - **`nhr_standalone_test.py`** - a runnable harness that validates `nlp_sampling.py` against the real Panda+cap grasp problem with a minimal Drake plant (no meshcat/IRIS/GCS overhead).
-  - **`nhr_code_walkthrough.md`**, **`Restarting Two-Phase NLP Sampler: Algorithm Reference.md`** - docs for the above.
+  - **`nlp_sampling.py`** - the restarting two-phase NLP-sampling library (Nonlinear Hit-and-Run + Manifold-RRT interior methods, two-phase restart sampler) - renamed from `nhr.py` to reflect that `interior_method` selects between both interior methods, not just NHR. See `nlp_sampling_code_walkthrough.md` in this folder for a full function-by-function guide.
+  - **`nlp_sampling_standalone_test.py`** - a runnable harness that validates `nlp_sampling.py` against the real Panda+cap grasp problem with a minimal Drake plant (no meshcat/IRIS/GCS overhead). Renamed from `nhr_standalone_test.py` for naming consistency with the module rename.
+  - **`nlp_sampling_code_walkthrough.md`**, **`Restarting Two-Phase NLP Sampler: Algorithm Reference.md`** - docs for the above. `nlp_sampling_code_walkthrough.md` was renamed from `nhr_code_walkthrough.md` for the same reason.
 - **`iris_zo_cliquecover/`** - empty placeholder package for the upcoming IRIS-ZO/clique-cover-with-NLP-sampling reimplementation. See its own `README.md` for the closest existing precedent to build from.
 
 **Standard bootstrap cell** for a new notebook anywhere in the repo that needs `algorithms/nlp_sampling/` and/or the root helper modules on `sys.path`:
@@ -57,7 +57,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 
 - **`grasping_space.ipynb`** - full 10-DOF unblocked Panda arm scene, similar scope to `data/generation/full_arm_c_free.ipynb` but ~2 weeks older; likely an earlier draft. **This is the closest existing precedent for the upcoming IRIS-ZO/clique-cover work** - it has a markdown header literally titled "Generate C-free for full franka arm with IRIS-ZO." Cross-referenced from `algorithms/iris_zo_cliquecover/README.md`.
 - **`grasping_space_3d.ipynb`** - oldest file in this group, toy WSG-gripper (not the Panda arm) IRIS-ZO/clique-cover exploration. Superseded prototype.
-- **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nlp_sampling.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nlp_sampling/nhr_standalone_test.py`.
+- **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nlp_sampling.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nlp_sampling/nlp_sampling_standalone_test.py`.
 - **`legacy_testing/`** - formerly the top-level `testing/` directory (see §7); merged in here as a frozen historical archive, separated from the notebooks above since it's older and untouched since April 2025.
 
 ## 5. `data/` - c-free polytope data and the notebook that generates it
@@ -71,7 +71,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 
 ## 6. `artifacts/` - ephemeral, gitignored run outputs
 
-- **`artifacts/joint_samples_plots/`** - per-run NHR sampling diagnostics (per-joint histogram PNGs + `info.json`), written by `nlp_sampling.save_joint_sample_artifacts(..., output_root=...)`. `full_arm_nhr.ipynb` points `output_root` at `artifacts/joint_samples_plots`, and `algorithms/nlp_sampling/nhr_standalone_test.py`'s `--output-root` default now resolves to the same repo-root-anchored `artifacts/joint_samples_plots` (via its existing `PROJECT_ROOT`), regardless of the CLI's working directory.
+- **`artifacts/joint_samples_plots/`** - per-run NHR sampling diagnostics (per-joint histogram PNGs + `info.json`), written by `nlp_sampling.save_joint_sample_artifacts(..., output_root=...)`. `full_arm_nhr.ipynb` points `output_root` at `artifacts/joint_samples_plots`, and `algorithms/nlp_sampling/nlp_sampling_standalone_test.py`'s `--output-root` default now resolves to the same repo-root-anchored `artifacts/joint_samples_plots` (via its existing `PROJECT_ROOT`), regardless of the CLI's working directory.
 
 Matched by `**/joint_samples_plots/` in `.gitignore` - new runs are never tracked. (Some older runs predating that gitignore rule are still tracked in git history; that's fine, just legacy.)
 

@@ -1609,7 +1609,7 @@ def save_run_analytics_artifacts(
     cleanup-ran fraction, a final-residual summary, Phase-1/accept rates,
     wall-clock timing, and per_restart_spread visualized (not just returned
     as data) per joint. Takes the same restart_info shape
-    restarting_nhr_sample returns, so nhr_standalone_test.py,
+    restarting_nhr_sample returns, so nlp_sampling_standalone_test.py,
     full_arm_nhr.ipynb, and any future caller can call this one method
     instead of each reimplementing their own diagnostics.
 

@@ -1,6 +1,6 @@
 # Restarting Two-Phase NLP Sampler. Algorithm Guide
 
-This document summarises the algorithm and implementation choices for the NHR / mRRT sampler, as implemented in `algorithms/nlp_sampling/nlp_sampling.py` and exercised in `algorithms/nlp_sampling/nhr_standalone_test.py`. It is intended to be a quick reference for how the algorithm maps to the code, what options are available, and how to run it.
+This document summarises the algorithm and implementation choices for the NHR / mRRT sampler, as implemented in `algorithms/nlp_sampling/nlp_sampling.py` and exercised in `algorithms/nlp_sampling/nlp_sampling_standalone_test.py`. It is intended to be a quick reference for how the algorithm maps to the code, what options are available, and how to run it.
 
 The implementation is based on the two-phase sampling algorithm described in the following paper:  
 
@@ -57,12 +57,12 @@ RESTARTING TWO-PHASE NLP SAMPLER
 ```
 
 > **What this project actually implements**. \
-> The above diagram is the paper's full design space. `nlp_sampling.py` only implements **1 (Gauss-Newton downhill)** and **2B (NHR / mRRT)** — none of Phase II-A's relaxed-energy MCMC family (Langevin/MALA/Riemannian Langevin) exists in this codebase. See `nhr_code_walkthrough.md` for exactly what was built and how it maps to the code.
+> The above diagram is the paper's full design space. `nlp_sampling.py` only implements **1 (Gauss-Newton downhill)** and **2B (NHR / mRRT)** — none of Phase II-A's relaxed-energy MCMC family (Langevin/MALA/Riemannian Langevin) exists in this codebase. See `nlp_sampling_code_walkthrough.md` for exactly what was built and how it maps to the code.
 
 
 ## How to Run the NHR / mRRT Sampler
 
-Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to the actual code in `algorithms/nlp_sampling/nlp_sampling.py` (the library) and `algorithms/nlp_sampling/nhr_standalone_test.py` (a runnable harness against the real Panda+cap grasp problem, with no meshcat/IRIS/GCS overhead).
+Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to the actual code in `algorithms/nlp_sampling/nlp_sampling.py` (the library) and `algorithms/nlp_sampling/nlp_sampling_standalone_test.py` (a runnable harness against the real Panda+cap grasp problem, with no meshcat/IRIS/GCS overhead).
 
 ### Algorithm → code map
 
@@ -77,14 +77,14 @@ Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to t
 
 - `cd algorithms/nlp_sampling`
 - Smoke test (fast, just checks nothing is broken):
-  `python nhr_standalone_test.py --num-samples 20 --burn-in 10 --num-restarts 2 --quiet --no-plots`
+  `python nlp_sampling_standalone_test.py --num-samples 20 --burn-in 10 --num-restarts 2 --quiet --no-plots`
 - Real run with NHR (default) and plots:
-  `python nhr_standalone_test.py --num-restarts 30 --num-samples 500`
+  `python nlp_sampling_standalone_test.py --num-restarts 30 --num-samples 500`
 - Same, but with mRRT instead:
-  `python nhr_standalone_test.py --interior-method mRRT --num-restarts 30 --num-samples 500`
+  `python nlp_sampling_standalone_test.py --interior-method mRRT --num-restarts 30 --num-samples 500`
 - Output goes to `artifacts/joint_samples_plots/<timestamp>/`: one PNG histogram per joint, plus `info.json` with every diagnostic.
 
-### CLI flags (`nhr_standalone_test.py`)
+### CLI flags (`nlp_sampling_standalone_test.py`)
 
 | Flag | Default | Meaning |
 |---|---|---|

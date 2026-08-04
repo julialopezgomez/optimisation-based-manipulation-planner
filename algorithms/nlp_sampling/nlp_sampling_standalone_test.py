@@ -6,8 +6,8 @@ ManipulationPlanner). Builds only what h_grasp_eq/g_grasp_ineq actually
 need: a welded arm+hand+cap plant and its AutoDiff companion.
 
 Usage:
-    python nhr_standalone_test.py
-    python nhr_standalone_test.py --interior-method mRRT --num-restarts 30
+    python nlp_sampling_standalone_test.py
+    python nlp_sampling_standalone_test.py --interior-method mRRT --num-restarts 30
 """
 
 import argparse
