@@ -58,6 +58,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 - **`grasping_space.ipynb`** - full 10-DOF unblocked Panda arm scene, similar scope to `data/generation/full_arm_c_free.ipynb` but ~2 weeks older; likely an earlier draft. **This is the closest existing precedent for the upcoming IRIS-ZO/clique-cover work** - it has a markdown header literally titled "Generate C-free for full franka arm with IRIS-ZO." Cross-referenced from `algorithms/iris_zo_cliquecover/README.md`.
 - **`grasping_space_3d.ipynb`** - oldest file in this group, toy WSG-gripper (not the Panda arm) IRIS-ZO/clique-cover exploration. Superseded prototype.
 - **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nhr.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nhr/nhr_standalone_test.py`.
+- **`legacy_testing/`** - formerly the top-level `testing/` directory (see §7); merged in here as a frozen historical archive, separated from the notebooks above since it's older and untouched since April 2025.
 
 ## 5. `data/` - c-free polytope data and the notebook that generates it
 
@@ -74,9 +75,9 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 
 Matched by `**/joint_samples_plots/` in `.gitignore` - new runs are never tracked. (Some older runs predating that gitignore rule are still tracked in git history; that's fine, just legacy.)
 
-## 7. `testing/` and `legacy/`
+## 7. `experiments/legacy_testing/` and `legacy/`
 
-- **`testing/`** - dormant since a single squashed commit in April 2025 (untouched since). Early toy-gripper IRIS/clique-cover/QP explorations, with its own (now stale) copies of `ciris_plant_visualizer.py`/`my_sdfs/`. Left completely untouched by this reorg - it's self-contained and touching it buys nothing. If reviving any of it, check it against the current root `ciris_plant_visualizer.py`/`my_sdfs/` first, since the copies have drifted.
+- **`experiments/legacy_testing/`** - formerly the top-level `testing/` directory; untouched since April 2025. Early toy-gripper IRIS/clique-cover/QP/MIQP explorations, with its own (now stale) copies of `ciris_plant_visualizer.py`/`visualization_utils.py`/`my_sdfs/`. These local copies were kept as-is rather than repointed at the shared root versions. If reviving any of it, check it against the current root `ciris_plant_visualizer.py`/`my_sdfs/` first for that reason.
 - **`legacy/`** - the prior Docker-based dev setup, preserved for reference per the main README.
 
 ## 8. Shared root helpers
