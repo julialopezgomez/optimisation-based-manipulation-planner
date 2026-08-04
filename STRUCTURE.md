@@ -42,7 +42,7 @@ def _find_repo_root(start: Path, markers=(".git", "README.md")) -> Path:
     raise RuntimeError(f"Could not locate repo root above {start}")
 
 REPO_ROOT = _find_repo_root(Path.cwd())
-for _p in (REPO_ROOT, REPO_ROOT / "algorithms" / "nhr"):
+for _p in (REPO_ROOT, REPO_ROOT / "algorithms" / "nhr", REPO_ROOT / "algorithms" / "iris_zo_cliquecover"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
