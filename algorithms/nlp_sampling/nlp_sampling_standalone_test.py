@@ -170,13 +170,14 @@ def make_joint_indices(plant, panda_arm, panda_hand, cap):
     return dict(idx_arm=idx_arm, idx_wrist=idx_wrist, idx_f1=idx_f1, idx_f2=idx_f2, idx_cap=idx_cap)
 
 
-def make_joint_limits(plant, idx_f1, idx_f2):
+def make_joint_limits(plant, idx_wrist, idx_f1, idx_f2):
     """Ports cell 40's narrowing logic directly on the plant's own limits -
     no ManipulationPlanner object needed (planner.lower/upper_joint_limits
     reduce directly to plant.GetPositionLowerLimits()/UpperLimits())."""
     lower = plant.GetPositionLowerLimits().copy()
     upper = plant.GetPositionUpperLimits().copy()
 
+    lower[idx_wrist], upper[idx_wrist] = -1.0, 1.0
     lower[idx_f1], upper[idx_f1] = -0.025, -0.024
     lower[idx_f2], upper[idx_f2] = 0.024, 0.025
 
@@ -284,7 +285,7 @@ def main():
     )
 
     joint_idx = make_joint_indices(plant, panda_arm, panda_hand, cap)
-    lower, upper = make_joint_limits(plant, joint_idx["idx_f1"], joint_idx["idx_f2"])
+    lower, upper = make_joint_limits(plant, joint_idx["idx_wrist"], joint_idx["idx_f1"], joint_idx["idx_f2"])
     joint_names = list(plant.GetPositionNames())
 
     h_counter = CallCounter(h_grasp_eq)
