@@ -76,18 +76,9 @@ class NHROptions:
 
     interior_method: Literal["HR", "mRRT"] = "HR"
     # Which interior-sampling method run_interior uses. "HR" is
-    # step_hit_and_run (Nonlinear Metropolis-Adjusted Hit-and-Run), the
-    # default and the only method this project used before. "mRRT" is
-    # Manifold-RRT (Algorithm 4): instead of a constraint-respecting line
-    # search from the current point, it jumps to the nearest previously
-    # visited point and takes one fixed-size step from there toward a
-    # random target, tangent-projected at that anchor - inequalities are
-    # only handled afterward via the same conditional cleanup HR uses, so
-    # a single very tight inequality can't collapse the whole step the
-    # way it can for HR's shared-beta line search. Per the paper's own
-    # results, mRRT tends to outperform HR specifically on problems
-    # dominated by hard equality constraints (the robotics category) -
-    # this project's grasp problem is exactly that shape.
+    # step_hit_and_run (Algorithm 3). "mRRT" is
+    # Manifold-RRT (Algorithm 4). mRRT tends to outperform HR specifically on problems
+    # dominated by hard equality constraints.
     interior_noise_sigma: float = 0.1  # ports opt.interiorNoiseSigma - mRRT's fixed step size
 
     constraint_tol: Optional[float] = None
@@ -1419,11 +1410,12 @@ def _draw_joint_histogram(
             label=f"Upper limit = {upper_limit:.4f}",
         )
 
-    ax.set_title(f"Joint Samples: {joint_name}")
-    ax.set_xlabel("Joint value")
-    ax.set_ylabel("Frequency")
+    ax.set_title(f"Joint Samples: {joint_name}", fontsize=15)
+    ax.set_xlabel("Joint value", fontsize=12)
+    ax.set_ylabel("Frequency", fontsize=12)
     ax.grid(True, alpha=0.25)
-    ax.legend(loc="best", fontsize=8)
+    ax.tick_params(axis="both", labelsize=11)
+    ax.legend(loc="best", fontsize=11)
 
     return mean, std
 
@@ -1435,10 +1427,10 @@ def save_joint_sample_artifacts(
     upper: Optional[Array] = None,
     joint_names: Optional[List[str]] = None,
     options: Optional[NHROptions] = None,
-    output_root: str | Path = "joint_samples_plots",
+    output_root: str | Path = "artifacts/joint_samples_plots",
     note: Optional[str] = None,
     timestamp: Optional[str] = None,
-    bins: int = 30,
+    bins: int = 40,
     show: bool = True,
 ) -> Path:
     """
@@ -1596,10 +1588,10 @@ def save_run_analytics_artifacts(
     upper: Optional[Array] = None,
     joint_names: Optional[List[str]] = None,
     options: Optional[NHROptions] = None,
-    output_root: str | Path = "joint_samples_plots",
+    output_root: str | Path = "artifacts/joint_samples_plots",
     note: Optional[str] = None,
     timestamp: Optional[str] = None,
-    bins: int = 30,
+    bins: int = 40,
     show: bool = True,
     elapsed: Optional[float] = None,
 ) -> Path:
