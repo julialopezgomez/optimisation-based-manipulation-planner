@@ -12,6 +12,7 @@ projection plus a walk-only epsilon-margin tube, matching the reference.
 """
 
 import json
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -1734,3 +1735,84 @@ def save_run_analytics_artifacts(
     print(f"Saved run analytics artifacts to {run_dir}")
 
     return run_dir
+
+
+# -----------------------------------------------------------------------------
+# One-call orchestration
+# -----------------------------------------------------------------------------
+
+def run_and_report(
+    g: Callable[[Array], Array],
+    lower: Array,
+    upper: Array,
+    Jg: Optional[Callable[[Array], Array]] = None,
+    h: Optional[Callable[[Array], Array]] = None,
+    Jh: Optional[Callable[[Array], Array]] = None,
+    nhr_options: Optional[NHROptions] = None,
+    restart_options: Optional[RestartOptions] = None,
+    joint_names: Optional[List[str]] = None,
+    output_root: str | Path = "artifacts/joint_samples_plots",
+    note: Optional[str] = None,
+    timestamp: Optional[str] = None,
+    bins: int = 40,
+    show: bool = True,
+    equality_tol: float = 1e-3,
+    project_samples_to_manifold: bool = True,
+    projection_iters: int = 10,
+) -> tuple[Array, list[Dict[str, Any]], Path]:
+    """
+    One-call preset for the full "sample -> diagnose -> save" pipeline,
+    matching the "one preset call" shape save_run_analytics_artifacts
+    already established: wires a run_downhill_phase1-based phase1 callable
+    around restarting_nhr_sample, then hands the result straight to
+    save_run_analytics_artifacts. A function, not a class, and it owns the
+    phase1 lambda internally so callers stop re-deriving that identical
+    wiring themselves.
+
+    Only needs g/Jg/h/Jh (no IK/Drake dependency), so it stays usable for
+    any constrained-sampling problem, not just ones that already have a
+    Drake plant built (e.g. nlp_sampling_standalone_test.py's Panda+cap
+    grasp problem).
+
+    Parameters
+    ----------
+    g, lower, upper, Jg, h, Jh:
+        Same meaning as run_downhill_phase1 / restarting_nhr_sample.
+    nhr_options, restart_options:
+        Same meaning as restarting_nhr_sample. nhr_options defaults to
+        NHROptions(verbose=False) if not given, matching
+        restarting_nhr_sample's own default.
+    joint_names, output_root, note, timestamp, bins, show:
+        Same meaning as save_run_analytics_artifacts.
+    equality_tol, project_samples_to_manifold, projection_iters:
+        Same meaning as restarting_nhr_sample.
+
+    Returns
+    -------
+    samples, restart_info, run_dir:
+        samples/restart_info as returned by restarting_nhr_sample; run_dir
+        is the directory save_run_analytics_artifacts wrote artifacts to.
+    """
+    if nhr_options is None:
+        nhr_options = NHROptions(verbose=False)
+
+    phase1 = lambda seed: run_downhill_phase1(
+        seed, g=g, Jg=Jg, lower=lower, upper=upper, options=nhr_options, h=h, Jh=Jh,
+    )
+
+    t0 = time.time()
+    samples, restart_info = restarting_nhr_sample(
+        phase1=phase1, g=g, lower=lower, upper=upper, Jg=Jg,
+        nhr_options=nhr_options, restart_options=restart_options,
+        h=h, Jh=Jh, equality_tol=equality_tol,
+        project_samples_to_manifold=project_samples_to_manifold,
+        projection_iters=projection_iters,
+    )
+    elapsed = time.time() - t0
+
+    run_dir = save_run_analytics_artifacts(
+        samples, restart_info, lower=lower, upper=upper, joint_names=joint_names,
+        options=nhr_options, output_root=output_root, note=note, timestamp=timestamp,
+        bins=bins, show=show, elapsed=elapsed,
+    )
+    return samples, restart_info, run_dir

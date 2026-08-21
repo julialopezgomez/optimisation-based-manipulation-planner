@@ -72,6 +72,7 @@ Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to t
 | 1. Phase I: find one feasible point | `run_downhill_phase1` (Gauss–Newton downhill, ports Algorithm 1) |
 | 2B. Phase II: explicit constrained sampling | `run_interior`, dispatching to `step_hit_and_run` (NHR) or `mrrt_step` (mRRT) |
 | 3. Restart | the outer loop inside `restarting_nhr_sample` |
+| Orchestration (0-3 + artifact saving, one call) | `run_and_report` |
 
 ### Quick start
 
@@ -148,12 +149,25 @@ Maps the algorithm above (restart seed → Phase I → Phase II → repeat) to t
 
 ### Using `nlp_sampling.py` directly in your own script
 
+The one-call entry point, `run_and_report`, wires the `run_downhill_phase1`-based `phase1` callable, `restarting_nhr_sample`, and `save_run_analytics_artifacts` together, so most callers only need this single call:
+
 ```python
 import nlp_sampling
 
 opts = nlp_sampling.NHROptions(num_samples=500, burn_in=100, interior_method="mRRT", verbose=False)
 restart_opts = nlp_sampling.RestartOptions(num_restarts=30, strategy="distance")
 
+samples, restart_info, run_dir = nlp_sampling.run_and_report(
+    g=g, lower=lower, upper=upper, Jg=Jg, h=h, Jh=Jh,
+    nhr_options=opts, restart_options=restart_opts,
+    joint_names=joint_names, output_root="artifacts/joint_samples_plots",
+    equality_tol=1e-3, project_samples_to_manifold=True, projection_iters=10,
+)
+```
+
+If you need to assemble `phase1`, sampling, and artifact-saving separately - e.g. to swap in a Drake/IK-based Phase I instead of the native `run_downhill_phase1` - call the pieces directly instead:
+
+```python
 phase1 = lambda seed: nlp_sampling.run_downhill_phase1(
     seed, g=g, Jg=Jg, lower=lower, upper=upper, options=opts, h=h, Jh=Jh
 )

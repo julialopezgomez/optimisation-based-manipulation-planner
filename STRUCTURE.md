@@ -71,7 +71,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 
 ## 6. `artifacts/` - ephemeral, gitignored run outputs
 
-- **`artifacts/joint_samples_plots/`** - per-run NHR sampling diagnostics (per-joint histogram PNGs + `info.json`), written by `nlp_sampling.save_joint_sample_artifacts(..., output_root=...)`. `full_arm_nhr.ipynb` points `output_root` at `artifacts/joint_samples_plots`, and `algorithms/nlp_sampling/nlp_sampling_standalone_test.py`'s `--output-root` default now resolves to the same repo-root-anchored `artifacts/joint_samples_plots` (via its existing `PROJECT_ROOT`), regardless of the CLI's working directory.
+- **`artifacts/joint_samples_plots/`** - per-run NHR sampling diagnostics (per-joint histogram PNGs, reason-code/per-restart-spread plots, `info.json`, `run_analytics_summary.json`), written via `nlp_sampling.run_and_report(..., output_root=...)` (the one-call pipeline entry point, which saves through `save_run_analytics_artifacts`/`save_joint_sample_artifacts`). `full_arm_nhr.ipynb` points `output_root` at `artifacts/joint_samples_plots`, and `algorithms/nlp_sampling/nlp_sampling_standalone_test.py`'s `--output-root` default now resolves to the same repo-root-anchored `artifacts/joint_samples_plots` (via its existing `PROJECT_ROOT`), regardless of the CLI's working directory.
 
 Matched by `**/joint_samples_plots/` in `.gitignore` - new runs are never tracked. (Some older runs predating that gitignore rule are still tracked in git history; that's fine, just legacy.)
 
