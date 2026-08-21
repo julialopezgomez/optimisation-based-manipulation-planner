@@ -1,6 +1,6 @@
 # Manual Test Plan
 
-Before merging a PR into `main`, manually verify the section(s) below relevant to what the PR actually touched. CI (`.github/workflows/claude.yml`) does not install Drake and cannot run any of these - they must be run locally.
+Before merging a PR into `main`, manually verify the section(s) below relevant to what the PR actually touched.
 
 ## Install / environment
 Touches: `environment.yml`, `requirements.txt`, `README.md` (install section)
