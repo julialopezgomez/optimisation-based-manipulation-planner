@@ -1,16 +1,20 @@
 import numpy as np
-from pydrake.all import (HPolyhedron, AngleAxis,
-                         VPolytope, Sphere, Ellipsoid, InverseKinematics,
-                         RationalForwardKinematics, GeometrySet, Role,
-                         RigidTransform, RotationMatrix,
-                         Hyperellipsoid, Simulator, Box)
+from pydrake.common.eigen_geometry import AngleAxis
+from pydrake.geometry import Box, Ellipsoid, GeometrySet, Role, Sphere
+from pydrake.geometry.optimization import HPolyhedron, Hyperellipsoid, VPolytope
+from pydrake.math import RigidTransform, RotationMatrix
+from pydrake.multibody.inverse_kinematics import InverseKinematics
+from pydrake.multibody.rational import RationalForwardKinematics
+from pydrake.systems.analysis import Simulator
 import mcubes
 
 import visualization_utils as viz_utils
 
 import pydrake.symbolic as sym
-from pydrake.all import MeshcatVisualizer, StartMeshcat, DiagramBuilder, \
-    AddMultibodyPlantSceneGraph, TriangleSurfaceMesh, Rgba, SurfaceTriangle, Sphere
+from pydrake.geometry import MeshcatVisualizer, StartMeshcat, TriangleSurfaceMesh, \
+    Rgba, SurfaceTriangle
+from pydrake.multibody.plant import AddMultibodyPlantSceneGraph
+from pydrake.systems.framework import DiagramBuilder
 from pydrake.geometry import MeshcatVisualizerParams
 from scipy.linalg import null_space
 from scipy.spatial import ConvexHull

@@ -1,9 +1,9 @@
 import numpy as np
 from functools import partial
-from pydrake.all import (MathematicalProgram, le, SnoptSolver,
-                         SurfaceTriangle, TriangleSurfaceMesh,
-                         VPolytope, HPolyhedron, Sphere, RigidTransform,
-                         RotationMatrix, Rgba)
+from pydrake.geometry import Rgba, Sphere, SurfaceTriangle, TriangleSurfaceMesh
+from pydrake.geometry.optimization import HPolyhedron, VPolytope
+from pydrake.math import RigidTransform, RotationMatrix, le
+from pydrake.solvers import MathematicalProgram, SnoptSolver
 import mcubes
 from scipy.spatial import ConvexHull
 from scipy.linalg import block_diag
@@ -11,7 +11,7 @@ from fractions import Fraction
 import itertools
 import random
 import colorsys
-from pydrake.all import PiecewisePolynomial
+from pydrake.trajectories import PiecewisePolynomial
 
 
 
