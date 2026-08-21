@@ -204,9 +204,8 @@ class CallCounter:
 # Diagnostics
 # -----------------------------------------------------------------------------
 
-def run_diagnostics(samples, restart_info, lower, upper, joint_names,
-                     nhr_options, restart_options, h_grasp_eq, g_grasp_ineq,
-                     elapsed, eval_counts, output_root, make_plots):
+def run_diagnostics(samples, restart_info, restart_options, h_grasp_eq,
+                     g_grasp_ineq, elapsed, eval_counts):
     num_restarts = restart_options.num_restarts
     successes = [i for i in restart_info if i["status"] == "success"]
     phase1_failed = [i for i in restart_info if i["status"] == "phase1_failed"]
@@ -233,18 +232,6 @@ def run_diagnostics(samples, restart_info, lower, upper, joint_names,
         print("final residuals over returned samples:")
         print(f"  max |h|_inf = {np.max(np.abs(hvals)):.3e}   mean |h|_inf = {np.mean(np.abs(hvals)):.3e}")
         print(f"  max g       = {np.max(gvals):.3e}   (want <= 0)")
-
-    # Everything else a run reports - reason-code histogram, cleanup-ran
-    # fraction, per-run final residual summary, Phase-1/accept rates,
-    # wall-clock timing - plus per-joint distributions and per_restart_spread
-    # visualized per joint, all in one call.
-    if make_plots and len(samples):
-        nlp_sampling.save_run_analytics_artifacts(
-            samples, restart_info, lower=lower, upper=upper, joint_names=joint_names,
-            options=nhr_options, output_root=output_root,
-            note=f"standalone harness, interior_method={nhr_options.interior_method}",
-            show=False, elapsed=elapsed,
-        )
 
 
 # -----------------------------------------------------------------------------
@@ -307,26 +294,41 @@ def main():
         random_seed=args.seed,
     )
 
-    phase1 = lambda seed: nlp_sampling.run_downhill_phase1(
-        seed, g=g_counter, Jg=g_jacobian_ineq, lower=lower, upper=upper,
-        options=nhr_options, h=h_counter, Jh=h_jacobian_eq,
-    )
-
     print(f"Sampling: interior_method={args.interior_method}, "
           f"{args.num_restarts} restarts x {args.num_samples} samples...")
-    t0 = time.time()
-    samples, restart_info = nlp_sampling.restarting_nhr_sample(
-        phase1=phase1, g=g_counter, lower=lower, upper=upper, Jg=g_jacobian_ineq,
-        nhr_options=nhr_options, restart_options=restart_options,
-        h=h_counter, Jh=h_jacobian_eq, equality_tol=args.equality_tol,
-        project_samples_to_manifold=True, projection_iters=10,
-    )
-    elapsed = time.time() - t0
+
+    if args.no_plots:
+        # Skips save_run_analytics_artifacts entirely (no PNGs/JSON written),
+        # so this path still hand-wires phase1 + restarting_nhr_sample
+        # directly rather than going through run_and_report.
+        phase1 = lambda seed: nlp_sampling.run_downhill_phase1(
+            seed, g=g_counter, Jg=g_jacobian_ineq, lower=lower, upper=upper,
+            options=nhr_options, h=h_counter, Jh=h_jacobian_eq,
+        )
+        t0 = time.time()
+        samples, restart_info = nlp_sampling.restarting_nhr_sample(
+            phase1=phase1, g=g_counter, lower=lower, upper=upper, Jg=g_jacobian_ineq,
+            nhr_options=nhr_options, restart_options=restart_options,
+            h=h_counter, Jh=h_jacobian_eq, equality_tol=args.equality_tol,
+            project_samples_to_manifold=True, projection_iters=10,
+        )
+        elapsed = time.time() - t0
+    else:
+        t0 = time.time()
+        samples, restart_info, _ = nlp_sampling.run_and_report(
+            g=g_counter, lower=lower, upper=upper, Jg=g_jacobian_ineq,
+            h=h_counter, Jh=h_jacobian_eq,
+            nhr_options=nhr_options, restart_options=restart_options,
+            joint_names=joint_names, output_root=args.output_root,
+            note=f"standalone harness, interior_method={args.interior_method}",
+            show=False, equality_tol=args.equality_tol,
+            project_samples_to_manifold=True, projection_iters=10,
+        )
+        elapsed = time.time() - t0
 
     run_diagnostics(
-        samples, restart_info, lower, upper, joint_names,
-        nhr_options, restart_options, h_grasp_eq, g_grasp_ineq,
-        elapsed, eval_counts, args.output_root, make_plots=not args.no_plots,
+        samples, restart_info, restart_options, h_grasp_eq, g_grasp_ineq,
+        elapsed, eval_counts,
     )
 
 
