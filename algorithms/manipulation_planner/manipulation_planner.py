@@ -1,13 +1,8 @@
 """
-Full-arm ManipulationPlanner shared by full_arm_nhr.ipynb and
-data/generation/full_arm_c_free.ipynb: given grasp/placement polytopes and a
-set of C-free regions (passed in, e.g. loaded from YAML, or generated on
-demand via IRIS-ZO/clique-cover), solves a MIQP for the minimum-grasp-count
-path and plans a GCS trajectory through it.
-
-Moved out of the two notebooks verbatim (see issue #58) except for dropping
-the per-instance Mosek-license-file check that used to live in __init__ -
-that check now lives at session/notebook startup instead.
+Full-arm ManipulationPlanner: given grasp/placement polytopes and a set of
+C-free regions (passed in, e.g. loaded from YAML, or generated on demand via
+IRIS-ZO/clique-cover), solves a MIQP for the minimum-grasp-count path and
+plans a GCS trajectory through it.
 """
 
 import time
@@ -36,9 +31,8 @@ from pydrake.all import (
 from ciris_plant_visualizer import CIrisPlantVisualizer
 
 # Set by the importing notebook before calling any planner method that needs
-# them: `_compute_connected_components` and `display_trajectory` read these
-# as module globals rather than instance state, an existing quirk carried
-# over unchanged from the inline notebook copies (see issue #58).
+# them. Read as module globals rather than instance state by
+# `_compute_connected_components` and `display_trajectory`.
 visualizer = None
 panda_hand = None
 panda_arm = None
