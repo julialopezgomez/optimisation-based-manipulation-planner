@@ -41,7 +41,7 @@ This repo is commonly used on Ubuntu 24.04 (including over SSH); `environment.ym
    - `source .venv/bin/activate`
 2. Install Drake and the remaining dependencies:
    - `python -m pip install --upgrade pip`
-   - `python -m pip install drake`
+   - `python -m pip install drake==1.48.0` (pinned - see `environment.yml`'s comment: 1.49+ has a MOSEK-solver regression that breaks a QP this project relies on)
    - `python -m pip install -r requirements.txt`
 3. Smoke test:
    - `python test.py`

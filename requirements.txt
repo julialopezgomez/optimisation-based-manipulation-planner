@@ -1,7 +1,10 @@
 # Python dependencies used by the notebooks/scripts in this repo (excluding Drake).
 #
-# Install Drake separately:
-#   python -m pip install drake
+# Install Drake separately, pinned:
+#   python -m pip install drake==1.48.0
+# 1.49+ has a MOSEK-solver regression that breaks a QP this project relies
+# on (see #76 - drake==1.48.0 is the last known-good
+# version). Don't bump without re-checking that issue.
 #
 # Optional: use a virtualenv or conda env (see README.md).
 ipywidgets==8.0.4
