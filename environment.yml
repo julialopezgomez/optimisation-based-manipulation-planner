@@ -6,8 +6,11 @@ dependencies:
   - python=3.13
   - pip>=20.3
   - pip:
-      # Drake (pydrake) Python bindings
-      - drake
+      # Drake (pydrake) Python bindings.
+      # Pinned: 1.49+ has a MOSEK-solver regression that breaks a QP this
+      # project relies on (see #76 - drake==1.48.0 is the last known-good
+      # version). Don't bump without re-checking that issue.
+      - drake==1.48.0
       # Notebook / visualization stack
       - ipykernel
       - jupyterlab
