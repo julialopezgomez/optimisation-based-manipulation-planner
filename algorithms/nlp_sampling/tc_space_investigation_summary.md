@@ -155,20 +155,31 @@ that direction.
    validated against 5000 random points spanning the whole region (0
    failures).
 
-### Open question - not yet resolved, flagged for follow-up
+6. **Resolved**: step 5's "improvement" optimized for maximum volume,
+   which was the wrong objective - confirmed by you that the region
+   needs to be small, matching the finger joints' own grasp tolerance
+   scale (`[-0.025, -0.024]`, width `0.001`). Retargeted to
+   `margin = 0.001` rad literally (your explicit choice, despite the
+   unit mismatch - fingers are prismatic/meters, arm joints
+   revolute/radians). Rebuilt with **two** constructions at this same
+   small target, kept side by side rather than picking one:
+   - `build_simple_margin_polytope` - the direct answer: wrist axis
+     (exact, full range) x `±0.001` rad independently on each of the
+     other 6 arm joints. No search, no optimization. **This is the
+     answer to #80.**
+   - `build_null_space_polytope` - the same null-space direction from
+     step 4, sized to the same `0.001` target instead of maximized.
+     Kept only for comparison.
 
-Step 5's "improvement" **optimized for maximum volume**, which is the
-opposite of what's actually wanted: per your latest message, the region
-around the wrist line needs to be **very small** - comparable in scale to
-the finger joints' own grasp tolerance (`[-0.025, -0.024]`, a width of
-`0.001`, in meters since the finger joint is prismatic). The current
-construction (direction range `0.386` rad, ~22°) is not that - it's
-deliberately as large as the tolerance allows, which is the wrong
-objective. This needs to be redone with a small, fixed target margin
-instead of a volume-maximizing search - not yet done, and worth deciding
-the exact target size before implementing (see open question in chat:
-same absolute width as the fingers' `0.001`, despite the unit mismatch
-[radians vs. meters], or some other principled small size?).
+   Both validated (0 failures, 3064 points each: 64 corners + 3000
+   random). **Comparison at this shared small scale**: identical volume
+   (a rotation doesn't change volume - the two boxes are the same size),
+   but only **~64-66% overlap** between the two regions - genuinely
+   different-shaped/oriented boxes of the same size, not the same region
+   in different coordinates. The null-space alignment's value is
+   specific to *maximizing* region size (step 4-5); at a fixed small
+   scale it doesn't offer an advantage, just a different-shaped region
+   of equal volume.
 
 ### `q0` is not a chosen configuration
 
