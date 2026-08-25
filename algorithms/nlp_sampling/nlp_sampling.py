@@ -1195,6 +1195,94 @@ def per_restart_spread(
 
 
 # -----------------------------------------------------------------------------
+# Minimum Spanning Tree Score (MSTS) - diversity/mode-coverage metric
+# -----------------------------------------------------------------------------
+# Ports the evaluation metric from Section 4.1 of Toussaint, Braun & Ortiz-
+# Haro's "NLP Sampling" paper (see module docstring). Unlike per_restart_spread
+# (a mixing diagnostic) or a mean/std/KS comparison against a known target
+# (correctness, asymptotically), MSTS is about diversity and mode coverage as
+# a function of sample count - see #45 and the algorithms/iris_zo_cliquecover/
+# README's evaluation-metric write-up for the full explanation and when to
+# reach for which tool.
+
+def minimum_spanning_tree_score(points: Array, p: float = 1.0) -> float:
+    """
+    MSTS_p(D): build the Euclidean minimum spanning tree over `points`
+    (shape (n, dim)) and sum its edge costs, where each edge (x, x') costs
+    |x - x'|^p. p=1 (default) gives plain Euclidean edge costs.
+
+    Requires at least 2 points. Coincident points would give an
+    exactly-zero-cost edge, which scipy's sparse MST would otherwise
+    mistake for "no edge" (it uses 0 as its no-edge sentinel even for
+    dense input) - guarded against with a tiny distance floor, since exact
+    duplicates are not expected from continuous MCMC samples but shouldn't
+    silently corrupt the tree if they occur.
+    """
+    from scipy.spatial.distance import pdist, squareform
+    from scipy.sparse.csgraph import minimum_spanning_tree as _mst
+
+    points = np.asarray(points, dtype=float)
+    if points.shape[0] < 2:
+        raise ValueError("minimum_spanning_tree_score needs at least 2 points.")
+
+    dist = squareform(pdist(points, metric="euclidean"))
+    dist = np.maximum(dist, 1e-12) * (1.0 - np.eye(points.shape[0]))
+    tree = _mst(dist ** p)
+    return float(tree.sum())
+
+
+def minimum_spanning_tree_score_curve(
+    points: Array, p: float = 1.0, num_checkpoints: int = 20, min_n: int = 2,
+) -> tuple[Array, Array]:
+    """
+    MSTS_p(D_n) for a sequence of prefixes D_n = points[:n], at up to
+    `num_checkpoints` values of n log-spaced between min_n and len(points).
+    `points` should already be in the order they were generated (restart-
+    then-interior-sampling order, e.g. straight from restarting_nhr_sample) -
+    this is what makes the resulting curve meaningful as "score vs. how much
+    sampling has been done so far", per the paper's own evaluation protocol.
+
+    Only evaluated at checkpoints, not every n: recomputing an MST from
+    scratch is O(n^2) per checkpoint, so evaluating every single n would be
+    O(n^3) overall. A log-spaced curve is also what you'd plot anyway.
+
+    Returns (ns, scores), both length <= num_checkpoints.
+    """
+    points = np.asarray(points, dtype=float)
+    total = points.shape[0]
+    if total < min_n:
+        raise ValueError(f"Need at least min_n={min_n} points, got {total}.")
+
+    ns = np.unique(np.geomspace(min_n, total, num=num_checkpoints).astype(int))
+    scores = np.array([minimum_spanning_tree_score(points[:n], p=p) for n in ns])
+    return ns, scores
+
+
+def plot_msts_curve(
+    ax, points: Array, p_values: tuple[float, ...] = (1.0, 2.0),
+    num_checkpoints: int = 20, min_n: int = 2, x_values: Optional[Array] = None,
+    x_label: str = "number of samples (n)",
+) -> None:
+    """
+    Draws MSTS_p(D_n) vs. n (or vs. x_values, e.g. cumulative constraint-
+    evaluation count - see #75's CallCounter pattern for how to build that
+    array) onto `ax`, one line per p in p_values. Matches
+    _draw_joint_histogram's style of taking a pre-made ax rather than
+    managing its own figure, so callers can lay out grids of these.
+    """
+    for p in p_values:
+        ns, scores = minimum_spanning_tree_score_curve(points, p=p, num_checkpoints=num_checkpoints, min_n=min_n)
+        xs = ns if x_values is None else np.asarray(x_values)[ns - 1]
+        ax.plot(xs, scores, marker="o", markersize=3, label=f"p={p:g}")
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel("MSTS")
+    ax.set_title("Minimum Spanning Tree Score vs. " + x_label)
+    ax.grid(True, alpha=0.25)
+    ax.legend(loc="best", fontsize=9)
+
+
+# -----------------------------------------------------------------------------
 # Manifold projection / superseded helpers
 # -----------------------------------------------------------------------------
 
