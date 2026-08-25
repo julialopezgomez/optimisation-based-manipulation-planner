@@ -23,9 +23,20 @@ per-subject variation - a real methodological improvement over eyeballing
 two separate scatter plots, which is all the mode-discovery comparison
 could offer for this specific question.
 
+--tc-evaluator {fast,slow}: fast (default) is tc_space_collision_scenario_fast.py's
+plain-numpy evaluator; slow is Drake's own symbolic
+Polynomial/RationalFunction.Evaluate (tc_space_collision_scenario_rational.py),
+~230x more expensive per call but not a reimplementation - it's Drake's
+actual evaluation of the actual rational function. Run both and compare
+directly (not just the isolated-point checks in
+tc_space_collision_scenario_fast.py's own validation) to make sure the
+fast path isn't quietly less correct - e.g. from an edge case the
+per-point spot checks didn't happen to hit.
+
 Usage:
     python tc_space_per_restart_spread_comparison.py
     python tc_space_per_restart_spread_comparison.py --num-seeds 5 --num-restarts 60
+    python tc_space_per_restart_spread_comparison.py --tc-evaluator slow --num-seeds 3
 """
 import argparse
 import json
@@ -41,6 +52,7 @@ from tc_space_collision_scenario import build_scene as build_regular_scene
 from tc_space_collision_scenario import make_collision_constraint as make_regular_constraint
 from tc_space_collision_scenario_fast import make_fast_rational_collision_constraint
 from tc_space_collision_scenario_rational import build_rational_scene, _validate_against_regular_fk
+from tc_space_collision_scenario_rational import make_rational_collision_constraint as make_slow_rational_constraint
 from tc_space_vs_regular_comparison import map_tc_samples_to_q, run_sampler
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -74,11 +86,15 @@ def main():
     parser.add_argument("--num-samples", type=int, default=50, help="per restart")
     parser.add_argument("--num-seeds", type=int, default=5)
     parser.add_argument("--base-seed", type=int, default=0)
+    parser.add_argument("--tc-evaluator", choices=["fast", "slow"], default="fast",
+                         help="fast = tc_space_collision_scenario_fast.py's numpy evaluator; "
+                              "slow = Drake's own symbolic RationalFunction.Evaluate")
     args = parser.parse_args()
 
     run_dir = PROJECT_ROOT / "artifacts" / "tc_space_experiments" / \
-        (datetime.now().strftime("%Y%m%d_%H%M%S") + "_per_restart_spread")
+        (datetime.now().strftime("%Y%m%d_%H%M%S") + f"_per_restart_spread_{args.tc_evaluator}")
     run_dir.mkdir(parents=True, exist_ok=True)
+    print(f"TC-space evaluator: {args.tc_evaluator}")
     print(f"Saving all output to {run_dir}\n")
 
     max_err = _validate_against_regular_fk(build_rational_scene(), build_regular_scene())
@@ -87,7 +103,10 @@ def main():
     regular_scene = build_regular_scene()
     g_reg, Jg_reg, lower_reg, upper_reg, embed = make_regular_constraint(regular_scene)
     rational_scene = build_rational_scene()
-    g_tc, Jg_tc, lower_tc, upper_tc = make_fast_rational_collision_constraint(rational_scene)
+    if args.tc_evaluator == "fast":
+        g_tc, Jg_tc, lower_tc, upper_tc = make_fast_rational_collision_constraint(rational_scene)
+    else:
+        g_tc, Jg_tc, lower_tc, upper_tc = make_slow_rational_constraint(rational_scene)
 
     diag_reg = float(np.linalg.norm(upper_reg - lower_reg))
     diag_tc = float(np.linalg.norm(upper_tc - lower_tc))
