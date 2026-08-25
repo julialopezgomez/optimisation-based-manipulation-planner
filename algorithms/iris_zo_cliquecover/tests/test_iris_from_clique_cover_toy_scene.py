@@ -9,14 +9,14 @@ default 70% coverage threshold genuinely requires multiple IRIS regions -
 this exercises the clique-cover loop itself, not just a single IrisZo call.
 
 Usage:
-    python test_iris_from_clique_cover_toy_scene.py
+    python tests/test_iris_from_clique_cover_toy_scene.py
 """
 import sys
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from test_iris_zo_toy_scene import build_checker
 import iris_from_clique_cover as ported
 from clique_solvers import max_clique_greedy

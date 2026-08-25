@@ -9,14 +9,14 @@ face count, N_test/N_col at every step, and inscribed-ellipsoid volume all
 match Drake's C++ exactly - not just "close enough".
 
 Usage:
-    python test_iris_zo_toy_scene.py
+    python tests/test_iris_zo_toy_scene.py
 """
 import sys
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import iris_zo as ported
 
 from pydrake.geometry import Box, ProximityProperties, AddContactMaterial

@@ -32,8 +32,8 @@ small-step design is what lets it stay safely inside thin nonlinear
 equality tubes elsewhere, which a large exact-chord jump could not do.
 
 Usage:
-    python validate_polytope_sampling.py
-    python validate_polytope_sampling.py --polytope random --dim 6 --num-samples 4000
+    python tests/validate_polytope_sampling.py
+    python tests/validate_polytope_sampling.py --polytope random --dim 6 --num-samples 4000
 """
 
 import argparse
@@ -47,10 +47,10 @@ from scipy.stats import ks_2samp
 from pydrake.common import RandomGenerator
 from pydrake.geometry.optimization import HPolyhedron
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "nlp_sampling"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "nlp_sampling"))
 import nlp_sampling
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 # -----------------------------------------------------------------------------
