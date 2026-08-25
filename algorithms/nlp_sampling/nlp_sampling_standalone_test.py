@@ -24,7 +24,7 @@ from pydrake.forwarddiff import jacobian as autodiff_jacobian
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import nlp_sampling
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 # -----------------------------------------------------------------------------
