@@ -60,6 +60,11 @@ def build_constraints():
     return dict(
         plant=plant, h=h_grasp_eq, g=g_grasp_ineq, Jh=h_jacobian_eq, Jg=g_jacobian_ineq,
         idx_wrist=idx["idx_wrist"], lower=lower, upper=upper,
+        # keep alive: plant_context/plant_context_ad alias into these - dropping them
+        # here let CPython free diagram/diagram_context on return (refcount -> 0),
+        # producing a real, non-deterministic use-after-free in every h/g call downstream.
+        _diagram=scene["diagram"], _diagram_context=scene["diagram_context"],
+        _plant_context=plant_context, _plant_context_ad=plant_context_ad,
     )
 
 

@@ -181,6 +181,77 @@ that direction.
    scale it doesn't offer an advantage, just a different-shaped region
    of equal volume.
 
+### Plots + HPolyhedron export
+
+**File**: `wrist_axis_grasp_polytope_plots.py`. Reuses `q0`, the margin,
+and both constructions from `wrist_axis_grasp_polytope.py` exactly (same
+seed) and produces, under `artifacts/wrist_axis_polytope/`:
+
+- `wrist_axis_exactness.png` - the wrist sweep from finding 1, plotted:
+  `max|h|`/`max(g)` vs. `panda_joint7` over its *entire* range, against
+  the `0.01` tolerance line. Confirms visually what the `0.00e+00` number
+  says - dead flat, not just small.
+- `region_comparison_2d.png` - 3000 random samples from each of the two
+  `margin=0.001` regions (finding 6), projected onto two joint pairs.
+  Same real scale as the polytope itself (not exaggerated) - shows the
+  simple box (axis-aligned square) and the null-space box (rotated,
+  slightly different footprint) overlapping heavily but not identically,
+  consistent with the ~64-66% overlap number.
+- `residual_headroom.png` - histograms of `max|h|` and `max(g)` over
+  those same 6000 samples, against the `0.01` tolerance. Both regions'
+  residuals cluster around `0.001`, an order of magnitude inside
+  tolerance - there's real headroom at this margin, it's not
+  borderline-feasible.
+
+**HPolyhedron construction** (the actual answer to "how do I generate a
+polytope from these"): both regions are over the same 7 "live" DOF (6
+arm joints + the wrist), fingers/cap held fixed alongside rather than
+folded in (a pinned coordinate has zero width, which a polytope can't
+represent; it's a separate fact, not a shape decision).
+
+- **Simple box -> trivial.** It's axis-aligned by construction, so it's
+  literally `HPolyhedron.MakeBox(lower7, upper7)` - `lower7`/`upper7`
+  are just `q0 ± margin` on the 6 arm joints, concatenated with the
+  wrist's full `[lower, upper]`. See `build_simple_hpolyhedron`.
+- **Null-space box -> needs explicit `(A, b)`.** It's a box in a
+  *rotated* frame (the null-space direction + its 5D orthogonal
+  complement, from finding 4), not axis-aligned, so `MakeBox` doesn't
+  apply. Each of the 6 orthonormal axes `v` (6-dim, over the arm joints
+  only) contributes a pair of halfspaces from
+  `-margin <= v . (q_arm - q0_arm) <= margin`:
+  `[v, 0] . x <= margin + v.q0_arm` and `[-v, 0] . x <= margin - v.q0_arm`
+  (the trailing `0` is the wrist column - these rows don't touch it),
+  plus two more rows for the wrist's own plain interval. 14 rows total
+  (`2 x 7`) for both constructions, `HPolyhedron(A, b)` (`A @ x <= b`).
+  See `build_null_space_hpolyhedron`.
+- Both were sanity-checked with `PointInSet`: `q0`'s own 7-vector is
+  `True` in both; a point 1.0 rad away on `panda_joint2` is `False` in
+  both.
+- `A`/`b` for both, `q0`, and the fixed finger/cap values are saved to
+  `artifacts/wrist_axis_polytope/hpolyhedron_export.npz` for downstream
+  use (e.g. feeding into GCS/IRIS-style region consumers that expect a
+  Drake `HPolyhedron` or raw `(A, b)`).
+
+**A real bug found and fixed while building this**: the plotting
+script's `build_constraints()` (a thin wrapper reusing
+`nlp_sampling_standalone_test.py`'s plant-building helpers) returned a
+dict with `plant=plant` but not the underlying `diagram`/
+`diagram_context` that `plant`'s mutable context aliases into. Once the
+function returned, nothing referenced those anymore, so CPython freed
+them immediately (refcount -> 0) while the returned `h`/`g` closures
+still held a `plant_context` pointing into that freed memory - a
+textbook use-after-free. It surfaced as a genuinely non-deterministic
+segfault (varying crash site, ~50-90% failure rate depending on run) -
+initially misdiagnosed as a pre-existing Drake/pybind11 memory-safety
+issue in the shared-context-mutation pattern itself. It wasn't: the
+original `nlp_sampling_standalone_test.py` keeps its whole `scene` dict
+alive for the duration of `main()` and has never shown this failure.
+Fixed in `wrist_axis_grasp_polytope.py`'s `build_constraints()` by
+keeping `diagram`/`diagram_context`/`plant_context`/`plant_context_ad`
+referenced in the returned dict. 3/3 clean runs at the full sample count
+(3000) after the fix, versus frequent crashes before it at any sample
+count.
+
 ### `q0` is not a chosen configuration
 
 Worth flagging clearly: `q0` throughout Part 2 is whatever the first
@@ -194,4 +265,5 @@ a *particular* grasp configuration, this needs rerunning with that seed.
 ```
 cd algorithms/nlp_sampling
 python wrist_axis_grasp_polytope.py
+python wrist_axis_grasp_polytope_plots.py   # plots + HPolyhedron export, see above
 ```
