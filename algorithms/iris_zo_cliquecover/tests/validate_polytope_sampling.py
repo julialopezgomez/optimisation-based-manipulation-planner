@@ -38,6 +38,7 @@ Usage:
 
 import argparse
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -117,10 +118,24 @@ def sample_drake_hit_and_run_multi_seed(
 # Sampling: nlp_sampling.py restricted to g = Ax - b, h = None
 # -----------------------------------------------------------------------------
 
+class CallCounter:
+    """Ports the CallCounter pattern from nlp_sampling_standalone_test.py:
+    counts calls transparently, no nlp_sampling.py changes needed since
+    WalkerState.evals isn't part of the public sampling entry points."""
+    def __init__(self, fn):
+        self.fn = fn
+        self.count = 0
+
+    def __call__(self, x):
+        self.count += 1
+        return self.fn(x)
+
+
 def sample_nlp_sampling(
     A: np.ndarray, b: np.ndarray, num_samples: int, burn_in: int, seed: int,
     thinning: int = 1, slack_max_step: float | None = None,
-) -> np.ndarray:
+) -> tuple[np.ndarray, int]:
+    """Returns (samples, num_g_evaluations)."""
     dim = A.shape[1]
     polyhedron = HPolyhedron(A, b)
     x0 = polyhedron.ChebyshevCenter()
@@ -133,11 +148,13 @@ def sample_nlp_sampling(
     lower = x0 - radius
     upper = x0 + radius
 
-    def g(x):
+    def _g(x):
         return A @ x - b
 
     def Jg(_x):
         return A
+
+    g = CallCounter(_g)
 
     kwargs = {}
     if slack_max_step is not None:
@@ -151,22 +168,25 @@ def sample_nlp_sampling(
     samples, _diagnostics = nlp_sampling.nhr_sample(
         x0=x0, g=g, lower=lower, upper=upper, Jg=Jg, options=options,
     )
-    return samples
+    return samples, g.count
 
 
 def sample_nlp_sampling_multi_seed(
     A: np.ndarray, b: np.ndarray, num_samples_per_seed: int, burn_in: int,
     seeds: list[int], thinning: int = 1, slack_max_step: float | None = None,
-) -> np.ndarray:
+) -> tuple[np.ndarray, int]:
     """Pool independent chains across seeds - reduces single-chain
     autocorrelation noise in the comparison, and surfaces run-to-run
     variance (e.g. a chain that hasn't mixed will disagree seed-to-seed,
-    not just against Drake)."""
-    chunks = [
-        sample_nlp_sampling(A, b, num_samples_per_seed, burn_in, seed, thinning, slack_max_step)
-        for seed in seeds
-    ]
-    return np.vstack(chunks)
+    not just against Drake). Returns (pooled_samples, total_g_evaluations)."""
+    chunks = []
+    total_g_evals = 0
+    for seed in seeds:
+        samples, g_evals = sample_nlp_sampling(
+            A, b, num_samples_per_seed, burn_in, seed, thinning, slack_max_step)
+        chunks.append(samples)
+        total_g_evals += g_evals
+    return np.vstack(chunks), total_g_evals
 
 
 # -----------------------------------------------------------------------------
@@ -271,13 +291,23 @@ def main():
 
     for name, (A, b) in polytopes.items():
         print(f"\n=== polytope: {name} (dim={args.dim}, {args.num_seeds} seeds pooled) ===")
+        t0 = time.perf_counter()
         drake_samples = sample_drake_hit_and_run_multi_seed(
             A, b, num_samples_per_seed=args.num_samples, mixing_steps=args.mixing_steps, seeds=seeds,
         )
-        nlp_samples = sample_nlp_sampling_multi_seed(
+        drake_elapsed = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        nlp_samples, nlp_g_evals = sample_nlp_sampling_multi_seed(
             A, b, num_samples_per_seed=args.num_samples, burn_in=args.burn_in, seeds=seeds,
             thinning=args.thinning, slack_max_step=args.slack_max_step,
         )
+        nlp_elapsed = time.perf_counter() - t0
+
+        print(f"timing: drake={drake_elapsed:.3f}s ({drake_samples.shape[0] / drake_elapsed:.0f} samples/sec) | "
+              f"nlp_sampling={nlp_elapsed:.3f}s ({nlp_samples.shape[0] / nlp_elapsed:.0f} samples/sec, "
+              f"{nlp_g_evals} g-evals total, {nlp_g_evals / max(nlp_samples.shape[0], 1):.1f} g-evals/sample) | "
+              f"ratio={nlp_elapsed / drake_elapsed:.1f}x")
         rows = compare(drake_samples, nlp_samples)
         print_report(rows)
 

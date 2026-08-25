@@ -12,6 +12,7 @@ Usage:
     python tests/test_iris_zo_toy_scene.py
 """
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -87,9 +88,12 @@ def main():
         num_particles=200, max_iterations=3, max_iterations_separating_planes=20,
         random_seed=0, verbose=True,
     )
+    t0 = time.perf_counter()
     P_ported = ported.iris_zo(checker, starting_ellipsoid, domain, ported_options)
+    ported_elapsed = time.perf_counter() - t0
     ellipsoid_ported = P_ported.MaximumVolumeInscribedEllipsoid()
-    print(f"ported: faces={P_ported.A().shape[0]}, inscribed ellipsoid volume={ellipsoid_ported.CalcVolume():.4f}")
+    print(f"ported: faces={P_ported.A().shape[0]}, inscribed ellipsoid volume={ellipsoid_ported.CalcVolume():.4f}, "
+          f"wall-clock={ported_elapsed:.3f}s")
 
     print("\n=== Drake native IrisZo ===")
     drake_options = DrakeIrisZoOptions()
@@ -98,9 +102,16 @@ def main():
     drake_options.sampled_iris_options.max_iterations_separating_planes = 20
     drake_options.sampled_iris_options.random_seed = 0
     drake_options.sampled_iris_options.verbose = True
+    t0 = time.perf_counter()
     P_drake = IrisZo(checker, starting_ellipsoid, domain, drake_options)
+    drake_elapsed = time.perf_counter() - t0
     ellipsoid_drake = P_drake.MaximumVolumeInscribedEllipsoid()
-    print(f"drake:  faces={P_drake.A().shape[0]}, inscribed ellipsoid volume={ellipsoid_drake.CalcVolume():.4f}")
+    print(f"drake:  faces={P_drake.A().shape[0]}, inscribed ellipsoid volume={ellipsoid_drake.CalcVolume():.4f}, "
+          f"wall-clock={drake_elapsed:.3f}s")
+    print(f"\nported/drake wall-clock ratio: {ported_elapsed / drake_elapsed:.2f}x "
+          f"(>1 means the ported Python orchestration is slower than Drake's C++ one; "
+          f"both call the same parallel collision-checking C++ underneath, so this ratio "
+          f"isolates the Python-loop overhead, not the collision-checking cost)")
 
     # Sanity: neither region should contain the obstacle's center.
     obstacle_center = np.array([0.0, 0.0])

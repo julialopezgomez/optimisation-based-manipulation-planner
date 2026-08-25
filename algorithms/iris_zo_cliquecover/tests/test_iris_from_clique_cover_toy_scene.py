@@ -12,6 +12,7 @@ Usage:
     python tests/test_iris_from_clique_cover_toy_scene.py
 """
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -47,11 +48,14 @@ def main():
     ported_options.iris_zo_options.verbose = False
 
     sets_ported: list = []
+    t0 = time.perf_counter()
     ported.iris_from_clique_cover(
         checker, ported_options, RandomGenerator(0), sets_ported, max_clique_greedy,
     )
+    ported_elapsed = time.perf_counter() - t0
     volumes_ported = sorted(s.MaximumVolumeInscribedEllipsoid().CalcVolume() for s in sets_ported)
-    print(f"ported: {len(sets_ported)} sets, inscribed-ellipsoid volumes={[f'{v:.3f}' for v in volumes_ported]}")
+    print(f"ported: {len(sets_ported)} sets, inscribed-ellipsoid volumes={[f'{v:.3f}' for v in volumes_ported]}, "
+          f"wall-clock={ported_elapsed:.3f}s")
 
     print("\n=== Drake native IrisInConfigurationSpaceFromCliqueCover ===")
     drake_options = DrakeIrisFromCliqueCoverOptions()
@@ -67,11 +71,18 @@ def main():
     drake_iris_zo_options.sampled_iris_options.verbose = False
     drake_options.iris_options = drake_iris_zo_options
 
+    t0 = time.perf_counter()
     sets_drake = IrisInConfigurationSpaceFromCliqueCover(
         checker, drake_options, RandomGenerator(0), [], MaxCliqueSolverViaGreedy(),
     )
+    drake_elapsed = time.perf_counter() - t0
     volumes_drake = sorted(s.MaximumVolumeInscribedEllipsoid().CalcVolume() for s in sets_drake)
-    print(f"drake:  {len(sets_drake)} sets, inscribed-ellipsoid volumes={[f'{v:.3f}' for v in volumes_drake]}")
+    print(f"drake:  {len(sets_drake)} sets, inscribed-ellipsoid volumes={[f'{v:.3f}' for v in volumes_drake]}, "
+          f"wall-clock={drake_elapsed:.3f}s")
+    print(f"\nported/drake wall-clock ratio: {ported_elapsed / drake_elapsed:.2f}x "
+          f"(>1 means the ported Python orchestration is slower than Drake's C++ one; "
+          f"both call the same parallel collision-checking C++ underneath, so this ratio "
+          f"isolates the Python-loop overhead, not the collision-checking cost)")
 
     # Both covers should need >1 region (the free space isn't convex) and
     # should agree on how many regions the greedy cover needed.
