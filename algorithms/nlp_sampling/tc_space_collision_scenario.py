@@ -101,9 +101,16 @@ def make_collision_constraint(scene: dict):
         return plant.CalcRelativeTransform(context, plant.world_frame(), link5).translation()
 
     def g(x):
+        # Squared distance, not raw distance: radius^2 - dist^2 <= 0 is
+        # equivalent to dist >= radius (both sides nonnegative), and this
+        # is the form #79's TC-space version has to use anyway (rational
+        # functions have no square root) - matching it here keeps the two
+        # paths comparing the same functional form, not accidentally
+        # comparing "smooth sqrt distance" against "rational squared
+        # distance" as if that difference were the TC-space effect itself.
         p = link5_position(x)
-        dist = np.sqrt(np.sum((p - OBSTACLE_CENTER) ** 2))
-        return np.array([OBSTACLE_RADIUS - dist])
+        dist_sq = np.sum((p - OBSTACLE_CENTER) ** 2)
+        return np.array([OBSTACLE_RADIUS ** 2 - dist_sq])
 
     def Jg(x):
         return autodiff_jacobian(g, np.asarray(x, dtype=float))
