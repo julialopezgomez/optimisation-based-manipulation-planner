@@ -30,7 +30,7 @@ class CIrisPlantVisualizer:
             plant,
             builder,
             scene_graph,
-            cspace_free_polytope,
+            cspace_free_polytope=None,
             **kwargs):
         if plant.num_positions() > 3:
             if kwargs.get('allow_plus_3dof', False):
@@ -127,7 +127,9 @@ class CIrisPlantVisualizer:
         # The plane numbers which we wish to visualize.
         self._plane_indices_of_interest = []
         self.plane_indices = np.arange(
-            0, len(cspace_free_polytope.separating_planes()))
+            0,
+            len(cspace_free_polytope.separating_planes())
+            if cspace_free_polytope is not None else 0)
 
 
     def clear_plane_indices_of_interest(self):
@@ -934,6 +936,12 @@ class CIrisPlantVisualizer:
             search_result,
             color,
             name_prefix=""):
+        if self.cspace_free_polytope is None:
+            raise RuntimeError(
+                "plot_plane_by_index_at_s requires a CspaceFreePolytope, "
+                "but this visualizer was constructed without one "
+                "(cspace_free_polytope=None).")
+
         name = name_prefix + f"/plane_{plane_index}"
         sep_plane = self.cspace_free_polytope.separating_planes()[plane_index]
 
