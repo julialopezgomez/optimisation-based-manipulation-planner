@@ -1,0 +1,19 @@
+\section{Conclusion}
+\label{sec:conclusion}
+We presented a manipulation planner that operates on convex decompositions of
+the collision-free composite configuration space of robot and object. By
+representing the grasp and placement spaces as unions of polytopes and
+intersecting them with the decomposition, the nodes and edges of the classical
+manipulation graph become convex sets. Grasp and release configurations are
+then selected with the minimum number of grasps by mixed-integer optimisation
+or heuristic search, and connected by transit and transfer trajectories
+computed with Graphs of Convex Sets. To scale this representation to a 7-DOF
+arm, where grasping is a nonlinear constraint on the forward kinematics, we
+combined NLP sampling for diverse grasp configurations with polytopes aligned
+with the null space of the grasp constraints. \todo{one or two sentences on
+the 10-DOF results and the comparison with sampling-based planners.} More
+broadly, this work shows that describing where grasping actions can start and
+end as convex sets lets an optimiser reason about how to sequence them.
+
+\section*{Acknowledgment}
+\todo{acknowledgments; funding is in the title footnote.}

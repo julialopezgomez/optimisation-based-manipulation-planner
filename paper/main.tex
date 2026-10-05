@@ -1,0 +1,99 @@
+% =============================================================================
+% Optimisation-based manipulation planning in convex decompositions of the
+% composite configuration space -- DRAFT
+%
+% Build:  latexmk -pdf main.tex      (or: pdflatex, bibtex, pdflatex, pdflatex)
+%
+% Placeholders:
+%   \todo{...}     red    -- missing content / decision needed
+%   \tocheck{...}  orange -- written from notes/memory, verify before submission
+%   \tbd           red    -- missing number
+% Set \showtodosfalse below to hide all of them (e.g. to check page count).
+% =============================================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{xcolor}
+\usepackage{bm}
+\usepackage[hidelinks]{hyperref}
+
+% ---------------------------------------------------------------- placeholders
+\newif\ifshowtodos
+\showtodostrue
+\ifshowtodos
+  \newcommand{\todo}[1]{{\color{red}\textbf{[TODO:} #1\textbf{]}}}
+  \newcommand{\tocheck}[1]{{\color{orange}\textbf{[CHECK:} #1\textbf{]}}}
+  \newcommand{\tbd}{{\color{red}\textbf{[TBD]}}}
+\else
+  \newcommand{\todo}[1]{}
+  \newcommand{\tocheck}[1]{}
+  \newcommand{\tbd}{--}
+\fi
+
+% Image if the file exists, otherwise a framed placeholder box.
+\newcommand{\figor}[3]{\IfFileExists{#1}%
+  {\includegraphics[width=\linewidth,height=#2,keepaspectratio]{#1}}%
+  {\fbox{\parbox[c][#2][c]{\dimexpr\linewidth-2\fboxsep-2\fboxrule}{\centering\footnotesize\color{gray}#3}}}}
+
+% ---------------------------------------------------------------------- macros
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\CS}{\mathcal{C}}                 % composite configuration space
+\newcommand{\CSfree}{\mathcal{C}_{\mathrm{free}}}
+\newcommand{\Crob}{\mathcal{C}_{\mathrm{rob}}}
+\newcommand{\Cobj}{\mathcal{C}_{\mathrm{obj}}}
+\newcommand{\CG}{\mathcal{C}_{G}}             % grasp space
+\newcommand{\CP}{\mathcal{C}_{P}}             % placement space
+\newcommand{\CGfree}{\mathcal{C}_{G}^{\mathrm{free}}}
+\newcommand{\CPfree}{\mathcal{C}_{P}^{\mathrm{free}}}
+\newcommand{\Pfree}{\mathcal{P}}              % union of free polytopes
+\newcommand{\qinit}{q_{\mathrm{init}}}
+\newcommand{\qgoal}{q_{\mathrm{goal}}}
+\newcommand{\qcap}{q_{\mathrm{cap}}}
+\newcommand{\qwr}{q_{\mathrm{wr}}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\algnewcommand\algorithmicinput{\textbf{Input:}}
+\algnewcommand\Input{\item[\algorithmicinput]}
+\algnewcommand\algorithmicoutput{\textbf{Output:}}
+\algnewcommand\Output{\item[\algorithmicoutput]}
+
+\newtheorem{remark}{Remark}
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+% Title alternatives (pick one):
+%  - Manipulation Planning with Convex Decompositions of C-free and NLP Sampling  (IPAB talk title)
+%  - Optimisation-Based Manipulation Planning in Convex Decompositions of the Composite Configuration Space
+%  - Planning Grasps and Regrasps over Graphs of Convex Sets
+\title{Optimisation-Based Manipulation Planning in Convex\\
+Decompositions of the Composite Configuration Space%
+\thanks{This work was supported by the UKRI AI Centre for Doctoral Training in
+Dependable and Deployable AI for Robotics (CDT-D2AIR) \todo{grant number}.}}
+
+\author{\IEEEauthorblockN{Julia L\'opez G\'omez and Steve Tonneau \tocheck{author list and order}}
+\IEEEauthorblockA{School of Informatics, University of Edinburgh, United Kingdom\\
+\todo{emails}}}
+
+\maketitle
+
+\input{sections/abstract}
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/problem}
+\input{sections/method}
+\input{sections/experiments}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

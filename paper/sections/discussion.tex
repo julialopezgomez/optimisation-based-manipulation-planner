@@ -1,0 +1,64 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Coverage near contact}
+The low-DOF experiments show that the planner is only as reliable as the
+decomposition it operates on. Uniform coverage of $\CSfree$ is not what
+matters most: grasps happen near contact, at the boundary of $\CSfree$, and
+missing a small region there can make an otherwise solvable task infeasible.
+This suggests biasing the decomposition towards task-relevant sets, e.g., by
+seeding region growth with samples on the grasp and placement manifolds rather
+than uniformly. \todo{revisit once 10-DOF coverage results are in.}
+
+\paragraph{Representing grasp manifolds with polytopes}
+Before the null-space construction of Section~\ref{sec:method:grasp}, we
+explored two alternatives on T4. First, we used NLP samples of the grasp
+constraints as seeds for IRIS-type region growing. This produced a very large
+number of very small polytopes, since regions grown around a thin curved
+manifold are limited by its curvature in every direction, which made
+sequencing slow and fragmented. Second, we fitted a union of polytopes to the
+NLP samples with a small max--min network, in which each neuron is a
+half-space $a_k^\top q-b_k$, a region is the maximum over its half-spaces and
+the set is the minimum over regions, with unused half-spaces pruned. This
+learns all polytopes at once, but did not yet represent the grasp set
+accurately enough to plan with. \todo{one figure or numbers for each, if
+space allows.} The null-space construction works because it uses the
+structure of the constraint, in particular its exact invariance to wrist and
+cap rotation, instead of discovering it from samples. Its cost is that each
+polytope is thin, which affects the numerics of the MIQP
+(Section~\ref{sec:method:sequencing}).
+
+% Cut for space (preliminary, 2-DOF only). Change \iffalse to \iftrue to restore.
+\iffalse
+\paragraph{Sampling in the tangent configuration space}
+Since C-IRIS certifies regions in the stereographic coordinates
+$t=\tan(\theta/2)$, where forward kinematics is rational, we also tested
+whether NLP sampling mixes better in these coordinates. It did not on a 2-DOF
+sub-problem of the Panda with a sphere obstacle: joints whose range lies near
+$\pm\pi$ are stretched by the map (e.g., the fourth Panda joint,
+$[-3.07,-0.07]$\,rad, maps to roughly $[-28.6,-0.03]$), so a sampler with a
+single step size barely moves along them. Per-coordinate step sizes would be
+needed. \tocheck{keep as a short remark or drop; preliminary, 2-DOF only.}
+\fi
+
+\paragraph{Limitations}
+The method addresses prehensile manipulation of a single rigid object with
+known geometry, quasi-statically. Linear manipulation constraints
+\eqref{eq:transit}--\eqref{eq:transfer} follow from the symmetry of the cap
+task; general objects with $SE(3)$ placements make the transfer constraint
+nonlinear, and would require either polytopes in grasp-relative coordinates or
+constraints enforced approximately. The grasp polytopes are validated
+empirically rather than certified, and the decomposition is collision-free
+only with high probability unless certified. GCS returns solutions that are
+optimal relative to the decomposition only when its convex relaxation is
+tight~\cite{marcucci2024shortest}, and the keyframes are chosen with a
+surrogate cost. Finally, the offline decomposition is expensive in high
+dimension and must be recomputed when the scene changes, although GPU
+implementations~\cite{werner2025superfast} reduce this cost.
+
+\paragraph{Future work}
+Natural extensions are constrained sampling inside region growing, so that
+regions are grown directly on the grasp manifold (we have ported IRIS-ZO and
+clique covers to Python to make the particle sampler replaceable), richer
+contact modes such as pushing, pivoting and in-hand manipulation, and
+experiments on the real robot. \todo{trim to what fits.}

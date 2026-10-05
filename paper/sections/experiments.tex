@@ -1,0 +1,140 @@
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Tasks}
+All tasks are variants of a simplified bottle-cap opening task: a cap
+rotates about its fixed vertical axis, and the goal is to turn it by a full
+revolution, from $\qcap=-3.14$ to $\qcap=3.14$\,rad. The joint that rotates
+the gripper about the cap axis has a limited range, so the task cannot be
+completed with a single grasp. Since $\qcap$ is constant during transit
+\eqref{eq:transit} and changes as much as $\qwr$ during transfer
+\eqref{eq:transfer}, a range of 2\,rad requires at least four grasps.
+\tocheck{verify against the plans found.} The task is deliberately simple
+in its object motion, so that difficulty comes from regrasping, obstacles near
+the contact, and the dimension of the composite space.
+\begin{itemize}
+  \item \textbf{T1, 3-DOF.} A simplified Schunk WSG gripper welded at a fixed
+    distance from the cap, with a revolute joint about the cap axis,
+    $\theta_{\mathrm{gr}}\in[-1,1]$\,rad, and one prismatic finger,
+    $z_{\mathrm{finger}}\in[-0.055,0]$\,m; the composite configuration is
+    $q=(\qcap,\theta_{\mathrm{gr}},z_{\mathrm{finger}})$. Two cylindrical
+    obstacles are placed next to the cap. Its 3D composite space can be
+    visualised directly.
+  \item \textbf{T2, 4-DOF.} T1 with the second finger as an additional
+    prismatic joint.
+  \item \textbf{T3, Franka hand, 4-DOF.} \tocheck{keep?} A Franka Panda with
+    all arm joints but the wrist locked, two fingers and the cap.
+  \item \textbf{T4, Franka arm, 10-DOF.} A Franka Panda~\cite{haddadin2022franka}
+    with its 7 arm joints and 2 finger joints, and the cap, placed $0.5$\,m in
+    front of the robot base, with two cylindrical obstacles next to it
+    (Fig.~\ref{fig:franka}). The wrist joint is restricted to $[-1,1]$\,rad.
+    Grasps are defined by \eqref{eq:grasp_h}--\eqref{eq:grasp_g}.
+    \todo{obstacle sizes; start/goal arm configurations.}
+\end{itemize}
+
+\begin{figure}[t]
+  \centering
+  \figor{figures/franka_cap_grasp.png}{3.8cm}{Franka task figure}
+  \caption{Task T4: a Franka Panda grasping the bottle cap, a configuration
+  sampled on the grasp manifold \eqref{eq:grasp_h}--\eqref{eq:grasp_g}.
+  \todo{replace with snapshots of a full plan with obstacles visible, and a
+  low-dimensional slice of $\CGfree$ / $\CPfree$.}}
+  \label{fig:franka}
+\end{figure}
+
+\subsection{Implementation}
+The planner is implemented in Python on top of
+Drake~\cite{tedrake2019drake} (v1.48.0; later versions showed a regression
+with the MOSEK interface), with MOSEK~\cite{mosek} solving the MIQP and the
+GCS programs. The clique-cover decompositions use Drake's IRIS-NP
+implementation. The NLP sampler is our Python port of the reference
+implementation of~\cite{toussaint2024nlp}, with forward kinematics and
+Jacobians from Drake's automatic differentiation. \todo{hardware; code
+release link.}
+
+\subsection{Baselines and ablations}
+\todo{Decide and implement. Candidates:}
+\begin{itemize}
+  \item a sampling-based manipulation planner over the manipulation
+    graph~\cite{simeon2004manipulation}, e.g., in HPP~\cite{mirabel2016hpp};
+  \item constrained sampling-based planners from OMPL~\cite{sucan2012ompl,kingston2019exploring}
+    for the transit and transfer segments, given the same keyframes;
+  \item ablations: MIQP vs.\ A* sequencing; axis-aligned vs.\ null-space
+    grasp polytopes; NHR vs.\ mRRT seeds; coverage $\alpha$.
+\end{itemize}
+
+\subsection{Metrics}
+We report success rate over \tbd{} queries and random seeds; offline time
+(decomposition and grasp polytopes); online time (sequencing and GCS); number
+of grasps; trajectory length in configuration space; and the maximum
+violation of the grasp constraint $\|h\|_\infty$ along transfer segments, a
+measure of how faithfully the polytopes represent the grasp manifold.
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Low-DOF tasks}
+Table~\ref{tab:lowdof} reports the effect of the coverage of the
+decomposition on the low-DOF tasks. \todo{These numbers are from the MInf
+report / Year-1 annual review (earlier pipeline, no mode constraints inside
+GCS). Re-run with the final pipeline, add T3, and average over seeds.} In
+T1, even moderate coverage is enough to find a plan, but trajectory time grows
+with the number of regions. In T2, low coverage is not enough: at a target of
+$0.70$ no feasible grasp--release sequence exists in the decomposition, and at
+$0.90$ a sequence is found but its transit and transfer segments cannot be
+connected. Full plans are found from a target coverage of about $0.96$. This
+is expected, as grasps lie close to contact, near the boundary of
+$\CSfree$, and small gaps in the decomposition can remove exactly the regions
+needed to regrasp. Trajectory time depends on the number and shape of the
+regions as much as on the dimension: T1 at $0.99$ takes longer than T2 at
+$0.96$.
+
+\begin{table}[t]
+\centering
+\caption{Coverage of the decomposition on the low-DOF tasks
+\todo{preliminary, earlier pipeline}}
+\label{tab:lowdof}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}c c c c c@{}}
+\toprule
+Task & Coverage target (actual) & Regions & Decomp.\ (s) & Traj.\ (s)\\
+\midrule
+\multirow{3}{*}{T1} & 0.70--0.90 (0.94) & 4 & 29.8 & 29.5\\
+                    & 0.96 (0.98)       & 7 & 54.6 & 34.0\\
+                    & 0.99 (0.996)      & 11 & 87.7 & 112.6\\
+\midrule
+\multirow{4}{*}{T2} & 0.70 (0.77)  & 4  & 16.5  & --$^{a}$\\
+                    & 0.90 (0.95)  & 5  & 31.2  & --$^{b}$\\
+                    & 0.96 (0.98)  & 10 & 78.5  & 29.0\\
+                    & 0.99 (0.996) & 14 & 115.9 & 95.9\\
+\bottomrule
+\end{tabular}\\[2pt]
+{\footnotesize $^{a}$No feasible grasp--release sequence.
+$^{b}$Sequence found, transit/transfer connection failed.}
+\end{table}
+
+\subsection{10-DOF Franka task}
+\todo{Main results table: rows = ours (MIQP), ours (A*), baselines;
+columns = success, offline time, online time, grasps, length, max
+$\|h\|_\infty$ along transfers.}
+
+\begin{table}[t]
+\centering
+\caption{Results on T4 (10-DOF) \todo{placeholder}}
+\label{tab:franka}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}l c c c c c@{}}
+\toprule
+Method & Succ. & Offline (s) & Online (s) & Grasps & Length\\
+\midrule
+Ours (A*)               & \tbd & \tbd & \tbd & \tbd & \tbd\\
+Ours (MIQP)             & \tbd & \tbd & \tbd & \tbd & \tbd\\
+Sampling-based baseline & \tbd & --   & \tbd & \tbd & \tbd\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Grasp polytopes and seeds}
+\todo{Number of NLP samples, restarts and seeds; HR vs.\ mRRT mixing
+diagnostic; number and volume of grasp polytopes; validation failures; max
+$\|h\|_\infty$ inside the polytopes; axis-aligned vs.\ null-space ablation.}

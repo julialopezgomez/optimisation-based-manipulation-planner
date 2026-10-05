@@ -1,0 +1,84 @@
+\section{Problem Formulation}
+\label{sec:problem}
+
+\subsection{Composite configuration space}
+We consider a robot with configuration space $\Crob\subset\R^{n_r}$ and a
+movable rigid object with configuration space $\Cobj\subset\R^{n_o}$, in a
+known static environment. The state of the whole system lives in the
+composite configuration space
+\begin{equation}
+  \CS = \Crob \times \Cobj \subset \R^{n}, \qquad n = n_r + n_o,
+\end{equation}
+and we write $\CSfree\subseteq\CS$ for the configurations in which no pair
+of bodies (robot links, object, obstacles) collides, apart from the contacts
+required by a grasp. We restrict the robot and object to revolute and prismatic
+joints, with finite joint limits $q_{\min}\le q\le q_{\max}$; we write
+$\qcap$ for the object coordinate in the tasks below. \tocheck{the MInf report
+argues other joint types reduce to revolute+prismatic~\cite{wampler2011numerical};
+keep or drop.}
+
+\subsection{Placement and grasp spaces}
+The object cannot move by itself: at every instant it is either resting at a
+stable placement or held by the robot. Following~\cite{simeon2004manipulation},
+we define two subsets of $\CS$:
+\begin{itemize}
+  \item the \emph{placement space} $\CP$, the configurations in which the
+    object rests at a stable placement;
+  \item the \emph{grasp space} $\CG$, the configurations in which the robot
+    holds the object with a valid grasp.
+\end{itemize}
+Every valid configuration lies in $\CP\cup\CG$. Configurations in $\CG\cap\CP$,
+where the object is both grasped and stably placed, are those at which the
+robot can grasp or release the object.
+
+\subsection{Transit, transfer and manipulation constraints}
+A manipulation path alternates two kinds of motion:
+\begin{itemize}
+  \item \emph{Transit}: the robot moves alone in $\CP$ while the object stays
+    at a fixed placement, i.e., the object coordinates are constant.
+  \item \emph{Transfer}: the robot moves in $\CG$ while holding the object, so
+    that the relative pose between end-effector and object is constant.
+\end{itemize}
+We collect these requirements in a set of \emph{manipulation constraints}
+$\mathcal{M}$. For two configurations $q,q'$ at the endpoints of a segment, we
+write $\mathcal{M}_{\mathrm{tr}}(q,q')$ for the transit constraint and
+$\mathcal{M}_{\mathrm{tf}}(q,q')$ for the transfer constraint. In general,
+$\mathcal{M}_{\mathrm{tf}}$ is a nonlinear function of the forward kinematics.
+In the bottle-cap tasks of Section~\ref{sec:experiments}, the cap only rotates
+about its own axis, which is aligned with the axis of the last robot joint
+during a grasp. Both constraints are then linear:
+\begin{align}
+  \mathcal{M}_{\mathrm{tr}}(q,q'):&\quad \qcap = \qcap', \label{eq:transit}\\
+  \mathcal{M}_{\mathrm{tf}}(q,q'):&\quad \qcap - \qwr = \qcap' - \qwr', \label{eq:transfer}
+\end{align}
+where $\qwr$ is the coordinate of the joint that rotates the gripper about the
+cap axis, together with the requirement that $q$ and $q'$ lie in the same
+connected grasp set (Section~\ref{sec:method:graph}). \tocheck{axis-sign
+convention: the MInf report notes the cap and gripper axes are inverted and
+aligned w.l.o.g.}
+
+\subsection{Problem statement}
+\label{sec:problem:statement}
+Given $\CS$, $\CP$, $\CG$, the manipulation constraints $\mathcal{M}$, and
+initial and goal configurations $\qinit,\qgoal\in\CP$, find a continuous
+trajectory $\tau:[0,1]\to\CSfree$ with $\tau(0)=\qinit$ and $\tau(1)=\qgoal$
+that is a concatenation of segments
+\begin{equation}
+  \tau = \tau_0 \oplus \tau_1 \oplus \dots \oplus \tau_{2\ell},
+\end{equation}
+where even segments $\tau_{2i}$ are transit paths in $\CP\cap\CSfree$ and odd
+segments $\tau_{2i+1}$ are transfer paths in $\CG\cap\CSfree$, each satisfying
+its manipulation constraint along its whole length. Among such trajectories,
+we seek one with the minimum number of grasps $\ell$ and, for that $\ell$,
+minimum length.
+
+The breakpoints of $\tau$ form a sequence of \emph{keyframes}
+\begin{equation}
+  x_0=\qinit,\; x_1=g_1,\; x_2=r_1,\; \dots,\; x_{2\ell}=r_\ell,\; x_{2\ell+1}=\qgoal,
+  \label{eq:keyframes}
+\end{equation}
+where $g_i$ and $r_i$ are the $i$-th grasp and release configurations. Every
+grasp and release lies in $\CG\cap\CP$; the pairs $(x_{2i},x_{2i+1})$ are
+connected by transit paths and the pairs $(x_{2i+1},x_{2i+2})$ by transfer
+paths. Our planner first chooses the keyframes and then the paths between
+them.

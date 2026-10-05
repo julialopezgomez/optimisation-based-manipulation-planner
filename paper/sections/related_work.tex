@@ -1,0 +1,66 @@
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Manipulation and multi-modal planning}
+Manipulation planning extends motion planning with movable objects that can
+only move when grasped~\cite{alami1990geometrical,latombe1991robot}. Early
+methods assumed finite, user-given sets of grasps and placements, and searched
+over the resulting discrete transitions~\cite{alami1990geometrical,tournassoud1987regrasping}.
+Treating grasps and placements as continuous sets was a major step: in the
+manipulation graph of Sim\'eon et al.~\cite{simeon2004manipulation}, nodes are
+connected components of the intersection of grasp and placement spaces and
+edges are transit or transfer paths, both computed with probabilistic
+roadmaps. Multi-modal planners generalise this structure to sequences of
+modes connected through their intersections~\cite{hauser2010multimodal,hauser2011randomized},
+and asymptotically optimal variants exist~\cite{schmitt2017optimal,vegabrown2016asymptotically}.
+Task and motion planning (TAMP) adds symbolic decisions on top of this
+geometry~\cite{garrett2021integrated}, either by calling continuous samplers
+from a symbolic planner~\cite{garrett2020pddlstream} or by optimising over a
+fixed skeleton~\cite{toussaint2015lgp}. Constraint-based frameworks such as
+HPP represent grasp, placement and motion constraints explicitly and explore
+their connectivity with constrained solvers~\cite{mirabel2016hpp}. Our
+planner keeps the manipulation-graph structure of~\cite{simeon2004manipulation},
+but represents its nodes and edges with convex sets rather than samples, so
+that the choice of grasps and the motions between them can be optimised.
+
+\subsection{Convex decompositions of C-free and Graphs of Convex Sets}
+Describing configuration-space obstacles exactly is
+intractable~\cite{lozano1983spatial,canny1988complexity}, which motivates
+describing $\CSfree$ directly as a union of simpler sets. IRIS grows large
+convex regions in free space by alternating separating hyperplanes and
+inscribed ellipsoids~\cite{deits2015computing}. C-IRIS certifies regions as
+collision-free through a rational parametrisation of the kinematics and
+sums-of-squares programs~\cite{amice2022finding,dai2024certified}, while
+IRIS-NP, IRIS-NP2 and IRIS-ZO trade certification for speed and scale with
+probabilistic guarantees~\cite{petersen2023growing,werner2024faster}.
+Clique covers of visibility graphs automate seeding and cover $\CSfree$ with
+few regions~\cite{werner2024approximating}, and recent GPU implementations make
+decompositions fast enough for online use~\cite{werner2025superfast}. Convex
+decompositions have long been used in mixed-integer
+planning~\cite{schouwenaars2001mixed,deits2015efficient}, and also in
+contact planning for legged robots~\cite{deits2014footstep,aceituno2018simultaneous,tonneau2020sl1m}.
+GCS~\cite{marcucci2024shortest,marcucci2023motion} solves shortest-path
+problems over such decompositions through a tight convex relaxation, and has
+been extended to non-Euclidean joint spaces~\cite{cohn2023noneuclidean},
+temporal-logic specifications~\cite{kurtz2023temporal}, contact-rich planar
+manipulation~\cite{graesdal2024tight}, and heuristic search over implicitly
+defined graphs (GCS*)~\cite{chia2024gcsstar}. Interleaving graph search with
+convex or trajectory optimisation has also been explored
+in~\cite{natarajan2021insat}. To our knowledge, these tools have not been used
+to plan grasp and regrasp sequences for prehensile manipulation in the
+composite configuration space. \tocheck{novelty claim}
+
+\subsection{Constrained sampling}
+Grasps and placements define lower-dimensional constraint manifolds. Task
+space regions express pose constraints for sampling-based
+planners~\cite{berenson2011tsr}, and manifold planners explore such
+constraints through tangent-space steps followed by
+projection~\cite{jaillet2013path,kingston2019exploring}; see~\cite{kingston2018sampling}
+for a review. Since these methods expand continuously from known feasible
+states, they struggle when the feasible set is disconnected. NLP
+sampling~\cite{toussaint2024nlp} instead targets diverse samples from
+densities restricted to nonlinear equality and inequality constraints, through
+a restarting two-phase scheme: a Gauss--Newton phase that finds a feasible
+point, and an interior phase (e.g., nonlinear hit-and-run or manifold RRT) that
+explores the feasible set from it. We use this sampler to seed grasp
+polytopes on the grasp manifold of a 7-DOF arm.
