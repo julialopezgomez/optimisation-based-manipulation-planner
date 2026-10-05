@@ -1,121 +1,72 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Many manipulation tasks require the robot to grasp the same object several
-times. To turn a bottle cap, a valve or a knob further than its wrist can
-rotate, a robot must grasp the object, turn it, release it, rotate its wrist
-back and grasp it again. How many grasps are needed is not known in advance.
-It depends on the goal, on the joint limits of the robot, and on obstacles
-near the object, which shorten the part of the wrist range that can be used
-without collision. A planner must decide how many grasps to make, where each
-one starts and ends, and how the robot moves between them without collision.
-Ideally, it should also be able to tell when a goal cannot be reached with
-fewer grasps, or not at all.
+A robot opening a bottle, turning a valve or winding a crank cannot finish in
+a single grasp: the wrist runs out of range long before the object reaches its
+goal. It has to grasp, turn as far as it can, let go, rotate the wrist back
+and grasp again. Planning this means deciding where to grasp and release, how
+far to turn each time, how many times to regrasp, and how to move in between.
+None of these can be decided on its own. An obstacle beside the object
+shortens the usable part of the wrist range, which changes how far one grasp
+can turn the object, and with it the number of grasps the task needs.
 
-The task looks simple, but it combines three difficulties.
-\emph{Grasps happen on thin sets.} For a 7-DOF arm holding a cap, four
-equality constraints on the pose of the hand leave a curved,
-lower-dimensional set of grasping configurations in the 10-dimensional space
-of robot and object. The robot can only use the part of this set that is
-collision-free, which lies close to the object and its obstacles.
-\emph{The length of the plan is unknown.} Each grasp turns the cap by at most
-the usable wrist range. An obstacle that blocks part of that range changes the
-number of grasps, i.e., the discrete structure of the solution, not only its
-geometry. \emph{The task has memory.} The cap only moves while it is grasped
-and keeps its angle after release, so whether a goal can be reached depends
-on everything the robot has done before.
+What makes this hard is how thin the feasible sets are, and the fact that the
+task accumulates. For an arm and a hand, the configurations that
+hold an object at a fixed grasp satisfy several equality constraints on the
+pose of the hand, and so form a thin, curved set in a configuration space of
+ten dimensions or more. Only its collision-free part is usable, and that part
+lies precisely where the hand is closest to the obstacles. The object, meanwhile, moves only while held and keeps its angle once
+released, so what the robot can still reach depends on all it has done so
+far.
 
-Existing planners each lack part of what this task needs.
-Sim\'eon et al.~\cite{simeon2004manipulation} posed manipulation planning in
-the composite configuration space of robot and object. A plan alternates
-\emph{transit}, where the robot moves alone, and \emph{transfer}, where it
-moves the object at a fixed grasp, and the two can only meet where the grasp
-and placement spaces intersect. They built the resulting manipulation graph
-with probabilistic roadmaps. Sampling-based planners of this
-kind~\cite{simeon2004manipulation,hauser2010multimodal,mirabel2016hpp} are
-probabilistically complete: if a plan exists, the probability of finding it
-tends to one as the number of samples grows. After a finite time, however,
-they cannot conclude that no plan exists, or that the plan they return uses
-the fewest grasps. Since the sets where grasps happen have zero volume, they
-also need dedicated samplers to reach them at all. Optimisation-based task and
-motion planners~\cite{toussaint2015lgp,levit2025regrasp} fix a sequence of
-grasps and then solve a nonconvex program for the motion. The solver is local,
-so a failure may come from the initial guess rather than from infeasibility.
-To find the fewest grasps, sequences of increasing length are tried, but a
-failed shorter sequence is not a proof that it is infeasible.
-\tocheck{characterisation of regrasp maps~\cite{levit2025regrasp}.}
-Mixed-integer programs over convex decompositions of free space, used for
-footstep planning~\cite{deits2014footstep} and in our earlier manipulation
-planner~\cite{lopezgomez2025minf}, are complete and globally optimal relative
-to the decomposition. But they are solved for a fixed number of grasps, found
-by an outer loop, and their big-M constraints became numerically unreliable
-on a 7-DOF arm (Section~\ref{sec:method:miqp}). Learned policies take a
-different route. They twist lids off with two multi-fingered
-hands~\cite{lin2024twisting} or reorient objects in
-hand~\cite{openai2020learning}, without planning regrasps explicitly. They
-come with no completeness guarantee and cannot certify that a goal is
-unreachable. A policy trained on goals that need $k$ regrasps has no guarantee
-on goals that need more, where errors compound over the longer
-horizon~\cite{ross2011reduction}.
+For a robot moving alone, convex decompositions of the collision-free
+space~\cite{deits2015computing,dai2024certified,petersen2023growing,werner2024approximating}
+made this kind of reasoning tractable: Graphs of Convex Sets return
+trajectories that are globally optimal relative to the
+decomposition~\cite{marcucci2023motion}. None of that machinery decides when
+to grasp or release. Planners that do reason about regrasping either sample
+the manipulation
+graph~\cite{simeon2004manipulation,hauser2010multimodal,mirabel2016hpp},
+enumerate a finite set of grasps~\cite{wan2017regrasp,lertkultanon2018certified},
+or fix the sequence of grasps and optimise the
+motions~\cite{toussaint2015lgp,levit2025regrasp}. Mixed-integer formulations
+over convex sets, our own included~\cite{lopezgomez2025minf}, are complete and
+optimal relative to the decomposition, but only for a number of grasps fixed
+beforehand, and the indicator constraints that select among the sets are
+poorly conditioned when those sets are thin
+(Section~\ref{sec:method:miqp}). After a finite computation, none of them can
+say that a plan uses the fewest grasps, or that no plan exists.
 
-Footstep planning has the same combinatorial core as regrasping: a sequence
-of contacts of unknown length, where each contact constrains the next.
-CASSR~\cite{wang2026cassr} showed that A* can search over convex sets of
-footholds reachable from the start, rather than over discretised footholds or
-integer variables, and plans 30 footsteps in under 125\,ms. Regrasping needs
-more than a change of domain. Footholds lie on stepping stones that the
-environment provides as polygons. Grasping configurations, in contrast, must
-be built from nonlinear kinematics in a 10-dimensional space. A footstep does
-not move the terrain, whereas a grasp moves the object, so reachability must
-carry the state of the object. And the motions between grasps must avoid
-collisions in the full configuration space of the robot.
+Footstep planning met the same obstacle and got past it by searching over sets
+instead of points: CASSR~\cite{wang2026cassr} runs A* on convex sets of
+footholds reachable from the start, planning 30 steps in under 125\,ms.
+Regrasping asks for more than a change of domain: footholds come ready-made
+from the environment, whereas grasping configurations must be built from
+nonlinear kinematics, and a grasp, unlike a footstep, moves the object, so
+reachability has to carry the object's state.
 
-We represent the manipulation graph of~\cite{simeon2004manipulation} with
-convex sets. A convex decomposition of free
-space~\cite{werner2024approximating,werner2024faster} gives the
-\emph{free sets}. A convex inner approximation of the grasping configurations,
-built from a seed grasp along the null space of the grasp
-constraints~\cite{toussaint2024nlp}, gives the \emph{grasp set}. Their
-intersections are the \emph{transition sets}, in which the robot can grasp,
-turn and release the object. We search them with an A* whose nodes pair a
-convex set with the interval of object configurations reachable inside it.
-Each guarantee follows from one property of this representation:
+We build the manipulation graph of~\cite{simeon2004manipulation} out of convex
+sets. A convex decomposition of free space gives the \emph{free sets}; a
+convex inner approximation of the grasping configurations, grown from a seed
+grasp along the null space of the grasp constraints~\cite{toussaint2024nlp},
+gives the \emph{grasp set}; their intersections are the \emph{transition
+sets}, the only places where the robot can grasp, turn and release the object.
+We search them with an A* whose nodes pair a set with the interval of object
+configurations reachable inside it. Convexity makes every point of a set
+reachable from any other along a line that never leaves it, and the interval
+makes propagation and pruning exact, so the search needs no sampling, no
+integer variables and no horizon fixed in advance. Our contributions are:
 \begin{itemize}
-  \item Every set is convex, so a robot that reaches a set can reach all of it
-    along straight lines. No sampling is needed inside a set.
-  \item The object moves only inside transition sets. When one object
-    coordinate is coupled to one robot joint, as for caps, valves and knobs,
-    the object configurations reachable in a set form an interval, which the
-    search propagates and compares exactly.
-  \item There are finitely many sets and the cost counts grasps. The search
-    therefore terminates and returns a plan with the fewest grasps relative to
-    the sets, or reports that none exists, without fixing the number of
-    grasps in advance.
-  \item Building the graph only requires linear programs, with no integer
-    variables.
-\end{itemize}
-
-Our contributions are:
-\begin{itemize}
-  \item \emph{Transition sets}: a representation of the manipulation graph in
-    which transit, transfer and the switches between them are convex sets.
-    We build it for a 7-DOF arm from a convex decomposition and a null-space
-    grasp set, and validate it against a collision checker where the
-    decomposition is least reliable (Sections~\ref{sec:problem}
-    and~\ref{sec:method:free}--\ref{sec:method:graph}).
-  \item A \emph{reachability A*} over transition sets. It is complete and
-    returns the minimum number of grasps relative to the sets, with exact
-    propagation and pruning when one object coordinate is coupled to one
-    robot joint. A second stage turns its output into motions without a
-    solver (Sections~\ref{sec:method:search}--\ref{sec:method:properties}).
-  \item An evaluation on cap-turning tasks against our earlier mixed-integer
-    planner and a sampling-based manipulation planner, up to the
-    10-dimensional space of a Franka arm, hand and cap
-    (Sections~\ref{sec:experiments}--\ref{sec:results}).
+  \item \emph{transition sets}, a convex representation of the manipulation
+    graph, built for a 7-DOF arm and validated against a collision checker
+    where the decomposition is least reliable
+    (Sections~\ref{sec:problem},~\ref{sec:method:free}--\ref{sec:method:graph});
+  \item a \emph{reachability A*} over them, complete and returning the fewest
+    grasps relative to the sets, with a solver-free stage that recovers the
+    motions (Sections~\ref{sec:method:search}--\ref{sec:method:properties});
+  \item an evaluation on cap-turning tasks, up to the 10-dimensional space of
+    a Franka arm, hand and cap, against our mixed-integer planner and a
+    sampling-based one (Sections~\ref{sec:experiments}--\ref{sec:results}).
     \todo{update with E1--E5.}
 \end{itemize}
-All guarantees hold relative to the free and grasp sets. They are only as
-meaningful as these sets are faithful near contact, which is why we validate
-the transition sets. Exact intervals rely on the coupling assumption of
-Section~\ref{sec:problem}. General objects are left to future work.
 \tocheck{anonymise the self-citation if double-blind.}

@@ -11,10 +11,9 @@ cannot move on its own. In the \emph{placement space} $\CP$ it rests stably,
 and in the \emph{grasp space} $\CG$ the robot holds it. A manipulation path
 alternates \emph{transit} segments in $\CP$, where the robot moves alone and
 $\alpha$ is constant, and \emph{transfer} segments in $\CG$, where the robot
-moves the object at a fixed relative pose. The two can only meet in the
-\emph{transition sets} $\CG\cap\CP\cap\CSfree$, where the robot can grasp or
-release the object. These are the nodes of the manipulation
-graph~\cite{simeon2004manipulation}.
+moves the object at a fixed relative pose. The two can only meet where the object is at once grasped and stably placed,
+in $\CG\cap\CP\cap\CSfree$. We call these the \emph{transition sets}; they are
+the nodes of the manipulation graph~\cite{simeon2004manipulation}.
 
 \subsection{Multi-regrasp tasks with a coupled object coordinate}
 We study the tasks captured by the following assumption, which include caps,
@@ -32,26 +31,31 @@ $\CSfree=\Xfree\times[\alpha_{\min},\alpha_{\max}]$ for some
 $G,\Xfree\subseteq\mathcal{X}$.
 \end{assumption}
 Point (iii) holds for rotationally symmetric objects, such as the cap in our
-experiments. By (i), every grasping configuration is also a placement, so the
-transition sets reduce to $G\cap\Xfree$ (times the object range). Transfer
-motions also happen inside them.
+experiments. Point (i) has a consequence we rely on throughout: every grasping
+configuration is also a placement, so a transition set is simply a
+collision-free piece of the grasp space, $G\cap\Xfree$ up to the object range.
+A transition set is therefore not only where the robot switches between the
+two kinds of motion, but also where it carries the object, so one set can host
+a grasp, a whole turn and the release that follows.
 
 The wrist has a limited range $[w_{\min},w_{\max}]$, so turning the object by
 more than this range requires several grasps. Without loss of generality, let
 $\agoal\le\ainit$. Since $\alpha$ affects neither collisions nor grasps, a plan
 never gains from turning the object backwards, and the task works like a
-ratchet. A \emph{stroke} grasps the object and moves the wrist forward, so
-$\alpha$ decreases by the wrist travel. A \emph{return} releases the object
-and rotates the wrist back with $\alpha$ fixed, ready for the next stroke. A
-\emph{release} lets go of the object before the robot leaves the transition
-set. Every other motion is transit in $\Xfree$ with $\alpha$ fixed.
+ratchet. A \emph{stroke} grasps the object and drives the wrist forward, turning the
+object by the wrist travel; one stroke is one grasp, and counting strokes
+counts grasps. The robot then either lets go and rotates the wrist back, with
+$\alpha$ fixed, to begin another stroke in the same set --- a \emph{return} ---
+or lets go and leaves the set --- a \emph{release}. Everything else is transit
+in $\Xfree$ at fixed $\alpha$.
 
 \subsection{Problem statement}
 \label{sec:problem:statement}
 Given $\qinit=(\xinit,\ainit)$ and $\qgoal=(\xgoal,\agoal)$, find a continuous
-path from $\qinit$ to $\qgoal$ in $\CSfree$, made of transit segments and
-strokes, that uses the minimum number of grasps. Ties are broken by the number
-of changes of convex set along the path. Path length is not optimised.
+path from $\qinit$ to $\qgoal$ in $\CSfree$, made of transit segments,
+strokes and returns, that uses the fewest grasps. Ties are broken by the
+number of changes of convex set along the path; path length is not
+optimised.
 
 In terms of reachability, let $\mathcal{R}_k\subseteq\CSfree$ be the set of
 states reachable from $\qinit$ with at most $k$ grasps. The minimum number of

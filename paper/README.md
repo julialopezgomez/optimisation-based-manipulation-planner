@@ -2,7 +2,7 @@
 
 This is the third draft, a rewrite for clarity of story and contributions. The method and numbers are unchanged from the second draft, which is based on `full_arm_planner.ipynb`.
 
-Format: IEEE conference (`IEEEtran`, two-column). It is 8 pages including references with the placeholder notes hidden, and 9 with them shown.
+Format: IEEE conference (`IEEEtran`, two-column). It is 8 pages including references with the placeholder notes hidden, and 9 with them shown. There is no slack left, so the E1–E5 results will need cuts.
 
 ## Build
 
@@ -42,6 +42,21 @@ To check the length without the notes, set `\showtodosfalse` in `main.tex`.
   - linear programs only: no integer variables.
 - **Main contribution:** the reachability A\* over transition sets. The MIQP appears as a short paragraph and a baseline.
 
+## Intro and abstract (rewritten 2026-10-05)
+
+Both were cut and rewritten for a shorter, more direct voice. The whole introduction now fits on page 1, and the paper is **8 pages even with the placeholder notes shown** (it was 9).
+
+The introduction is six short paragraphs, following the arc of the IPAB talk and the Year-1 report, so a reader finishes knowing the problem, why it is hard, why others cannot solve it, and what we propose:
+
+1. the task and the coupled decisions it forces (IPAB slide 4);
+2. why it is hard: the grasping set is thin and near contact, and the task accumulates;
+3. convex decompositions + GCS solved this for a robot moving alone, but decide nothing about grasping; what regrasp planners give up instead; and, as the last sentence, the gap;
+4. footstep planning got past the same obstacle by searching over sets, and what regrasping adds;
+5. what we build, and why each guarantee holds;
+6. contributions.
+
+The background on C-free and the per-method critiques are not repeated at length here: Related Work carries them. The abstract follows the same arc and ends on the 4 ms result.
+
 ## Decisions made with Julia
 
 - **Naming:** "transition sets", for grasp set ∩ free set.
@@ -54,20 +69,52 @@ To check the length without the notes, set `\showtodosfalse` in `main.tex`.
   - The finding that the decomposition contains collisions at grasps motivates it.
 - **Learning:** a short, specific comparison in the intro.
 - **Siméon et al.:** the difference is the representation (sampled vs. convex), with the same family of task.
+- **A\* formulation (requested by Julia):** the A\* follows CASSR and Griffin et al. 2019 in their syntax.
+  - Algorithm 1 is the standard A\* loop, with the parts specific to our problem in blue, each pointing to its own numbered paragraph.
+  - Struct 1 describes the node.
+  - Algorithm 2 (`expandNode`) replaces the earlier moves table.
+  - The numbered paragraphs cover the A\* algorithm, the node structure, `expandNode`, `nodeAlreadyExpanded`, `hasReachedTheGoal` and the cost computation.
+  - Specific differences from CASSR are stated in the text: exact dominance (CASSR uses a 2 cm threshold), an admissible heuristic (CASSR's is weighted), and revisiting sets is allowed.
+
+## Reviewer pass (2026-10-05)
+
+A full editing pass for precision, cohesion and repetition. The substantive corrections, as opposed to wording:
+
+- **Problem statement** said plans are made of "transit segments and strokes"; returns were missing even though the cost charges for them.
+- **Transition sets were defined twice with different scopes** (manipulation-graph nodes in §III-A, then "transfer motions also happen inside them"). §III-B now states the consequence of Assumption 1(i) once: a transition set is a collision-free piece of the grasp space, so a single set can host a grasp, a whole turn and the release.
+- **"One stroke is one grasp"** is now stated, so the claims about grasps connect to the moves named in the method.
+- **Extreme-wrist LPs** were written `w_k^± = max/min{±w : x ∈ T_k}`; now two separate LPs.
+- **Proposition (ii) termination argument was wrong.** It claimed each stroke lowers α⁻ by at least `L_min`, but a stroke's reach is `w_k⁺ − a⁻`, which can be smaller. Replaced with the correct argument: interval ends come from finitely many LP-derived wrist values, so finitely many nodes exist per key. **Worth confirming against the code.**
+- **Cost ordering** ("grasps first, set changes second") holds only while `μ · (set changes) < 1`; the condition is now stated.
+- **§VI-A contradicted itself** — "the online stage never calls a collision checker: its only geometric operations are the LPs of the offline stage". Now: the online stage does no geometric computation; it all happened offline.
+- **Convexity claims** now say the connecting line stays inside the set, which is the part that matters.
+- **TP/FP counts** in the fidelity results are spelled out instead of relying on an unstated classifier convention.
+- **Repetition**: the thin-set-near-contact observation was made five times; it is now made once in the introduction, with the technical justification in §IV-C and the rest referring back. "Essentially a wrist interval" / "essentially a segment" replaced with the precise convexity statement.
+
+## Keeping the method independent of the experiment (2026-10-05)
+
+The introduction and method were pinned to the Franka cap task; they are now stated for the general setting, and every task-specific number lives in Sections V--VI.
+
+- **Introduction** no longer names the 10-DOF task, the arm, or big-M. The mixed-integer limitation is stated as a property of the formulation: indicator constraints that select among sets are poorly conditioned when those sets are thin.
+- **§IV-B (grasp set)** now defines the grasp conditions abstractly as `h(x)=0, g(x)<=0` and says what each typically contains; the cap instantiation, its constants, and the rank of `J_h` moved to §V-A. The wrist-invariance property is stated as a general condition on the last joint axis, not as a fact about the Panda.
+- **§IV-G (mixed-integer)** is now a principled account: a binary certified integral only to tolerance `tau` relaxes its set by `M*tau`, so membership is meaningful only for sets much thicker than that; and the continuous relaxation weakens as `M` grows. Tight per-row constants and convex-hull (extended) formulations are cited as the standard remedies [vielma2015mixed], neither of which removes the outer loop over the number of grasps. The concrete numbers (`M=1e6`, `tau=1e-5`, a 2e-3-thick grasp set) now appear in the MIQP comparison in §VI.
+- **New §VI-B, "The trust region on the grasp set"**, carries the evidence that was in the method: without `rho`, extreme points lay 2.27 rad from the seed with `|h|=0.95` and the hand 0.80 m from the cap.
+- The running-example figure is now tied to task T2 rather than standing alone as "the 10-DOF cap task".
 
 ## Open items
 
 1. **Validation (E5):** implement it, then re-run Q0 (expected: 5 grasps) and regenerate Fig. 1.
 2. **Cost of a return from the "entered" phase:** the code charges 1 for rotating the wrist back before any grasp. It should cost μ for the cost to be exactly 2 × grasps.
-3. **Experiments E1–E4:**
+3. **Experiments E1–E4** (note: the paper is exactly 8 pages now, so the results will need space made for them — candidates: Struct 1, the Related Work GCS paragraph, or Fig. 1 panel (b)):
    - Implement the sampling-based baseline: your own manipulation-graph PRM, or HPP.
    - Run the reachability A\* on T1 and check that it returns 11 grasps.
    - Record the MOSEK status for the 10-DOF MIQP.
 4. **Proposition 1:** write the full proof, especially part (iii), that the recovery stage always succeeds.
 5. **Characterisations to verify:** regrasp maps (Levit & Toussaint), Liu et al. 2026, SL1M.
 6. **T1:** decide between the WSG gripper (MInf) and the locked Franka.
-7. **Fig. 1:** a figure of the Franka/cap task was removed for space. Add one back if the results leave room.
-8. **Bibliography:** entries marked `VERIFY` in `references.bib`, and all older entries, still need checking against DBLP.
+7. **Figures:** there is no teaser figure on page 1 (the Franka/cap photo was dropped for space); `figures/franka_cap_grasp.png` is still in the repo. The E1/E4 results figure is commented out in `sections/experiments.tex` because `figures/generalisation.pdf` does not exist yet — that empty grey box was the old Fig. 2.
+8. **Citations removed for space**, when the A\* section grew: Aceituno-Cabezas 2018, Song 2021, Vega-Brown & Roy 2016, Berenson 2011, PDDLStream, Natarajan 2024, Chestnutt 2005 and Amice 2022. They are still in `references.bib`. Long author lists were shortened to "et al.".
+9. **Bibliography:** entries marked `VERIFY` in `references.bib`, and all older entries, still need checking against DBLP.
 
 ## Sources
 

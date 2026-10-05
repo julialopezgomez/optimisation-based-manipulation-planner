@@ -22,11 +22,24 @@ so any turn larger than 2\,rad needs several grasps.
     cap is 0.5\,m in front of the robot base, with two cylindrical obstacles
     (radius 5\,mm) next to it. The free sets come from an IRIS-NP2 clique
     cover with 42 regions \tocheck{coverage target 0.98; $(\varepsilon,\delta)$;
-    generation time}. The grasp set uses~\eqref{eq:graspPoly} with
-    $\epsilon=10^{-3}$, $\rho=0.05$\,rad and $\Lmin=0.05$\,rad. The reference
-    query Q0 turns the cap from 3 to $-1$\,rad and returns the arm to its
-    start configuration.
+    generation time}. The reference query Q0 turns the cap from 3 to $-1$\,rad
+    and returns the arm to its start configuration.
 \end{itemize}
+
+The grasp constraints~\eqref{eq:grasp_hg} ask the hand to be centred over the
+cap, within a height band, with its approach axis $z_E={}^{C}R^{E}(x)e_z$
+pointing down:
+\begin{align}
+  h(x) &= [\,p_x,\; p_y,\; z_{E,x},\; z_{E,y}\,]^\top, \label{eq:grasp_h}\\
+  g(x) &= [\,p_z - z_{\max},\; z_{\min} - p_z,\; z_{E,z} + c\,]^\top, \label{eq:grasp_g}
+\end{align}
+with $p={}^{C}p^{E}(x)$, $[z_{\min},z_{\max}]=[0.105,0.110]$\,m and $c=0.9$,
+and the fingers held within a 1\,mm band around the width of the cap. Here
+$J_h$ has rank 4, leaving a six-dimensional null space. The grasp set
+of~\eqref{eq:graspPoly} uses $\epsilon=10^{-3}$, $\rho=0.05$\,rad and
+$\Lmin=0.05$\,rad. The wrist of the Panda satisfies the invariance of
+Section~\ref{sec:method:grasp} exactly: sweeping it over its whole range at a
+grasp leaves $h$ and $g$ unchanged to machine precision.
 The planner is implemented in Python with Drake~\cite{tedrake2019drake}
 (v1.48). The LPs use Drake's \texttt{MathematicalProgram}, and the MIQP uses
 MOSEK~\cite{mosek}. \todo{hardware; code release.}
@@ -68,9 +81,9 @@ and stroke, and releases into $F_0$. Its cost, $4+\mu$, equals the initial
 heuristic plus one set change, so the heuristic is tight on this query. With
 $D=4$\,rad and $\Lmax=2$\,rad, two grasps is the minimum that the sets allow.
 The second stage turns 2\,rad per stroke and produces 7 waypoints, and all 6
-straight-line motions lie in their recorded set and satisfy the coupling. The
-online stage never calls a collision checker: its only geometric operations
-are the LPs of the offline stage.
+straight-line motions lie in their recorded set and satisfy the coupling. The online stage performs no
+geometric computation of its own: every intersection and extreme point it
+relies on was computed offline, by linear programs.
 
 \begin{table}[t]
 \centering
@@ -96,14 +109,25 @@ Stage & Quantity & Value\\
 \end{tabular}
 \end{table}
 
+\subsection{The trust region on the grasp set}
+Without the trust region $\rho$, the extreme points that the graph
+construction returns lie far outside the region where the linearisation holds:
+on T2 they lay 2.27\,rad from the seed in one arm joint, with
+$\|h\|_\infty=0.95$ and the hand 0.80\,m away from the cap. With
+$\rho=0.05$\,rad, $\|h\|_\infty$ stays near $2\times10^{-3}$ along the plans we
+report \tocheck{numbers from the q0 run}.
+
 \subsection{Comparison with the MIQP}
 Table~\ref{tab:miqp} compares the two ways of choosing grasps. On T1, the MIQP
 returns 11 grasps after proving 10 infeasible. Each stroke turns the cap by
 0.604\,rad, the wrist range of the grasp set in that decomposition, and
 $\lceil 2\pi/0.604\rceil=11$. GCS then connects all 23 transit and transfer
-segments. On T2, the MIQP does not return a reliable solution, for the
-reasons of Section~\ref{sec:method:miqp}, whereas the search returns the plan
-above in milliseconds. \tocheck{MIQP outcome and solve time on T2; run the
+segments. On T2 it does not return a reliable solution. The
+numbers make the argument of Section~\ref{sec:method:miqp} concrete: the grasp
+set is $2\epsilon=2\times10^{-3}$ thick, while $M=10^{6}$ and MOSEK's default
+integrality tolerance $\tau=10^{-5}$~\cite{mosek} give $M\tau=10$\,rad of
+slack on a set reported as occupied, more than any joint range. The
+reachability A* returns the plan above in milliseconds. \tocheck{MIQP outcome and solve time on T2; run the
 reachability A* on T1 and check that it also returns 11.}
 
 \begin{table}[t]
@@ -126,42 +150,37 @@ Task & Method & Grasps & Time & Outcome\\
 
 \subsection{Why transition sets must be validated}
 \label{sec:results:fidelity}
-A planner that is complete and optimal relative to its sets inherits their
-errors. To measure them where they matter, we swept the wrist over $[-1,1]$
+A planner whose guarantees are relative to its sets inherits their errors. To measure them where they matter, we swept the wrist over $[-1,1]$
 at the seed grasp, at 99 points, and compared membership in the free sets
 with Drake's collision checker. The checker finds the wrist free only on
 $[-1,-0.19]$ and $[0.70,0.92]$\,rad \tocheck{which bodies collide in between:
 fingers vs.\ obstacles?}. All four decompositions we computed for T2
 (IRIS-NP2 with 42 and 46 regions, and two IRIS-ZO covers with 64 regions
 \tocheck{the two IRIS-ZO files may be the same cover}) contain every point of
-the sweep: 53 true positives, 46 false positives and no false negatives in
-each case. The two-grasp plan of Fig.~\ref{fig:reach} is therefore valid
+the sweep, so all four label as collision-free the 46 configurations that the
+checker rejects, and miss none of the 53 it accepts. The two-grasp plan of Fig.~\ref{fig:reach} is therefore valid
 relative to the sets, but collides in reality. With the longest truly free
 wrist interval of 0.81\,rad, the minimum is $\lceil4/0.81\rceil=5$ grasps: a
 different discrete structure, not just a different geometry.
 
-This is not a bug in the region generators, but a mismatch between their
-guarantee and our use of them. IRIS-NP2 and IRIS-ZO bound the
-\emph{fraction of volume} of a region in collision~\cite{werner2024faster}. A
-transition set has near-zero volume, so it can be entirely in collision
-without violating that bound, and grasps happen exactly where the hand is
-closest to the obstacles. The same sensitivity appeared on low-dimensional
-versions of the task~\cite{lopezgomez2025minf}: with a 4-DOF gripper, a
-decomposition at 0.70 coverage contained no grasp--release sequence, and at
-0.90 it contained one that GCS could not connect. For regrasp planning, what
-matters is not coverage of free space but the fidelity of the transition
-sets, which is what the validation step checks.
+This is not a bug in the region generators: their guarantee bounds the
+fraction of a region's volume in collision, and transition sets have almost
+no volume (Section~\ref{sec:method:graph}). The same sensitivity appeared on
+low-dimensional versions of the task~\cite{lopezgomez2025minf}, where a
+decomposition at 0.90 coverage contained a grasp--release sequence that GCS
+could not connect. For regrasp planning, what matters is not coverage of free
+space but the fidelity of the transition sets.
 \todo{E5: Q0 with validated transition sets; expected 5 grasps with no
 change to the search.}
 
 \subsection{Generalisation across goals, starts and scenes}
 \todo{Results of E1--E4 (Section~\ref{sec:experiments:protocol}).}
 
-\begin{figure}[t]
-  \centering
-  \figor{figures/generalisation.pdf}{3.4cm}{(left) E1: grasps vs.\ turning angle $D$,
-  a staircase tracking $\lceil D/L\rceil$; (right) E4: planning time vs.\ required grasps
-  for the reachability A*, the MIQP and the sampling-based baseline}
-  \caption{\todo{E1 and E4 results.}}
-  \label{fig:generalisation}
-\end{figure}
+% Results figure, to add once E1/E4 are run: (left) grasps vs. turning
+% angle D, a staircase tracking ceil(D/L); (right) planning time vs.
+% required grasps, for the reachability A*, the MIQP and the
+% sampling-based baseline. Uncomment and provide figures/generalisation.pdf.
+% \begin{figure}[t]\centering
+%   \includegraphics[width=\linewidth]{figures/generalisation.pdf}
+%   \caption{...}\label{fig:generalisation}
+% \end{figure}

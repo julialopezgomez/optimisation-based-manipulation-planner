@@ -3,33 +3,28 @@
 
 \paragraph{Validating where it matters}
 The weakest link is not the search but the sets it searches over
-(Section~\ref{sec:results:fidelity}). Transition sets are thin and almost
-one-dimensional, so they are much cheaper to validate than full regions, and
-the search only needs their wrist intervals, so validation does not change it.
-A dense check is not a certificate. Certifying transition sets with
-C-IRIS~\cite{dai2024certified}, or seeding the decomposition on the grasp set
-so that it is dense where grasps happen, would strengthen the guarantees.
+(Section~\ref{sec:results:fidelity}). A dense check is not a certificate;
+certifying the thin transition sets with C-IRIS~\cite{dai2024certified}, or
+seeding the decomposition on the grasp set, would strengthen the guarantees
+without changing the search.
 
 \paragraph{Constructing grasp sets}
-The grasp set uses only part of NLP sampling~\cite{toussaint2024nlp}: its
-Gauss--Newton phase to find a seed, and its null-space view of the
-constraints. We also tried to use its interior samplers, nonlinear
-hit-and-run and manifold RRT, to explore the grasp manifold and build grasp
-sets from the samples, but neither gave usable polytopes. Growing IRIS regions
-around grasp samples produced a very large number of very small polytopes,
-since a region grown around a thin, curved set is limited by its curvature in
-every direction. Fitting a union of polytopes to the samples with a small
-network, in which each neuron is a half-space, a region is the maximum over
-its half-spaces and the set is the minimum over regions, did not represent
-the grasp set accurately enough to plan with. On the grasp problem, hit-and-run
-also mixed poorly in the wrist and cap coordinates, because its line search
-shares one step size across all coordinates. The construction we use instead
-exploits the structure of the constraints, in particular their exact
-invariance to the wrist, rather than discovering it from samples. Its
-limitation is that it is local: one seed gives one grasp set, valid near the
-seed only. The restarts of NLP sampling, which spread seeds over the
-components of the grasp manifold, are a natural way to obtain several grasp
-sets, which the search already supports. \todo{numbers for the attempts, if
+We take two ideas from NLP sampling~\cite{toussaint2024nlp}, its
+Gauss--Newton phase and its null-space view of the constraints, but not its
+interior samplers, which we first tried and could not turn into usable
+polytopes. Seeding IRIS regions with grasp samples produced many tiny
+polytopes, because a region grown around a thin, curved set is bounded by its
+curvature in every direction. Fitting a union of polytopes to the samples with
+a small network, each neuron a half-space, a region the maximum over its
+half-spaces and the set the minimum over regions, never fitted the grasp set
+closely enough to plan with. Hit-and-run itself mixed poorly in the wrist and
+cap coordinates, since its line search shares one step size across all of
+them. What works instead is to exploit the structure of the constraints, above
+all their exact invariance to the wrist, rather than to rediscover it from
+samples. The price is locality: one seed yields one grasp set, valid near that
+seed. The restarts of NLP sampling spread seeds across the components of the
+grasp manifold, and are the natural way to obtain the several grasp sets the
+search already accepts. \todo{numbers for the attempts, if
 space allows.}
 
 \paragraph{Scope}
@@ -41,11 +36,9 @@ CASSR~\cite{wang2026cassr}, at the cost of exact dominance and with nonlinear
 grasp transforms to approximate.
 
 \paragraph{Optimality and offline cost}
-The search minimises the number of grasps, and then the number of set
-changes, a weak proxy for path length. As in CASSR, the sets are fixed before
-the configurations, so path length is not optimal. The heuristic uses the
-longest transition set in the graph; one computed per connected component
-would be tighter. A new obstacle layout requires a new decomposition, which
+The search minimises the number of grasps, then the number of set changes,
+which is only a weak proxy for distance travelled. As in CASSR, the sets are
+fixed before the configurations, so path length is not optimal. A new obstacle layout requires a new decomposition, which
 dominates the offline cost: in a separate run, IRIS-NP2 took 120\,s for 25
 regions at a 0.98 coverage target \tocheck{different settings}. GPU
 implementations~\cite{werner2025superfast} reduce this cost, and new start
