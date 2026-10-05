@@ -1,12 +1,12 @@
 % =============================================================================
-% Optimisation-based manipulation planning in convex decompositions of the
-% composite configuration space -- DRAFT
+% Reachability search over convex sets for multi-regrasp manipulation planning
+% -- DRAFT (v2: reachability A* from branch pipeline/full-arm-planner)
 %
 % Build:  latexmk -pdf main.tex      (or: pdflatex, bibtex, pdflatex, pdflatex)
 %
 % Placeholders:
 %   \todo{...}     red    -- missing content / decision needed
-%   \tocheck{...}  orange -- written from notes/memory, verify before submission
+%   \tocheck{...}  orange -- written from notes/notebook output, verify before submission
 %   \tbd           red    -- missing number
 % Set \showtodosfalse below to hide all of them (e.g. to check page count).
 % =============================================================================
@@ -22,6 +22,10 @@
 \usepackage[noend]{algpseudocode}
 \usepackage{xcolor}
 \usepackage{bm}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usetikzlibrary{arrows.meta,calc,positioning}
 \usepackage[hidelinks]{hyperref}
 
 % ---------------------------------------------------------------- placeholders
@@ -46,17 +50,19 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\CS}{\mathcal{C}}                 % composite configuration space
 \newcommand{\CSfree}{\mathcal{C}_{\mathrm{free}}}
-\newcommand{\Crob}{\mathcal{C}_{\mathrm{rob}}}
-\newcommand{\Cobj}{\mathcal{C}_{\mathrm{obj}}}
+\newcommand{\Xfree}{\mathcal{X}_{\mathrm{free}}}
 \newcommand{\CG}{\mathcal{C}_{G}}             % grasp space
 \newcommand{\CP}{\mathcal{C}_{P}}             % placement space
-\newcommand{\CGfree}{\mathcal{C}_{G}^{\mathrm{free}}}
-\newcommand{\CPfree}{\mathcal{C}_{P}^{\mathrm{free}}}
-\newcommand{\Pfree}{\mathcal{P}}              % union of free polytopes
 \newcommand{\qinit}{q_{\mathrm{init}}}
 \newcommand{\qgoal}{q_{\mathrm{goal}}}
-\newcommand{\qcap}{q_{\mathrm{cap}}}
-\newcommand{\qwr}{q_{\mathrm{wr}}}
+\newcommand{\xinit}{x_{\mathrm{init}}}
+\newcommand{\xgoal}{x_{\mathrm{goal}}}
+\newcommand{\ainit}{\alpha_{\mathrm{init}}}
+\newcommand{\agoal}{\alpha_{\mathrm{goal}}}
+\newcommand{\alo}{\alpha^{-}}
+\newcommand{\ahi}{\alpha^{+}}
+\newcommand{\Lmax}{L_{\max}}
+\newcommand{\Lmin}{L_{\min}}
 \DeclareMathOperator*{\argmin}{arg\,min}
 
 \algnewcommand\algorithmicinput{\textbf{Input:}}
@@ -64,21 +70,21 @@
 \algnewcommand\algorithmicoutput{\textbf{Output:}}
 \algnewcommand\Output{\item[\algorithmicoutput]}
 
-\newtheorem{remark}{Remark}
 \newtheorem{proposition}{Proposition}
+\newtheorem{assumption}{Assumption}
 
 \begin{document}
 
-% Title alternatives (pick one):
-%  - Manipulation Planning with Convex Decompositions of C-free and NLP Sampling  (IPAB talk title)
-%  - Optimisation-Based Manipulation Planning in Convex Decompositions of the Composite Configuration Space
-%  - Planning Grasps and Regrasps over Graphs of Convex Sets
-\title{Optimisation-Based Manipulation Planning in Convex\\
-Decompositions of the Composite Configuration Space%
+% Title alternatives:
+%  - Reachability-Aware Manipulation Planning for Long Regrasp Sequences
+%  - How Many Regrasps? Reachability Search over Convex Sets for Manipulation Planning
+%  - Planning Regrasp Sequences by Propagating Reachability over Convex Sets
+\title{Reachability Search over Convex Sets for\\
+Multi-Regrasp Manipulation Planning%
 \thanks{This work was supported by the UKRI AI Centre for Doctoral Training in
 Dependable and Deployable AI for Robotics (CDT-D2AIR) \todo{grant number}.}}
 
-\author{\IEEEauthorblockN{Julia L\'opez G\'omez and Steve Tonneau \tocheck{author list and order}}
+\author{\IEEEauthorblockN{Julia L\'opez G\'omez and Steve Tonneau}
 \IEEEauthorblockA{School of Informatics, University of Edinburgh, United Kingdom\\
 \todo{emails}}}
 

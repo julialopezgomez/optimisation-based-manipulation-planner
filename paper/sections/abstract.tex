@@ -1,32 +1,27 @@
-% Adapted from the IPAB workshop abstract (13.08.26) and the Year-1 annual review.
 \begin{abstract}
-Manipulation planning requires a robot to decide where to grasp, transport and
-release an object while moving through a high-dimensional configuration space
-shaped by collisions, joint limits and grasp constraints. These conditions make
-the feasible space narrow, disconnected and hard to describe. Sampling-based
-manipulation planners are probabilistically complete but converge slowly in the
-narrow, lower-dimensional sets where grasps and regrasps happen, while
-trajectory optimisation can exploit problem structure but is sensitive to
-initialisation and offers no completeness guarantees. We propose a manipulation
-planner that operates on a convex decomposition of the collision-free composite
-configuration space of robot and object. Grasp and placement spaces are
-represented as unions of convex polytopes and intersected with the
-decomposition, so that the classical manipulation graph becomes a graph of
-convex sets. A minimum-regrasp sequence of grasp and release configurations is
-selected by a mixed-integer quadratic program, or by heuristic search over the
-polytope graph, and connected by globally optimal transit and transfer
-trajectories computed with Graphs of Convex Sets. For high-dimensional arms,
-where grasping is a nonlinear constraint on the forward kinematics, we generate
-diverse feasible grasp configurations with NLP sampling and build grasp
-polytopes aligned with the null space of the active grasp constraints. The
-resulting planner is complete and optimal relative to the constructed
-decomposition. We evaluate it on bottle-cap opening tasks that require repeated
-regrasping, from 3- and 4-DOF systems up to the 10-dimensional composite space
-of a Franka Panda arm, hand and cap, and compare it with sampling-based
-baselines. \todo{one sentence with the headline result once experiments are in.}
+Many manipulation tasks need a sequence of grasps whose length is not known
+in advance. Turning a cap with a wrist of limited range takes as many regrasps
+as the goal, the kinematics and the obstacles require. We cast multi-regrasp
+planning as a reachability problem over a convex decomposition of the
+collision-free configuration space of robot and object. Grasp pieces, the
+polytopes where the robot can hold the object, are the only sets where the
+object moves. Inspired by recent footstep planners, we search them with an A*
+whose nodes are not configurations but polytopes paired with the set of object
+configurations reachable inside them. When one object coordinate is coupled to
+one robot joint, this set is an interval, so reachability propagates by
+interval arithmetic and dominance is exact. The graph is built with linear
+programs only, and the search returns a plan with the minimum number of grasp
+actions relative to the decomposition, with no integer variables and no fixed
+horizon. On a 10-DOF cap-turning task with a Franka Panda, where a
+mixed-integer formulation is numerically unreliable, it plans in 4\,ms. The
+same task shows that probabilistically certified decompositions can contain
+collisions concentrated on the grasp sets where regrasps happen. This makes the
+fidelity of these switch sets, not coverage of free space, the key requirement
+for planners of this kind.
+\todo{headline numbers from E1--E4.}
 \end{abstract}
 
 \begin{IEEEkeywords}
-Manipulation planning, motion and path planning, convex optimisation,
-graphs of convex sets, constrained sampling.
+Manipulation planning, regrasping, reachability, graph search, convex
+decompositions.
 \end{IEEEkeywords}

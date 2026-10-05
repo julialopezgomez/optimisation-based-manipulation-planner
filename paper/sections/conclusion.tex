@@ -1,19 +1,19 @@
 \section{Conclusion}
 \label{sec:conclusion}
-We presented a manipulation planner that operates on convex decompositions of
-the collision-free composite configuration space of robot and object. By
-representing the grasp and placement spaces as unions of polytopes and
-intersecting them with the decomposition, the nodes and edges of the classical
-manipulation graph become convex sets. Grasp and release configurations are
-then selected with the minimum number of grasps by mixed-integer optimisation
-or heuristic search, and connected by transit and transfer trajectories
-computed with Graphs of Convex Sets. To scale this representation to a 7-DOF
-arm, where grasping is a nonlinear constraint on the forward kinematics, we
-combined NLP sampling for diverse grasp configurations with polytopes aligned
-with the null space of the grasp constraints. \todo{one or two sentences on
-the 10-DOF results and the comparison with sampling-based planners.} More
-broadly, this work shows that describing where grasping actions can start and
-end as convex sets lets an optimiser reason about how to sequence them.
+We posed multi-regrasp manipulation planning as a reachability problem over a
+convex decomposition of free space, and solved it with an A* search whose
+nodes pair polytopes with intervals of reachable object configurations. This
+transfers to manipulation an idea that recently matured in footstep planning.
+For objects with one coordinate coupled to the wrist, propagation is interval
+arithmetic and dominance is exact. The graph needs only LPs, and the search
+returns the minimum number of grasp actions relative to the decomposition,
+without fixing the number of regrasps in advance and without the numerical
+fragility of a mixed-integer formulation. On a 10-DOF Franka cap-turning task
+it plans in milliseconds where the MIQP fails. The same experiment shows that
+these guarantees are only as good as the decomposition near contact. We
+believe that certifying the switch sets, rather than covering free space, is
+the key requirement for planners of this kind.
+\todo{one sentence on E1--E4 once run.}
 
 \section*{Acknowledgment}
 \todo{acknowledgments; funding is in the title footnote.}

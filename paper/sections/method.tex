@@ -1,309 +1,344 @@
 \section{Method}
 \label{sec:method}
 
-\subsection{Overview}
-\label{sec:method:overview}
-Algorithm~\ref{alg:planner} summarises the planner. An offline stage
-decomposes $\CSfree$ into convex polytopes (Section~\ref{sec:method:decomp}),
-constructs polytopic grasp and placement spaces
-(Section~\ref{sec:method:grasp}), and intersects them to obtain the convex
-counterparts of the nodes and edges of the manipulation graph
-(Section~\ref{sec:method:graph}). The planning stage selects the keyframes
-\eqref{eq:keyframes} with the minimum number of grasps
-(Section~\ref{sec:method:sequencing}) and connects them with transit and
-transfer trajectories (Section~\ref{sec:method:gcs}). The offline stage
-depends only on the robot, object and environment, and can be reused across
-queries with different $\qinit$ and $\qgoal$.
+\begin{figure*}[t]
+\centering
+% ---------------------------------------------------------------- (a) schematic
+\begin{minipage}[b]{0.33\textwidth}\centering
+\begin{tikzpicture}[scale=1.0, font=\scriptsize]
+  \fill[blue!10, draw=blue!50] (-0.2,0) -- (3.0,0) -- (3.0,0.9) -- (1.1,2.25) -- (-0.2,2.25) -- cycle;
+  \fill[blue!10, draw=blue!50, fill opacity=0.8] (5.2,0) -- (2.0,0) -- (2.0,0.9) -- (3.9,2.25) -- (5.2,2.25) -- cycle;
+  \fill[blue!5, draw=blue!50, fill opacity=0.7] (0.0,1.75) rectangle (5.0,2.4);
+  \fill[green!55!black] (0.3,1.97) rectangle (4.7,2.03);
+  \node[blue!60!black] at (0.1,0.22) {$F_2$};
+  \node[blue!60!black] at (4.9,0.22) {$F_0$};
+  \node[blue!60!black, anchor=west] at (5.0,2.1) {$F_6$};
+  \node[green!35!black, anchor=south] at (2.5,2.03) {$G_6=G\cap F_6$};
+  \node[anchor=south, font=\tiny] at (0.35,2.03) {$w{=}{-}1$};
+  \node[anchor=south, font=\tiny] at (4.65,2.03) {$w{=}1$};
+  \node[font=\tiny] at (2.5,2.6) {stroke, return, stroke: $G_6\times[-1,3]$};
+  \coordinate (s) at (2.5,0.45);
+  \draw[densely dashed, -{Stealth[length=2mm]}] (s) -- (0.33,1.94);
+  \draw[densely dashed, -{Stealth[length=2mm]}] (4.67,1.94) -- (2.58,0.5);
+  \fill (s) circle (1.5pt) node[below=1pt] {$\xinit=\xgoal$};
+  \node[align=center, font=\tiny] at (0.62,1.0) {enter\\$F_2{\times}\{3\}$};
+  \node[align=center, font=\tiny] at (4.38,1.0) {release\\$F_0{\times}[-1,1.65]$};
+\end{tikzpicture}\\[-1pt]
+{\footnotesize (a)}
+\end{minipage}\hfill
+% ---------------------------------------------------- (b) intervals along search
+\begin{minipage}[b]{0.31\textwidth}\centering
+\begin{tikzpicture}
+\begin{axis}[width=\linewidth, height=4.1cm, ymin=-1.6, ymax=3.9, xmin=-0.5, xmax=5.5,
+  ylabel={$\alpha$ [rad]}, ylabel style={yshift=-6pt}, font=\scriptsize,
+  xtick={0,...,5}, xticklabels={$F_2$,e,h,r,h,$F_0$},
+  x tick label style={font=\tiny}, ytick={-1,0,1,2,3}, grid=major, grid style={gray!20}]
+  \addplot[dashed, red!70!black, domain=-0.5:5.5, samples=2] {-1};
+  \node[font=\tiny, red!70!black, anchor=north] at (axis cs:2.5,-1.05) {$\agoal$};
+  \foreach \i/\lo/\hi in {0/3/3, 1/3/3, 2/1/3, 3/1/3, 4/-1/3, 5/-1/1.645} {
+    \edef\temp{\noexpand\draw[line width=3pt, blue!60, line cap=round] (axis cs:\i,\lo) -- (axis cs:\i,\hi);}
+    \temp
+  }
+  \foreach \i/\y/\g in {0/3/0, 1/3/\mu, 2/3/1{+}\mu, 3/3/2{+}\mu, 4/3/3{+}\mu, 5/1.645/4{+}\mu} {
+    \edef\temp{\noexpand\node[font=\noexpand\tiny, anchor=south] at (axis cs:\i,\y+0.12) {$\g$};}
+    \temp
+  }
+\end{axis}
+\end{tikzpicture}\\[-1pt]
+{\footnotesize (b)}
+\end{minipage}\hfill
+% ------------------------------------------------------ (c) wrist--cap waypoints
+\begin{minipage}[b]{0.31\textwidth}\centering
+\begin{tikzpicture}
+\begin{axis}[width=\linewidth, height=4.1cm, xmin=-1.1, xmax=1.1, ymin=-1.6, ymax=3.6,
+  xlabel={wrist $w$ [rad]}, ylabel={$\alpha$ [rad]}, ylabel style={yshift=-6pt},
+  xlabel style={yshift=3pt}, font=\scriptsize, ytick={-1,0,1,2,3}, grid=major, grid style={gray!20}]
+  \fill[red!12] (axis cs:-0.192,-1.6) rectangle (axis cs:0.697,3.6);
+  \fill[red!12] (axis cs:0.919,-1.6) rectangle (axis cs:1.0,3.6);
+  \fill[green!12] (axis cs:-1.0,-1.6) rectangle (axis cs:-0.192,3.6);
+  \fill[green!12] (axis cs:0.697,-1.6) rectangle (axis cs:0.919,3.6);
+  \addplot[densely dotted, thick, black, -{Stealth[length=1.6mm]}] coordinates {(0.037,3) (-1,3)};
+  \addplot[very thick, green!45!black, -{Stealth[length=1.6mm]}] coordinates {(-1,3) (1,1)};
+  \addplot[dashed, thick, orange!80!black, -{Stealth[length=1.6mm]}] coordinates {(1,1) (-1,1)};
+  \addplot[very thick, green!45!black, -{Stealth[length=1.6mm]}] coordinates {(-1,1) (1,-1)};
+  \addplot[densely dotted, thick, black, -{Stealth[length=1.6mm]}] coordinates {(1,-1) (0.037,-1)};
+  \addplot[only marks, mark=*, mark size=1.2pt] coordinates {(0.037,3) (0.037,-1)};
+  \node[font=\tiny, anchor=south] at (axis cs:0.05,3.05) {start};
+  \node[font=\tiny, anchor=north] at (axis cs:0.05,-1.05) {goal};
+  \node[font=\tiny, green!35!black, rotate=-38] at (axis cs:-0.05,2.25) {stroke};
+  \node[font=\tiny, orange!70!black, anchor=south] at (axis cs:0.2,1.0) {return};
+\end{axis}
+\end{tikzpicture}\\[-1pt]
+{\footnotesize (c)}
+\end{minipage}
+\caption{Reachability A* on the 10-DOF cap task, turning the cap from
+$\ainit=3$ to $\agoal=-1$\,rad with the arm returning to its start
+configuration. (a)~Sets on the returned path. The arm enters the grasp piece
+$G_6$ from region $F_2$, performs stroke--return--stroke, and releases into
+$F_0$. (b)~The interval $[\alo,\ahi]$ of each node on the path (bars; e, h, r:
+$G_6$ entered, holding, released), labelled with its cost-to-come $g$. Only strokes widen the interval, and the release lowers
+$\ahi$ by the forced turning $d=1.35$\,rad. (c)~Placed waypoints projected on
+the wrist--cap plane: strokes turn the cap ($\Delta\alpha=-\Delta w$), and
+returns and transit keep it fixed. Shading shows the true collision status of
+the wrist sweep at the seed grasp (green: free, red: in collision). Every
+region contains the full sweep, so the plan is valid relative to the
+decomposition but not physically (Section~\ref{sec:results:fidelity}).}
+\label{fig:reach}
+\end{figure*}
 
-\begin{algorithm}[t]
-\caption{Manipulation planner}
-\label{alg:planner}
-\begin{algorithmic}[1]
-\Input robot, object, obstacles, manipulation constraints $\mathcal{M}$,
-  $\qinit$, $\qgoal$, max.\ grasps $L$
-\Output trajectory $\tau$
-\State $\{P_j\}_{j=1}^{J} \gets \textsc{CliqueCoverIRIS}(\CSfree)$
-  \Comment{Sec.~\ref{sec:method:decomp}}
-\State $\{G_k\}_{k=1}^{K} \gets \textsc{GraspPolytopes}()$
-  \Comment{Sec.~\ref{sec:method:grasp}, Alg.~\ref{alg:grasp}}
-\State $\CPfree,\CGfree,\text{components} \gets \textsc{Intersect}(\{P_j\},\{G_k\},\CP)$
-  \Comment{Sec.~\ref{sec:method:graph}}
-\For{$\ell = 1,\dots,L$}
-  \State $x_{0:2\ell+1} \gets \textsc{Sequence}(\ell,\CPfree,\CGfree,\mathcal{M})$
-  \Comment{Sec.~\ref{sec:method:sequencing}}
-  \If{a sequence is found} \textbf{break} \EndIf
-\EndFor
-\For{$i = 0,\dots,2\ell$}
-  \State $\sigma \gets$ transit if $i$ even, else transfer
-  \State $\tau_i \gets \textsc{GCS}(x_i, x_{i+1}; \text{regions of mode }\sigma, \mathcal{M}_\sigma)$
-  \Comment{Sec.~\ref{sec:method:gcs}}
-\EndFor
-\State \Return $\tau = \tau_0\oplus\dots\oplus\tau_{2\ell}$
-\end{algorithmic}
-\end{algorithm}
 
-\subsection{Convex decomposition of the collision-free space}
+The planner has an offline stage, which depends only on the robot, the object
+and the scene, and an online stage per query. Offline, it decomposes free
+space into polytopes (Section~\ref{sec:method:decomp}), builds grasp polytopes
+(Section~\ref{sec:method:grasp}), and intersects them into grasp pieces and a
+polytope graph using only LPs (Section~\ref{sec:method:graph}). Online, a
+reachability A* chooses the sequence of sets and grasp actions
+(Section~\ref{sec:method:search}), and a placement stage turns it into
+certified motions (Section~\ref{sec:method:placement}).
+Fig.~\ref{fig:reach} illustrates both stages on our 10-DOF task.
+
+\subsection{Convex decomposition of free space}
 \label{sec:method:decomp}
-We compute a collection of convex polytopes
-$P_j=\{q\in\R^{n} : A_j q\le b_j\}$, $j=1,\dots,J$, whose union
-$\Pfree=\bigcup_j P_j$ is an inner approximation of $\CSfree$. We use clique
-covers of visibility graphs~\cite{werner2024approximating}: collision-free
-configurations are sampled, a visibility graph is built between them, it is
-covered by cliques, and each clique seeds the growth of one region, here with
-IRIS-NP~\cite{petersen2023growing} as implemented in
-Drake~\cite{tedrake2019drake}. The process repeats until a fraction $\alpha$ of
-sampled collision-free configurations is covered. Regions grown this way are
-collision-free with high probability; when certification is required, they can
-be mapped to the tangent configuration space $t_i=\tan(\theta_i/2)$ of each
-revolute joint and certified, or shrunk until certified, with
-C-IRIS~\cite{dai2024certified}. \tocheck{the MInf pipeline maps polytope
-vertices to TC-space, takes the convex hull, shrinks with C-IRIS and maps
-vertices back; the back-mapped hull is not guaranteed to stay inside the
-certified set, since the map is nonlinear. Either fix, state as approximate, or
-drop certification from the 10-DOF results.} The decomposition is computed
-once per scene, and is the only stage whose cost grows directly with the
-volume of free space covered. \todo{coverage $\alpha$ and IRIS/clique-cover
-parameters per task; the stored 10-DOF decomposition has 18 regions at
-$\alpha=0.98$ \tocheck{}.}
+We inner-approximate $\CSfree$ by polytopes
+$P_j=\{q:A_jq\le b_j\}$, $j=1,\dots,J$, computed with clique covers of
+visibility graphs~\cite{werner2024approximating} and IRIS-NP2
+regions~\cite{werner2024faster} in Drake~\cite{tedrake2019drake}. Each region
+is collision-free up to a fraction $\varepsilon$ of its volume, with
+confidence $1-\delta$. Certified alternatives exist~\cite{dai2024certified}
+but scale poorly to 10 dimensions. By Assumption~\ref{ass:task}(iii), the
+object coordinate does not affect collisions. We therefore replace each region
+by its slice at $\alpha=0$, $F_j=\{x:(x,0)\in P_j\}$, dropping rows that only
+bound $\alpha$. This is sound: if $(x,0)$ is collision-free, so is $(x,\alpha)$
+for every $\alpha$. The robot can then occupy any $x\in F_j$ at any object
+angle, and the planner tracks $\alpha$ separately.
 
-\subsection{Grasp and placement polytopes}
+\subsection{Grasp polytopes for a 7-DOF arm}
 \label{sec:method:grasp}
-The planner needs $\CP$ and $\CG$ as unions of polytopes,
-$\CP=\bigcup_{k'} P^{\mathrm{pl}}_{k'}$ and $\CG\supseteq\bigcup_{k} G_k$.
-In the bottle-cap tasks, the cap rotates about a fixed axis and is always
-stably placed, so $\CP$ is the joint-limit box. Grasps are where the
-two settings differ.
-
-\paragraph{Low-DOF grippers}
-When the gripper joints map directly to the grasp, $\CG$ is a box in
-configuration space. For the 3- and 4-DOF tasks of
-Section~\ref{sec:experiments}, a grasp is any configuration in which the
-finger touches the cap, $z_{\mathrm{finger}}=-0.025$\,m, with the other joints
-free within their limits. To give the set non-zero volume we use a 1\,mm band,
-$z_{\mathrm{finger}}\in[-0.025,-0.024]$, so $\CG$ is a single box, i.e., the
-convex hull of its $2^{n}$ corners.
-
-\paragraph{High-DOF arms}
-For a 7-DOF arm, a grasp constrains the pose of the hand frame $E$ relative to
-the cap frame $C$, ${}^{C}X^{E}(q)=({}^{C}R^{E}(q),{}^{C}p^{E}(q))$, which is
-a nonlinear function of the arm joints. For the cap task, the hand must be
-centred above the cap, within a height band, with its approach axis
-$z_E={}^{C}R^{E}(q)\,e_z$ pointing down along the cap axis:
+For a gripper with a few joints, $G$ is a box in configuration
+space~\cite{lopezgomez2025minf}. For a 7-DOF arm, a grasp constrains the pose
+of the hand frame $E$ relative to the cap frame $C$, a nonlinear function of
+the arm joints. The hand must be centred above the cap, within a height band,
+with its approach axis $z_E={}^{C}R^{E}(x)\,e_z$ pointing down:
 \begin{align}
-  h(q) &= \big[\,p_x,\; p_y,\; z_{E,x},\; z_{E,y}\,\big]^\top = 0, \label{eq:grasp_h}\\
-  g(q) &= \big[\,p_z - z_{\max},\; z_{\min} - p_z,\; z_{E,z} + c\,\big]^\top \le 0, \label{eq:grasp_g}
+  h(x) &= [\,p_x,\; p_y,\; z_{E,x},\; z_{E,y}\,]^\top = 0, \label{eq:grasp_h}\\
+  g(x) &= [\,p_z - z_{\max},\; z_{\min} - p_z,\; z_{E,z} + c\,]^\top \le 0, \label{eq:grasp_g}
 \end{align}
-with $p={}^{C}p^{E}(q)$, $[z_{\min},z_{\max}]=[0.105,0.110]$\,m and $c=0.9$,
-together with the finger joints restricted to a 1\,mm band around the cap
-width. The set $\{q: h(q)=0,\,g(q)\le0\}$ is a thin, curved manifold of
-dimension $n-4$ in $\CS$, which cannot be written down as a polytope. We
-approximate it with a union of thin polytopes around diverse grasp
-configurations (Algorithm~\ref{alg:grasp}).
-
-\begin{algorithm}[t]
-\caption{Grasp polytopes for a high-DOF arm}
-\label{alg:grasp}
-\begin{algorithmic}[1]
-\Input grasp constraints $h,g$ and Jacobians; joint limits; margins $\epsilon$, tolerance $\eta$
-\Output grasp polytopes $\{G_k\}$
-\State $\{q_k\} \gets \textsc{NLPSampling}(h,g)$ \Comment{diverse grasp seeds}
-\For{each seed $q_k$}
-  \State $J_k \gets [\,\partial h/\partial q;\; \partial g_{\mathcal{A}}/\partial q\,](q_k)$ \Comment{active rows}
-  \State $N_k \gets \mathrm{null}(J_k)$, $\;V_k \gets N_k^{\perp}$ \Comment{orthonormal bases}
-  \State $r_k \gets$ largest extents along $N_k$ s.t.\ the box validates
-  \State $G_k \gets \{q : |N_k^\top(q-q_k)|\le r_k,\ |V_k^\top(q-q_k)|\le\epsilon\}$
-  \State validate $G_k$: $\|h\|_\infty\le\eta$, $g\le\eta$ on corners and random points
-\EndFor
-\end{algorithmic}
-\end{algorithm}
-
-\paragraph{Grasp seeds with NLP sampling}
-Grasp polytopes are only useful if their seeds cover the different
-components of the grasp manifold (e.g., different elbow postures). A local
-inverse-kinematics solver returns one solution per initial guess and gives no
-control over diversity. We instead use NLP sampling~\cite{toussaint2024nlp},
-which targets the density $p(q)\propto e^{-f(q)}\,\mathbb{1}[g(q)\le0]\,\mathbb{1}[h(q)=0]$,
-here with $f\equiv0$. Each restart (i) picks a seed among candidates far from
-all previous samples, (ii) runs a damped Gauss--Newton descent on the slack
-$\|s(q)\|^2$, $s=[\max(g,0);\,h]$, until a feasible point is found, and
-(iii) explores the feasible set from it with an interior sampler, relaxing
-$h=0$ to a tube $|h|\le\eta_{w}$ and projecting proposal directions onto the
-tangent space,
-$d\gets\big(I-J_h^\top(J_hJ_h^\top+\lambda I)^{-1}J_h\big)d$. A final
-Gauss--Newton projection brings every sample within $\|h\|_\infty\le10^{-3}$.
-Our implementation is a Python port of the reference implementation
-of~\cite{toussaint2024nlp}, with nonlinear hit-and-run (NHR) and manifold RRT
-(mRRT) as interior methods, and Drake's automatic differentiation for the
-Jacobians. On the grasp problem, NHR mixed poorly in the wrist and cap
-coordinates: its line search shares one step size across all coordinates, so
-the tightest constraint throttles motion even along directions it does not
-depend on. We diagnose this by comparing the spread of each coordinate within
-a chain with its spread across restarts, and switch to mRRT, which takes
-fixed-length tangent steps and corrects them afterwards.
-\todo{report within-chain vs.\ across-restart spread for HR vs.\ mRRT; number
-of restarts / samples / seeds used; optionally MSTS curves~\cite{toussaint2024nlp}.}
-
-\paragraph{Null-space polytopes}
-Around each seed $q_k$, we linearise the active constraints, i.e., $h$ and the
-rows of $g$ within $\delta$ of zero, and compute an orthonormal basis $N_k$ of
-the null space of their Jacobian $J_k$ and a basis $V_k$ of its orthogonal
-complement. Directions in $N_k$ preserve the grasp to first order, and some of
-them preserve it exactly: rotating the wrist, whose axis passes through the
-origin of $E$ along $z_E$, changes neither $p$ nor $z_E$; the cap joint and
-the fingers do not enter \eqref{eq:grasp_h}--\eqref{eq:grasp_g} at all. These
-directions are given their full joint range. The remaining null direction of
-the 7-DOF arm, a self-motion that mixes all shoulder and elbow joints, is
-given the largest extent for which the constraints remain within a tolerance
-$\eta$, and the complement $V_k$ a small margin $\epsilon$. The resulting
-$G_k$ is a box in rotated coordinates, i.e., an H-polytope with $2n$
-half-spaces, intersected with the joint limits. We validate each $G_k$ by
-checking the constraints at the corners of the non-trivial directions and at
-random interior points.
-\todo{final $\epsilon$ and $\eta$ (currently $\epsilon=10^{-3}$\,rad, matching
-the finger band, and $\eta=10^{-2}$); report validation counts and volume
-compared with the axis-aligned box
-($\pm3.5\times10^{-3}$\,rad, preliminary) \tocheck{numbers from the
-investigation record on branch nlp-sampling/quality-metrics}.}
-\tocheck{this validation is empirical, not a certificate; say so explicitly or
-add a Lipschitz/interval bound.}
-
-Because the wrist and cap are exact invariant directions of the grasp
-constraint, a transfer motion for the cap task (a coupled rotation of wrist
-and cap, \eqref{eq:transfer}) stays within a single $G_k$; regrasps between
-different grasp polytopes happen through transit motions.
-
-\subsection{Mode sets and their connectivity}
-\label{sec:method:graph}
-We intersect the grasp and placement spaces with the decomposition,
-\begin{equation}
-  \CPfree = \bigcup_{j}\big(\CP\cap P_j\big),\qquad
-  \CGfree = \bigcup_{j,k}\big(G_k\cap P_j\big),
-  \label{eq:modefree}
-\end{equation}
-keeping only non-empty intersections (each checked with one linear program).
-Both are unions of convex polytopes, possibly disconnected. We compute their
-connected components from the intersection graph of their polytopes: two
-polytopes are adjacent if they intersect. The components of $\CPfree$ and
-$\CGfree$ play the role of the transit and transfer edges of the manipulation
-graph: two configurations in the same component of $\CPfree$ can be connected
-by a collision-free path in $\CP$, and similarly for $\CGfree$. Configurations
-in $\CGfree\cap\CPfree$ are candidate grasps and releases, the nodes of the
-manipulation graph~\cite{simeon2004manipulation}.
-
-\subsection{Grasp--release sequencing}
-\label{sec:method:sequencing}
-
-\paragraph{Mixed-integer formulation}
-For a fixed number of grasps $\ell$, we choose the keyframes
-\eqref{eq:keyframes} by solving
+with $p={}^{C}p^{E}(x)$, $[z_{\min},z_{\max}]=[0.105,0.110]$\,m and $c=0.9$.
+The fingers are restricted to a 1\,mm band around the cap width. The set
+$\{h=0,\,g\le0\}$ is a thin, curved manifold. We find a seed grasp $x_0$ on it
+with the Gauss--Newton phase of NLP sampling~\cite{toussaint2024nlp} and
+linearise around it:
 \begin{equation}
 \begin{aligned}
-  \min_{x_0,\dots,x_{2\ell+1}}\ & \textstyle\sum_{i=0}^{2\ell}\|x_{i+1}-x_i\|_2^2\\
-  \text{s.t.}\ \ & x_0=\qinit,\quad x_{2\ell+1}=\qgoal,\quad q_{\min}\le x_i\le q_{\max},\\
-  & \mathcal{M}_{\mathrm{tr}}(x_{2i},x_{2i+1}),\ \ x_{2i}\sim_{\CPfree}x_{2i+1},\ \ i\le\ell,\\
-  & \mathcal{M}_{\mathrm{tf}}(x_{2i+1},x_{2i+2}),\ \ x_{2i+1}\sim_{\CGfree}x_{2i+2},\ \ i<\ell,
+G=\{x:\ & |h_0+J_h(x-x_0)|\le\epsilon,\ \ g_0+J_g(x-x_0)\le\epsilon,\\
+        & x^{G}_{\min}\le x\le x^{G}_{\max},\ \ |x_j-x_{0,j}|\le\rho\ \ \forall j\in\mathcal{A}\},
 \end{aligned}
-\label{eq:miqp}
+\label{eq:graspPoly}
 \end{equation}
-where $x\sim_{\mathcal{U}}x'$ requires both points to lie in the same
-connected component of the union of polytopes $\mathcal{U}$. For
-$\mathcal{U}=\bigcup_m Q_m$, $Q_m=\{x:A_mx\le b_m\}$, with components
-$\mathcal{U}_1,\dots,\mathcal{U}_C$, we encode membership of each point $x$
-with binaries $\delta_m$ (point in $Q_m$) and $\lambda_c$ (point in
-$\mathcal{U}_c$):
+where $h_0,J_h,g_0,J_g$ are evaluated at $x_0$, $\epsilon=10^{-3}$, and
+$\mathcal{A}$ are the arm joints other than the wrist. Two properties of the
+task shape this construction. First, the wrist axis passes through the origin
+of $E$ along $z_E$, so rotating the wrist changes neither $p$ nor $z_E$: $h$
+and $g$ are \emph{exactly} invariant along $w$. We verified this to machine
+precision over the whole wrist range. The wrist columns of $J_h$ and $J_g$
+therefore vanish, and $G$ spans the full wrist range. Second, $J_h$ has rank
+4, so without the last constraint in~\eqref{eq:graspPoly} the null directions
+of $J_h$ would be bounded only by the joint limits. The extreme points that
+the graph construction computes would then lie where the linearisation is
+meaningless. Without this \emph{trust region}, they moved an arm joint by
+2.27\,rad from $x_0$, with $\|h\|_\infty=0.95$ and the hand 0.80\,m away from
+the cap. With $\rho=0.05$\,rad, $\|h\|_\infty$ stays around $2\times10^{-3}$
+along our plans \tocheck{guide numbers, q0 run}. Seeds drawn from other
+components of the grasp manifold, e.g., with NLP sampling's manifold-RRT
+interior phase, give further grasp polytopes $G^{s}$ that the search treats in
+the same way. We use a single seed in this paper.
+
+\subsection{Grasp pieces and the polytope graph}
+\label{sec:method:graph}
+For every region with $F_k\cap G\ne\emptyset$ we form the \emph{grasp piece}
+$G_k=G\cap F_k$. Grasp pieces are the switch sets of the manipulation graph,
+and the only sets in which the object moves. Two LPs give the extreme wrist
+values $w_k^{\pm}=\max/\min\{\pm w: x\in G_k\}$ and points
+$x_k^{\pm}\in G_k$ attaining them. A stroke inside $G_k$ turns the object by
+at most $L_k=w_k^+-w_k^-$, and we discard pieces with $L_k<\Lmin$. Since $G$ is
+thin in every direction but the wrist, a piece is essentially a wrist
+interval, and by convexity the segment $[x_k^-,x_k^+]$ lies in $G_k$.
+
+The graph has two kinds of edges. A \emph{transit} edge joins $F_i$ and $F_j$
+if they intersect. Its door point is the Chebyshev centre of $F_i\cap F_j$. A
+\emph{switch} edge joins $F_i$ and $G_k$ if they intersect. For it, we store
+the wrist range $[a_{ik}^-,a_{ik}^+]$ of $F_i\cap G_k$ and the points attaining
+its ends. Every quantity is an LP feasibility check, a Chebyshev centre or an
+extreme point. No binaries and no vertex enumeration are needed, and the
+number of LPs is $O(J^2+JK)$ for $J$ regions and $K$ pieces.
+
+\subsection{Reachability A*}
+\label{sec:method:search}
+\paragraph{Nodes} Following CASSR~\cite{wang2026cassr}, a node does not
+represent a configuration but a set reachable from the start. A \emph{transit
+node} $(F_i,[\alo,\ahi])$ states that every $x\in F_i$ is reachable together
+with every $\alpha\in[\alo,\ahi]$. Since $F_i$ is convex and $\alpha$ is
+frozen during transit, any point of $F_i$ can be reached from any other along
+a straight line. A \emph{grasp node} $(G_k,[\alo,\ahi],\phi,[a^-,a^+])$
+additionally records the wrist range $[a^-,a^+]$ through which the piece was
+entered and a phase $\phi$. In phase \emph{entered}, the robot is in the piece
+and has not grasped yet. In phase \emph{holding}, it has just completed a
+stroke. In phase \emph{released}, it has completed a return and the wrist is
+back at $w_k^-$. All path information is carried by the interval. Reaching
+$F_3$ before any grasp and after a stroke of 2\,rad gives the same polytope
+with intervals $\{3\}$ and $[1,3]$, two different nodes.
+
+\paragraph{Moves} Table~\ref{tab:moves} lists the successors of a node. Only
+strokes widen the interval: a stroke can turn the object by any amount up to
+its cap, so it lowers $\alo$ and keeps $\ahi$. Since grasping happens only
+inside grasp pieces, these are the only sets where reachability grows in
+$\alpha$, which is the reachability counterpart of the switch sets of the
+manipulation graph. Leaving a piece towards $F_j$ can also force turning.
+Inside $G_k$ the wrist moves forward only while grasped, so reaching the exit
+range from the entry range turns the object by at least
+$d=\max(0,a_{jk}^- - a^+)$, which lowers $\ahi$. We clip $\alo$ at
+$\max(\agoal,\alpha_{\min})$. Each grasp, return and release costs 1, and
+each change of set costs $\mu\ll1$ ($\mu=10^{-3}$), so the search minimises
+grasp actions first and set changes second. A release must cost 1, otherwise
+leaving and re-entering a piece would be a free substitute for a return.
+
+\begin{table}[t]
+\centering
+\caption{Moves of the reachability A*. $c_1=w_k^+-a^-$ after
+entering, $c_1=L_k$ after a return; $d=\max(0,a_{jk}^- - a^+)$.}
+\label{tab:moves}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l l l l@{}}
+\toprule
+Move & From $\to$ to & Interval update & Cost\\
+\midrule
+transit & $F_i\to F_j$, $F_i\cap F_j\ne\emptyset$ & -- & $\mu$\\
+enter   & $F_i\to G_k$ (entered), $F_i\cap G_k\ne\emptyset$ & -- & $\mu$\\
+stroke  & entered/released $\to$ holding & $\alo\gets\alo-c_1$ & 1\\
+return  & entered/holding $\to$ released & -- & 1\\
+release & holding $\to F_j$, $F_j\cap G_k\ne\emptyset$ & $\ahi\gets\ahi-d$ & 1\\
+leave   & entered $\to F_j$, only if $d=0$ & -- & $\mu$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Heuristic, goal and dominance} With $\Lmax=\max_k L_k$, the
+heuristic
 \begin{equation}
-\begin{gathered}
-  A_m x \le b_m + M(1-\delta_m),\quad \textstyle\sum_m \delta_m \ge 1,\\
-  \textstyle\sum_c \lambda_c = 1,\quad \delta_m \le \lambda_{c(m)},
-\end{gathered}
-\label{eq:bigm}
+  h(\nu)=2\Big\lceil\frac{\alo-\agoal}{\Lmax}\Big\rceil+\mathbf{1}[\phi=\text{holding}]
+  \label{eq:heuristic}
 \end{equation}
-and require the component indicators $\lambda$ of the two points of a pair to
-be equal. Since every grasp and release keyframe belongs to a transit pair and
-a transfer pair, it lies in $\CGfree\cap\CPfree$. The objective, a sum of
-squared keyframe distances, is a convex surrogate for the length of the
-final trajectory. Problem \eqref{eq:miqp} is a mixed-integer convex quadratic
-program, which we solve with MOSEK~\cite{mosek} for $\ell=1,2,\dots$ until the
-first feasible $\ell$, which gives the minimum number of grasps (relative to
-the decomposition, see Proposition~\ref{prop:guarantees}).
+is admissible. Each remaining stroke turns the object by at most $\Lmax$ and
+must be followed by an ungrasp, either a return or the final release, and a
+holding node must still release. It is also consistent, since no move lowers
+$h$ by more than its cost. A transit node is a goal if $\xgoal\in F_i$ and
+$\agoal\in[\alo,\ahi]$. A node is \emph{dominated}, and skipped, if an expanded
+node with the same key has an interval that contains its interval at no
+higher cost. The key is the set for transit nodes, and the set, phase and
+entry range for grasp nodes. Because the abstraction describes reachability
+completely by key and interval, this check is exact. By contrast, the
+domination checks of GCS*~\cite{chia2024gcsstar} must in general be
+approximated, and CASSR uses a non-admissible
+heuristic~\cite{wang2026cassr}. Algorithm~\ref{alg:astar} summarises the
+search.
 
-On the 10-DOF task, the MIQP fails to return feasible sequences even where
-they exist. We attribute this to numerics: the grasp polytopes have widths of
-order $\epsilon=10^{-3}$, while the big-M constant must dominate the
-constraint violation over the whole joint range, and the problem grows with
-$(2\ell+2)$ copies of all region binaries.
-\tocheck{confirm cause; possible fixes: per-row tight $M$ from joint limits,
-convex-hull (perspective) formulation, rescaling the thin directions.}
-This motivates the graph-search alternative below.
+\begin{algorithm}[t]
+\caption{Reachability A*}
+\label{alg:astar}
+\begin{algorithmic}[1]
+\Input graph of Sec.~\ref{sec:method:graph}; $(\xinit,\ainit)$, $(\xgoal,\agoal)$
+\Output node sequence with grasp actions, or \textsc{none}
+\State $\mathcal{O}\gets\{(F_i,[\ainit,\ainit]) : \xinit\in F_i\}$;\ \ $\mathcal{E}\gets\emptyset$
+\While{$\mathcal{O}\neq\emptyset$}
+  \State $\nu\gets\arg\min_{\nu\in\mathcal{O}} g(\nu)+h(\nu)$; remove $\nu$ from $\mathcal{O}$
+  \If{$\nu$ dominated by $\mathcal{E}$} \textbf{continue} \EndIf
+  \State $\mathcal{E}\gets\mathcal{E}\cup\{\nu\}$
+  \If{$\nu=(F_i,[\alo,\ahi])$, $\xgoal\in F_i$, $\agoal\in[\alo,\ahi]$}
+    \State \Return path to $\nu$
+  \EndIf
+  \For{each successor $\nu'$ of $\nu$ (Table~\ref{tab:moves})}
+    \If{$\nu'$ not dominated by $\mathcal{E}$} add $\nu'$ to $\mathcal{O}$ \EndIf
+  \EndFor
+\EndWhile
+\State \Return \textsc{none}
+\end{algorithmic}
+\end{algorithm}
 
-\paragraph{A* search over the polytope graph}
-\todo{Draft --- align with the implementation in progress.}
-We build a graph whose vertices are the polytopes of $\CPfree$ (transit
-vertices) and of $\CGfree$ (transfer vertices). Two vertices of the same mode
-are adjacent if their polytopes intersect; a transit and a transfer vertex are
-adjacent if their intersection contains a configuration in $\CG\cap\CP$ (a
-grasp or release). A search node stores a vertex, the mode, an entry
-configuration $q$ and the number of grasps so far. Expanding a node towards a
-neighbour solves a small convex QP for the entry configuration $q'$ closest to
-$q$ in the intersection of the two polytopes subject to the manipulation
-constraint of the current mode, so that keyframes remain consistent with
-\eqref{eq:transit}--\eqref{eq:transfer}. A* orders nodes by $f=g+h$, with $g$
-the accumulated keyframe distance plus a large cost per grasp, which makes the
-number of grasps the primary criterion, and $h$ an admissible lower bound,
-e.g., $\|q'-\qgoal\|$ plus the grasp cost times
-$\big\lceil|\qcap'-q_{\mathrm{cap,goal}}|\,/\,(q_{\mathrm{wr,max}}-q_{\mathrm{wr,min}})\big\rceil$,
-a lower bound on the remaining number of grasps for the cap task.
-Fixing entry configurations greedily at expansion keeps each step cheap but
-gives up optimality and completeness relative to the decomposition;
-GCS*~\cite{chia2024gcsstar} recovers both by keeping a convex program over the
-whole partial path and pruning dominated paths, at a higher cost per
-expansion. \todo{choose between greedy entry points and a GCS*-style
-expansion; state the heuristic used and whether it is admissible.}
+\subsection{Placing configurations}
+\label{sec:method:placement}
+The search fixes the sets and the grasp actions, for example
+\emph{enter, stroke, return, stroke, release}. As in CASSR, a second stage
+places the configurations. We do this without a solver. First, a backward pass
+from $\agoal$ allocates the turning to each grasp visit. Visit $v$ turns
+$T_v=\min(\ahi_v,\alpha_v^{\mathrm{after}}+\sum_s c_s)-\alpha_v^{\mathrm{after}}$,
+where $\ahi_v$ is the upper end of the interval before the visit and $c_s$
+are the caps of its strokes. $T_v$ is split among the strokes by
+water-filling. The pass ends exactly at $\ainit$, because the search proved
+$\agoal$ reachable. Second, waypoints are placed: door points for transit, an
+entry point in $F_i\cap G_k$ at the wrist value from which the first stroke
+ends at the top of the piece, points on $[x_k^-,x_k^+]$ for strokes and
+returns, an exit point in $G_k\cap F_j$, and finally $\qgoal$. Each waypoint
+records a \emph{certifying set}, a region $F_j$ or a piece $G_k$ that contains
+both ends of the straight motion into it. By convexity, it contains the whole
+motion. We check containment and the coupling rule ($\Delta\alpha=-\Delta w$
+on strokes, $\Delta\alpha=0$ otherwise) for every motion. Path length is not
+optimised. Since the discrete structure is fixed, a convex program over the
+chosen sets could shorten the path, e.g., GCS~\cite{marcucci2023motion}
+restricted to these sets, or a QP as in CASSR. \todo{implement, or keep as
+future work.}
 
-\subsection{Transit and transfer trajectories with GCS}
-\label{sec:method:gcs}
-Given the keyframes, each pair $(x_i,x_{i+1})$ is connected by a shortest
-path in the graph of convex sets formed by the polytopes of the corresponding
-mode, $\CPfree$ for transit and $\CGfree$ for transfer, using Drake's
-\texttt{GcsTrajectoryOptimization}~\cite{marcucci2023motion,tedrake2019drake}.
-Each trajectory segment is a B\'ezier curve whose control points lie in one
-polytope, so the whole curve lies in that polytope and in $\Pfree$. When the
-manipulation constraints are linear, as in \eqref{eq:transit}--\eqref{eq:transfer},
-we impose them on all control points, and since a B\'ezier curve is a convex
-combination of its control points, they then hold along the entire segment.
-\tocheck{the MInf version did not enforce $\mathcal{M}$ inside GCS (only at
-keyframes); confirm this is now implemented.} The final trajectory is the
-concatenation $\tau=\tau_0\oplus\dots\oplus\tau_{2\ell}$. \todo{B\'ezier
-order, cost weights (path length, time), convex relaxation and rounding
-settings.}
-
-\subsection{Guarantees}
-\label{sec:method:guarantees}
+\subsection{Properties}
+\label{sec:method:properties}
 \begin{proposition}[informal]
 \label{prop:guarantees}
-Let $\Pfree\subseteq\CSfree$. (i) Any trajectory returned by
-Algorithm~\ref{alg:planner} is collision-free, respects joint limits and
-satisfies the linear manipulation constraints along every segment.
-(ii) Problem~\eqref{eq:miqp} is a relaxation of the planning problem
-restricted to the represented sets: every valid manipulation path with $\ell$
-grasps whose transit segments lie in $\CPfree$ and transfer segments in
-$\CGfree$ yields a feasible keyframe sequence for~\eqref{eq:miqp}.
-Hence, if \eqref{eq:miqp} is infeasible for all $\ell\le L$, no such path with
-at most $L$ grasps exists within the decomposition, and if the GCS stage
-succeeds for the first feasible $\ell$, the plan uses the minimum number of
-grasps relative to the decomposition.
+Relative to the regions $\{F_j\}$ and the pieces $\{G_k\}$:
+(i) every motion returned is a straight line inside one region or piece that
+satisfies the coupling of Assumption~\ref{ass:task}, so the path is
+collision-free whenever the regions are;
+(ii) the search terminates, and if a plan exists whose transit motions lie in
+the regions and whose grasp motions lie in the pieces, it returns one with
+the minimum number of grasp actions, ties broken by the number of set changes;
+(iii) placement succeeds on every sequence the search returns.
 \end{proposition}
-\noindent\emph{Sketch.} (i) follows from the containment of each B\'ezier
-segment in a polytope of $\Pfree$ and the convex-combination argument above.
-(ii) The keyframes of a valid path satisfy the constraints of
-\eqref{eq:miqp}, since consecutive keyframes of a transit (transfer) segment are
-connected within $\CPfree$ ($\CGfree$) and therefore lie in the same component.
-The converse does not hold: two configurations in the same component of
-$\CPfree$ need not be connected by a path that keeps $\qcap$ fixed, so the GCS
-stage can fail on a feasible sequence. \tocheck{state precisely; relates to
-the 4-DOF, $\alpha=0.90$ case in Table~\ref{tab:lowdof}.}
-Optimality of the path length is only partial: each segment is optimal
-relative to the decomposition given its endpoints when the convex relaxation
-of GCS is tight~\cite{marcucci2024shortest,marcucci2023motion}, but the
-keyframes are chosen with a surrogate cost.
+\noindent\emph{Sketch.} (i) follows from the certifying sets and convexity.
+(ii) Each stroke lowers $\alo$ by at least $\Lmin$ until it reaches $\agoal$,
+so finitely many intervals arise per key and the search terminates. With a
+consistent heuristic and exact dominance, A* expands a goal node of minimum
+cost first~\cite{hart1968astar}. Entering at the highest and leaving at the
+lowest wrist value of each switch set minimises forced turning, so restricting
+entries and exits to these points loses no plan. (iii) The backward pass
+mirrors the interval updates of Table~\ref{tab:moves}.
+\tocheck{write the full proof; (iii) is asserted in our implementation but
+not yet proven. A merged chain of overlapping pieces needs chain-aware
+placement, so each piece is its own segment for now.}
 \hfill$\square$
+
+The guarantees are relative: a plan the search reports as optimal uses the
+fewest grasps \emph{that the decomposition allows}. Section~\ref{sec:results:fidelity}
+shows that this number can differ from the true one. Path length is not
+optimal, which is also a stated limitation of CASSR~\cite{wang2026cassr}.
+
+\subsection{Why not a mixed-integer program?}
+\label{sec:method:miqp}
+The same problem can be posed as an MIQP over keyframes
+$x_0=\qinit,x_1,\dots,x_{2\ell+1}=\qgoal$ for a fixed number of grasps $\ell$,
+minimising $\sum_i\|x_{i+1}-x_i\|^2$ subject to the linear transit and
+transfer constraints. Region membership is enforced with big-M constraints
+$A_jx_i\le b_j+M(1-z_{ij})$, $\sum_j z_{ij}\ge1$, and binaries for the
+connected component of each pair. The MIQP is solved for
+$\ell=1,2,\dots$ until feasible~\cite{lopezgomez2025minf}. This worked for 3-
+and 4-DOF tasks, but it is fragile at 10-DOF for three reasons. (a) Big-M:
+with $M=10^6$ and MOSEK's default integrality tolerance of
+$10^{-5}$~\cite{mosek}, a binary accepted as 1 may relax each row of its region
+by $M\cdot10^{-5}=10$\,rad. That is more than any joint range, while grasp
+polytopes are $2\epsilon=2\times10^{-3}$\,rad thick. Tight per-row constants or
+convex-hull formulations~\cite{vielma2015mixed} mitigate this at the cost of
+a larger model. (b) Components: connected components of the switch sets were
+merged through convex hulls of their vertices, which requires vertex
+enumeration of thin 10-D polytopes (Qhull fails without joggling). The hull of
+a union is also not contained in the union. (c) Scaling: the binaries grow as
+$(2\ell+2)(J+C)$ for $C$ components, and $\ell$ is found by an outer loop. The
+reachability A* has none of these issues. It solves LPs offline and does
+interval arithmetic online, and the number of grasps is an output.
+\tocheck{record the MOSEK status/log for the 10-DOF MIQP failure.}
+

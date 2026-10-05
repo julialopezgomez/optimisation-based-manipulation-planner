@@ -1,6 +1,8 @@
-# Paper draft: Optimisation-Based Manipulation Planning in Convex Decompositions of the Composite Configuration Space
+# Paper draft: Reachability Search over Convex Sets for Multi-Regrasp Manipulation Planning
 
-IEEE conference format (`IEEEtran`, two-column), 8-page target. No experimental results yet. Every gap is marked inline.
+This is the second draft. The first draft was written without access to branch `pipeline/full-arm-planner`, so it only sketched a point-based A*. In this draft, the **reachability A\*** from `full_arm_planner.ipynb` (inspired by CASSR, Wang & Tonneau, arXiv:2603.02989) is the main method. The MIQP is described as the earlier formulation, together with the reasons it fails at 10-DOF.
+
+The format is IEEE conference (`IEEEtran`, two-column). The draft is **8 pages including references**, both with and without the placeholder notes.
 
 ## Build
 
@@ -8,61 +10,61 @@ IEEE conference format (`IEEEtran`, two-column), 8-page target. No experimental 
 latexmk -pdf main.tex
 ```
 
-To check the length without the placeholder notes, set `\showtodosfalse` in `main.tex`.
+To check the length without the notes, set `\showtodosfalse` in `main.tex`.
 
 ## Placeholder conventions
 
 | Macro | Colour | Meaning |
-|---|---|---|
-| `\todo{...}` | red | Missing content or a decision you need to make |
-| `\tocheck{...}` | orange | Written from notes, an older pipeline or memory; verify before submission |
+| --- | --- | --- |
+| `\todo{...}` | red | Missing content, or a decision you need to make |
+| `\tocheck{...}` | orange | Taken from notebook output or notes. Verify before submission |
 | `\tbd` | red | Missing number |
 
-## Layout
+## The pitch
 
-```
-main.tex                 preamble, macros, title/authors, section includes
-sections/abstract.tex
-sections/introduction.tex
-sections/related_work.tex
-sections/problem.tex     composite space, CG/CP, transit/transfer, problem statement
-sections/method.tex      decomposition, grasp polytopes (NLP sampling + null space),
-                         mode sets, MIQP, A* (draft), GCS, guarantees
-sections/experiments.tex setup (tasks T1-T4, implementation, baselines, metrics) + results
-sections/discussion.tex
-sections/conclusion.tex
-references.bib
-figures/                 copied from the Year-1 annual review handout (originals untouched)
-```
+**Takeaway:** the number and location of regrasps are *outputs* of a reachability computation, not inputs.
+
+**What is new** (it must stay precise to survive review):
+
+- A search whose cost is the number of grasp actions, whose nodes are continuous reachable sets (polytope × interval of object angle), and which is complete and optimal **relative to the decomposition**. There is no fixed horizon, no integer variables, and the graph needs only LPs.
+- Grasp pieces (grasp polytope ∩ free region) are the only sets where reachability grows. They are the switch sets of the manipulation graph.
+- Exact dominance and an admissible, consistent heuristic. In CASSR the heuristic is not admissible and yaw is discretised. In GCS\* the domination checks are approximated in general.
+
+**What is not claimed:** physical optimality or completeness (both are relative to the sets), path-length optimality, or generality beyond Assumption 1 (one object coordinate coupled to one joint).
+
+## Reviewer's assessment of the current draft
+
+Below is what I would write as a reviewer, ordered by severity.
+
+1. **The only 10-DOF plan collides in reality.** Along the wrist sweep at the seed grasp, 46 of 99 points are in collision, yet every decomposition contains them (Sec. VI-C). Honest reporting turns this into a finding, but a planning paper whose headline plan is invalid will be rejected. **Fix:** validate the grasp pieces by restricting them to wrist intervals that the collision checker confirms, re-run Q0, and confirm the expected 5 strokes.
+2. **There is one query and no baselines.** The claimed advantages are adapting to goals, starts and obstacle layouts with guarantees. None of these is tested yet. **Fix:** run E1–E4 (Sec. V-B). E1 (the goal sweep) and E4 (time vs. required regrasps, against the MIQP and a sampling-based planner) are the two plots that make the paper stand out.
+3. **The MIQP failure is asserted, not documented.** A reviewer will ask whether a better MIQP would work, for example with tight per-row big-M from the joint-limit box, a convex-hull formulation, or rescaling. **Fix:** log the MOSEK status. Ideally also run the MIQP with per-row M_r = max over the box of (a_r·x − b_r), so the baseline is not a straw man.
+4. **Proposition 1 is informal.** Two points need care.
+   - Exact dominance for grasp nodes: in the holding phase, the wrist position and α are correlated, so the reachable set is not exactly polytope × interval. Prove that the abstraction loses nothing, or state the result for the abstraction.
+   - Placement always succeeds: today the code asserts this, but there is no proof.
+5. **The scope is narrow.** Assumption 1 covers caps, knobs, valves and cranks. Say so up front and frame general objects (Minkowski-sum propagation, as in CASSR) as future work. A second object or scene would help.
+6. **The grasp set is ad hoc.** It uses one seed, a linearisation, and a trust region ρ = 0.05 chosen by hand. Report |h| along every plan, and ideally use several NLP-sampling seeds.
+7. **The learning argument is an argument, not an experiment.** It is kept to that level in the text. Do not strengthen it without a learned baseline.
+8. **The low-DOF results come from the old pipeline.** Run the reachability A* on T1. It should return 11 grasps, matching the MIQP.
 
 ## Sources used
 
-- **MInf2 report**: `~/Downloads/MINF2.pdf`. Problem statement, the MIQP and its constraints, GCS stage, 3-DOF task definition.
-- **Year-1 annual review report**: `~/PhD-Literature/Presentations/21.09.26 - Annual Review Year 1/`. Sections 5.1 and 6.1.1, Table 5.1 (low-DOF results), the three grasp-polytope approaches, and the bibliography.
-- **IPAB workshop notes**: `~/PhD-Literature/Presentations/13.08.26 - IPAB Workshop - MInf + NLP Sampling/Notes for Content.md`. Basis for the abstract.
-- **This repo**:
-  - `origin/main`: `algorithms/nlp_sampling/` (sampler and docs), `standalone_test.py` (grasp constraints h and g), `data/generation/full_arm_c_free.ipynb` (scene and obstacles), `data/cfree/cfree_full_98coverage.yaml` (18 regions).
-  - Branch `origin/nlp-sampling/quality-metrics`: `tc_space_investigation_summary.md` and `wrist_axis_grasp_polytope.py` (null-space grasp polytope, wrist-axis invariance), `msts_metric_reference.md`.
-  - Local `main` is behind `origin/main` (the IRIS-ZO/clique-cover port and the shared `ManipulationPlanner` module are only on origin). Nothing was pulled or changed; files were read with `git show`.
+- **Branch `pipeline/full-arm-planner`**:
+  - `full_arm_planner.ipynb`, section "Reachability A\* over free and grasp polytopes", cells 33–55 and their outputs: 42 regions, 8 pieces, 850/58 edges, 63 expansions in 4 ms, 2 strokes + 1 return + 1 release, all 6 motions certified, path length 15.25. Cell 58 gives the TP/FP wrist sweep: 53/46 for all four decompositions.
+  - `algorithms/manipulation_planner/reachability_astar_guide.md`, for the design rationale and the trust-region numbers (2.27 rad, |h| = 0.95, 0.80 m without it). Those numbers come from a q0-as-start/goal run.
+  - `algorithms/manipulation_planner/manipulation_planner.py`, for the MIQP: M = 1e6, component merging through convex hulls with QJ joggling.
+  - `full_arm_blocked_joints_3dof.ipynb`, cell 24: the MIQP returns 11 grasps on the 3-DOF task, with GCS succeeding on all segments.
+  - `artifacts/diffpoly_runs/stage4_10dof_pilot/baselines/report.json`: IRIS-NP2 at 0.98 coverage took 120 s for 25 regions, a different run from the 42-region set.
+- **CASSR** ([arXiv:2603.02989](https://arxiv.org/abs/2603.02989)): the node definition, Minkowski-sum propagation, the non-admissible scaled EPA heuristic, yaw discretisation, the QP placement stage, and the results (30 steps in under 125 ms).
+- **MOSEK documentation**: the default `MSK_DPAR_MIO_TOL_ABS_RELAX_INT` is 1e-5, which gives the big-M argument (1e6 × 1e-5 = 10 rad of slack).
+- The first draft (MInf report, Year-1 review, IPAB notes) for the problem formulation, the grasp constraints and the low-DOF coverage finding.
 
-## Main open items
+## Bibliography
 
-1. **A\* sequencing (Sec. IV-E)**: written as a draft formulation, since no implementation exists yet. Settle the search state, edge cost and heuristic, and choose between greedy entry points and a GCS*-style expansion.
-2. **Mode constraints inside GCS (Sec. IV-F)**: the text says linear transit and transfer constraints are imposed on all Bézier control points. The MInf version did not do this; confirm or implement.
-3. **MIQP failure on 10-DOF**: attributed to big-M and thin polytopes. Confirm.
-4. **C-IRIS certification via TC-space vertex mapping**: the back-mapped hull is not guaranteed to stay certified. Fix, call it approximate, or drop it.
-5. **Grasp-polytope parameters and validation numbers**: ε, η, counts, volumes. HR vs. mRRT mixing numbers.
-6. **Experiments**: baselines (HPP or a manipulation-graph PRM, OMPL constrained planners), the 10-DOF results table, re-running Table I with the final pipeline, T3 (keep or drop), obstacle sizes and start/goal configurations.
-7. **Novelty claim** (intro and related work): re-check against recent GCS manipulation work.
-8. **Authors, emails, grant number, venue**: if the venue is double-blind, anonymise the MInf self-citation.
-9. **Bibliography**: written from the annual review and from memory. Verify every entry against DBLP or the publisher.
+The new entries are at the end of `references.bib`, and those marked `VERIFY` were written from memory or from an arXiv abstract page. CASSR was missing from the first draft and is now `wang2026cassr`. The earlier entries still need checking against DBLP.
 
-## Length budget
+## Venue notes
 
-With placeholders hidden, the draft is exactly 8 pages, but the 10-DOF results and grasp-polytope result subsections are still empty. Expect to free about 0.75–1 page for results. Candidate cuts:
-- Related work: drop the legged mixed-integer refs, Kurtz/INSAT, Tournassoud.
-- Algorithm 2: fold it into the text.
-- Problem-formulation bullets: compress them.
-- Discussion: compress the alternatives paragraph.
-
-The TC-space paragraph in the discussion is already disabled with `\iffalse`.
+- RSS uses its own template and does not count references towards its page limit.
+- ICRA and IROS have typically allowed 6 pages plus 2 extra pages (with a fee, or for references only, depending on the year).
+- Check the current CFP. At 8 pages including references, this draft fits all three, but there is no slack for the E1–E4 results until something is cut. Candidates: Fig. 1 (the teaser), the Algorithm 1 box, or the Related Work section on GCS.

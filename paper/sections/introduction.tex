@@ -1,106 +1,116 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Manipulating an object involves more than moving a robot without collision.
-The robot must decide where to grasp the object, how to carry it, where to
-release it and, when its own kinematics prevent the task from being completed
-in one motion, where to regrasp it. Geometrically, this is a motion planning
-problem in the \emph{composite} configuration space of robot and
-object~\cite{alami1990geometrical,simeon2004manipulation}, where the object can
-only move while it is grasped. Valid solutions therefore alternate between
-\emph{transit} paths, in which the robot moves alone while the object rests at
-a stable placement, and \emph{transfer} paths, in which the robot moves while
-holding the object at a fixed grasp. Switching between the two is only
-possible on the intersection of the grasp and placement spaces, a set of
-measure zero in the composite space. Together with collision avoidance and
-joint limits, this makes the feasible space narrow, disconnected and highly
-nonlinear.
+Many manipulation tasks cannot be completed with a single grasp. Turning a
+bottle cap with a wrist of limited range, cranking a valve, or reorienting an
+object the hand cannot rotate far enough all force the robot to grasp, move,
+release, reposition and grasp again. How many regrasps are needed, and where,
+depends on the goal, on the robot's kinematics and on the obstacles around the
+object. In our 10-DOF task, turning a cap by 4\,rad with a wrist that sweeps
+2\,rad takes at least two grasps in free space. Obstacles that block part of
+the sweep raise this to five (Section~\ref{sec:results:fidelity}). The
+question to answer is one of \emph{reachability}: which object configurations
+can be reached with $k$ grasps, and from which robot configurations each grasp
+can start and end.
 
-The two dominant families of planners handle this structure in complementary
-ways. Sampling-based planners build roadmaps or trees over sampled
-configurations~\cite{kavraki1996prm,lavalle1998rrt}, and their extension to
-manipulation through the manipulation graph~\cite{simeon2004manipulation} and
-multi-modal planning~\cite{hauser2010multimodal} gives probabilistic
-completeness and, for some variants, asymptotic
-optimality~\cite{karaman2011sampling,schmitt2017optimal}. In practice,
-however, they degrade with dimension and in narrow passages, and require
-dedicated samplers to hit the lower-dimensional sets where grasps happen.
-Trajectory optimisation~\cite{zucker2013chomp,schulman2014motion} instead
-exploits gradients and optimises task costs directly, but collision and grasp
-constraints are non-convex, so solutions are local, depend on initialisation,
-and failure gives no information about whether a solution exists.
+Footstep planning has the same structure and has made it explicit. A footstep
+plan is a sequence of contacts of unknown length, each constrained by where
+the previous ones allow the next foot to land. Planners moved from A* over
+discretised footholds~\cite{chestnutt2005footstep,griffin2019footstep} to
+mixed-integer programs over convex terrain
+decompositions~\cite{deits2014footstep,aceituno2018simultaneous}, made fast
+by $\ell_1$ relaxations~\cite{tonneau2020sl1m,song2021solving}, and to
+planners built on explicit reachability
+conditions~\cite{tonneau2018efficient}. Most recently,
+CASSR~\cite{wang2026cassr} runs A* over nodes that are convex sets of
+footholds reachable from the start. It plans 30 footsteps in under 125\,ms,
+outperforming discretised A* by up to two orders of magnitude, and a
+commercial mixed-integer solver. In
+footstep planning, \emph{the number of contacts is an output of a reachability
+computation over convex sets}.
 
-A third route has matured in recent years. The collision-free configuration
-space $\CSfree$ can be approximated as a union of convex
-polytopes~\cite{deits2015computing,amice2022finding,dai2024certified,petersen2023growing,werner2024faster},
-with seeding automated through clique covers of visibility
-graphs~\cite{werner2024approximating}. On such a decomposition, Graphs of
-Convex Sets (GCS)~\cite{marcucci2023motion,marcucci2024shortest} compute
-trajectories that are globally optimal \emph{relative to the decomposition}
-by solving a tight convex relaxation of a mixed-integer program. These tools
-turn $\CSfree$ into an object that an optimiser can reason about directly, but
-they have so far mainly been applied to collision-free motion of the robot
-alone. \tocheck{Check whether any recent work applies C-free decompositions + GCS
-to prehensile regrasp planning; closest known: contact-rich planar
-pushing~\cite{graesdal2024tight}, GCS*~\cite{chia2024gcsstar}.}
+Prehensile manipulation shares this combinatorial core, yet long regrasp
+sequences have received much less attention. Sim\'eon
+et al.~\cite{simeon2004manipulation} formalised manipulation planning in the
+composite configuration space of robot and object. Paths alternate
+\emph{transit}, where the robot moves alone, and \emph{transfer}, where it
+holds the object, and switch where grasp and placement sets intersect. They
+explored the resulting manipulation graph with probabilistic roadmaps. Since
+then, regrasp sequences have mostly been planned over finite sets of grasps and
+placements~\cite{tournassoud1987regrasping,alami1990geometrical,wan2017regrasp}.
+With continuous grasp sets, planners sample, which gives at best probabilistic
+completeness and is slow in the thin sets where grasps
+happen~\cite{simeon2004manipulation,hauser2010multimodal,mirabel2016hpp}, or
+optimise over a skeleton whose number of mode switches is guessed or
+enumerated~\cite{toussaint2015lgp,levit2025regrasp}. To our knowledge, no
+manipulation planner offers what CASSR offers for footsteps: a search whose
+cost is the number of contact switches, whose nodes are continuous reachable
+sets, and which is complete and optimal relative to its model of free space.
+\tocheck{novelty; closest are~\cite{levit2025regrasp,liu2026graph}.}
 
-In this paper, we bring convex decompositions to prehensile manipulation
-planning. We decompose the collision-free composite configuration space,
-describe the grasp and placement spaces as unions of polytopes, and intersect
-them with the decomposition. The nodes of the classical manipulation graph,
-i.e., the connected components of grasp-and-placement configurations, then
-become unions of convex sets over which we can optimise. A minimum-regrasp
-sequence of grasp and release configurations is selected by a mixed-integer
-quadratic program (MIQP) or by A* search over the polytope
-graph~\cite{hart1968astar}, and connected by optimal transit and transfer
-trajectories computed with GCS (Fig.~\ref{fig:teaser}). A preliminary
-version of this pipeline was demonstrated on 3-DOF tasks
-in~\cite{lopezgomez2025minf}. \tocheck{anonymise if the venue is
-double-blind.}
+Learning does not close this gap, and multi-regrasp tasks show why. Learned
+policies have reached impressive dexterity, from in-hand
+reorientation~\cite{openai2020learning} to twisting lids off with two
+multi-fingered hands~\cite{lin2024twisting}, and imitation learning covers
+many everyday tasks~\cite{chi2023diffusion}. But the minimum number of
+regrasps is a piecewise-constant function of the goal and the scene, roughly
+$\lceil D/L\rceil$ for a turning angle $D$ and a longest collision-free wrist
+sweep $L$. A policy trained on goals that need $k$ regrasps must extrapolate
+to $k+1$, a longer horizon than any it was trained on, where errors
+compound~\cite{ross2011reduction}. Moving an obstacle slightly can change $L$
+and with it the discrete structure of the solution, not only its geometry. A
+policy also cannot certify that a goal is unreachable with fewer grasps. A
+planner that computes reachability on an explicit model handles these cases by
+construction: a new goal is a new query, and a new obstacle layout is a new
+model. \tocheck{an argument, not an experiment; keep claims at this level
+unless a learned baseline is added.}
 
-Scaling this idea to a full arm raises a problem that does not appear in
-low-dimensional examples. For a gripper with a few joints, grasp and placement
-spaces can be written directly as bounds on the configuration. For a 7-DOF arm,
-a grasp is a nonlinear constraint on the forward kinematics, and the set of
-grasping configurations is a thin, curved, lower-dimensional manifold. To
-represent it with polytopes, we use NLP
-sampling~\cite{toussaint2024nlp}, a restarting two-phase constrained sampler,
-to generate diverse grasp configurations, and construct around each one a
-polytope aligned with the null space of the active grasp constraints.
-
+We bring the reachability view of footstep planning to multi-regrasp
+manipulation. We build on convex decompositions of the collision-free
+configuration space~\cite{werner2024approximating,werner2024faster}, the
+representation behind globally optimal motion planning with Graphs of Convex
+Sets~\cite{marcucci2023motion}. We intersect them with polytopes of grasping
+configurations. The resulting \emph{grasp pieces} are the only sets in which
+the object moves, the switch sets of the manipulation graph. Our A* pairs
+each polytope with the set of object configurations reachable inside it. When
+one object coordinate is coupled to one robot joint, this set is an interval,
+propagation is interval arithmetic and dominance is exact. We arrived at this
+design after a mixed-integer formulation~\cite{lopezgomez2025minf}, which
+solved low-dimensional tasks, became numerically unreliable on a 7-DOF arm.
+Its grasp polytopes are $10^{-3}$\,rad thick, nine orders of magnitude below
+its big-M constant. \tocheck{anonymise the self-citation if double-blind.}
 Our contributions are:
 \begin{itemize}
-  \item A formulation of prehensile manipulation planning over convex
-    decompositions of the collision-free composite configuration space, in
-    which the grasp, placement and transition sets of the manipulation graph
-    are represented as unions of convex polytopes
-    (Sections~\ref{sec:problem} and~\ref{sec:method:graph}).
-  \item A two-stage planner that selects a minimum-regrasp sequence of
-    grasp and release configurations, by MIQP or by A* search over the
-    polytope graph, and connects it with GCS transit and transfer
-    trajectories that are optimal relative to the decomposition
-    (Sections~\ref{sec:method:sequencing}--\ref{sec:method:gcs}).
-  \item A construction of grasp polytopes for high-DOF arms, combining NLP
-    sampling of the nonlinear grasp constraints with null-space-aligned
-    polytopes around the samples (Section~\ref{sec:method:grasp}).
-  \item An evaluation on bottle-cap opening tasks requiring repeated
-    regrasping, from 3-DOF and 4-DOF systems to the 10-dimensional composite
-    space of a Franka Panda arm, hand and cap, with a comparison against
-    sampling-based planners (Sections~\ref{sec:experiments}--\ref{sec:results}).
-    \todo{update once the baselines are fixed.}
+  \item a formulation of multi-regrasp planning as reachability over a convex
+    decomposition, with grasp pieces as the switch sets between transit and
+    transfer (Sections~\ref{sec:problem},~\ref{sec:method:graph});
+  \item a reachability A* with an LP-only graph, an admissible and consistent
+    heuristic and exact dominance. It returns a plan with the minimum number
+    of grasp actions relative to the decomposition, of a length not fixed in
+    advance, and a solver-free stage turns that plan into certified straight
+    motions (Sections~\ref{sec:method:search}--\ref{sec:method:properties});
+  \item grasp polytopes for a 7-DOF arm, built from a linearisation at an NLP
+    sampling seed~\cite{toussaint2024nlp} that uses the exact invariance of
+    the grasp to wrist rotation and a trust region
+    (Section~\ref{sec:method:grasp});
+  \item an evaluation up to the 10-DOF space of a Franka arm, hand and cap,
+    with an analysis of the MIQP's failure. It shows that probabilistically
+    certified decompositions concentrate their errors on grasp sets
+    (Sections~\ref{sec:experiments}--\ref{sec:discussion}).
+    \todo{update with E1--E4.}
 \end{itemize}
+All guarantees are relative to the decomposition and grasp polytopes, and
+are only as meaningful as these sets are faithful near contact, which is
+where our experiments expose a weakness.
 
 \begin{figure}[t]
   \centering
-  \figor{figures/composite_space.png}{4.2cm}{Teaser figure}
-  \caption{Manipulation planning in the composite configuration space of robot
-  and object. Valid states lie in the placement space $\CP$ (object at rest,
-  green) or the grasp space $\CG$ (object held, blue), intersected with a
-  convex decomposition of the collision-free space. Their intersection
-  (purple) contains the configurations where the robot can grasp or release
-  the object. A plan alternates transit paths in $\CP$ (A$\to$B) and transfer
-  paths in $\CG$ (B$\to$D). \todo{replace with a figure showing the real
-  Franka/cap task alongside the abstract picture, and re-label CC as
-  $\CG\cap\CP$.}}
+  \figor{figures/composite_space.png}{3.5cm}{Teaser figure}
+  \caption{Transit (A$\to$B) moves the robot alone while the object rests in
+  the placement space $\CP$. Transfer (B$\to$D) moves it while holding the
+  object, in the grasp space $\CG$. Plans switch only where the two sets
+  intersect (purple), inside a convex decomposition of free space.
+  \todo{replace with the Franka cap task next to the abstract picture;
+  relabel CC as $\CG\cap\CP$.}}
   \label{fig:teaser}
 \end{figure}
