@@ -1,0 +1,16 @@
+{
+  "args": {
+    "num_restarts": 60,
+    "num_samples": 50,
+    "num_seeds": 5,
+    "base_seed": 0
+  },
+  "q_star": "zeros",
+  "step_size": "default (0.1, unadjusted)",
+  "q_domain_diagonal": 4.6305355370626415,
+  "s_domain_diagonal": 28.71245758443055,
+  "median_msts1_regular": 40.753095640567025,
+  "median_msts1_tc": 27.092677573850807,
+  "median_msts2_regular": 3.2166466647400584,
+  "median_msts2_tc": 5.305351573660493
+}

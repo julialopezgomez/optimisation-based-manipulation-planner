@@ -30,6 +30,7 @@ Usage:
 """
 import itertools
 import sys
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -79,6 +80,76 @@ def find_grasp_seed(constraints: dict, max_trials: int = 100, seed: int = 0):
         if q0 is not None:
             return q0
     raise RuntimeError(f"No feasible grasp seed found in {max_trials} trials")
+
+
+def sample_grasp_configurations(
+        constraints: dict,
+        num_samples: int = 10,
+        num_restarts: int = 40,
+        burn_in: int = 15,
+        interior_method: str = "mRRT",
+        random_seed: int = 0,
+        **nhr_option_overrides,
+) -> tuple[np.ndarray, list]:
+    """Sample varied, grasp-constraint-satisfying configurations by walking
+    the real h_grasp_eq/g_grasp_ineq manifold (nlp_sampling.py's restarting
+    two-phase sampler), instead of hit-and-run over a fixed-margin box like
+    build_simple_margin_polytope's - useful when the box's own sample
+    variety looks poor (a very anisotropic box - tiny margin on 6 arm
+    joints, full range on wrist/cap - makes generic polytope hit-and-run mix
+    slowly in the tight dimensions).
+
+    Defaults to interior_method="mRRT", not the library's own "HR" default:
+    per NHROptions.interior_method's docstring and
+    nlp_sampling_code_walkthrough.md, HR's line search couples ALL
+    coordinates' step size to whichever inequality is currently tightest -
+    exactly the kind of mixing collapse documented there on the wrist/cap
+    joints for hard-equality-constraint problems like this one. mRRT never
+    consults inequalities while building a step, sidestepping that
+    coupling - the documented fix, not a guess.
+
+    num_samples/burn_in are set lower here than NHROptions' own
+    general-purpose defaults (1000/100) for a quick interactive walk - each
+    g/h call triggers a real Drake FK solve. num_restarts is set *higher*
+    than RestartOptions' default (10): Phase 1 (the downhill seed-finding
+    step) fails from most random box-uniform starting points for this
+    constraint - only ~1 in 4 restarts finds a feasible seed at all
+    (empirically), and each successful chain only explores its own local
+    neighborhood of the manifold, so getting genuinely different arm
+    configurations (not just small perturbations of the same one) needs
+    enough restarts for several to independently succeed. Restarts are
+    cheap (~0.4s for 40, in testing) since Phase 1 fails fast. Any other
+    NHROptions field can be overridden via **nhr_option_overrides (e.g.
+    good_err_tol=...).
+
+    Returns (samples, restart_info): samples is an (N, 10) array (same
+    ambient dimension/ordering as constraints["lower"]/["upper"], i.e. the
+    notebook's own 10-DOF plant, per the index-parity convention used
+    throughout this file) of configurations satisfying h_grasp_eq/
+    g_grasp_ineq to within nlp_sampling's own good_err_tol; restart_info is
+    nlp_sampling's own per-restart diagnostic list (status/diagnostics per
+    restart - see restarting_nhr_sample's docstring).
+    """
+    phase1 = partial(
+        nlp_sampling.run_downhill_phase1,
+        g=constraints["g"], Jg=constraints["Jg"],
+        lower=constraints["lower"], upper=constraints["upper"],
+        options=nlp_sampling.NHROptions(random_seed=random_seed, verbose=False),
+        h=constraints["h"], Jh=constraints["Jh"],
+    )
+    nhr_options = nlp_sampling.NHROptions(
+        interior_method=interior_method, num_samples=num_samples, burn_in=burn_in,
+        random_seed=random_seed, verbose=False, **nhr_option_overrides,
+    )
+    restart_options = nlp_sampling.RestartOptions(num_restarts=num_restarts, random_seed=random_seed)
+
+    return nlp_sampling.restarting_nhr_sample_with_equalities(
+        phase1=phase1,
+        g=constraints["g"], h=constraints["h"],
+        lower=constraints["lower"], upper=constraints["upper"],
+        Jg=constraints["Jg"], Jh=constraints["Jh"],
+        nhr_options=nhr_options, restart_options=restart_options,
+    )
 
 
 def verify_wrist_axis_is_exactly_free(constraints: dict, q0: np.ndarray, num_points: int = 21) -> float:

@@ -1,0 +1,35 @@
+[
+  {
+    "label": "irisnp2_cov0.9 (tightened margin=1e-5)",
+    "K": 5,
+    "F_L": 202,
+    "coverage": 0.7645620275678079,
+    "precision": 0.9956572090330053,
+    "iou": 0.7620208287170397,
+    "tp": 13756,
+    "fp": 60,
+    "fn": 4236
+  },
+  {
+    "label": "irisnp2_cov0.98 (tightened margin=1e-5)",
+    "K": 25,
+    "F_L": 948,
+    "coverage": 0.9424188528234771,
+    "precision": 0.991578947368421,
+    "iou": 0.934936038817821,
+    "tp": 16956,
+    "fp": 144,
+    "fn": 1036
+  },
+  {
+    "label": "irisnp2 canonical (margin=1e-4, target=0.98)",
+    "K": 3,
+    "F_L": 106,
+    "coverage": 0.8000778123610494,
+    "precision": 0.9906406991948249,
+    "iou": 0.7940754633715799,
+    "tp": 14395,
+    "fp": 136,
+    "fn": 3597
+  }
+]
