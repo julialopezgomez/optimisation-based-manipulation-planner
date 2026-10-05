@@ -1,24 +1,28 @@
 \begin{abstract}
-Many manipulation tasks need a sequence of grasps whose length is not known
-in advance. Turning a cap with a wrist of limited range takes as many regrasps
-as the goal, the kinematics and the obstacles require. We cast multi-regrasp
-planning as a reachability problem over a convex decomposition of the
-collision-free configuration space of robot and object. Grasp pieces, the
-polytopes where the robot can hold the object, are the only sets where the
-object moves. Inspired by recent footstep planners, we search them with an A*
-whose nodes are not configurations but polytopes paired with the set of object
-configurations reachable inside them. When one object coordinate is coupled to
-one robot joint, this set is an interval, so reachability propagates by
-interval arithmetic and dominance is exact. The graph is built with linear
-programs only, and the search returns a plan with the minimum number of grasp
-actions relative to the decomposition, with no integer variables and no fixed
-horizon. On a 10-DOF cap-turning task with a Franka Panda, where a
-mixed-integer formulation is numerically unreliable, it plans in 4\,ms. The
-same task shows that probabilistically certified decompositions can contain
-collisions concentrated on the grasp sets where regrasps happen. This makes the
-fidelity of these switch sets, not coverage of free space, the key requirement
-for planners of this kind.
-\todo{headline numbers from E1--E4.}
+Turning a cap, a valve or a knob further than the wrist can rotate requires
+the robot to grasp, turn, release and grasp again, as many times as the goal,
+the joint limits and the surrounding obstacles demand. Planning these
+multi-regrasp tasks is hard for existing methods. Sampling-based manipulation
+planners are only probabilistically complete, so they cannot conclude that a
+goal needs more grasps or is unreachable. Optimisation-based and mixed-integer
+planners must fix the number of grasps in advance and, on high-dimensional
+arms, rely on local solvers or on numerically fragile big-M formulations. We
+represent the manipulation graph with convex sets: a convex decomposition of
+the free space of robot and object, intersected with a convex set of grasping
+configurations, gives \emph{transition sets} in which the robot can grasp,
+turn and release the object. We search them with an A* whose nodes pair a
+convex set with the interval of object configurations reachable inside it.
+When one object coordinate is coupled to one robot joint, this interval is
+propagated and compared exactly. The graph is built with linear programs only,
+and the search returns a plan with the minimum number of grasps relative to
+the sets, or proves that none exists, without fixing the number of grasps in
+advance. On a 10-DOF cap-turning task with a Franka Panda, where our earlier
+mixed-integer formulation is numerically unreliable, it plans in 4\,ms.
+Because probabilistic
+decompositions can contain collisions concentrated on the grasp sets, we
+validate the transition sets before searching them.
+\todo{headline comparison with the MIQP and the sampling-based planner
+(E1--E4), and the validated Q0 result (E5).}
 \end{abstract}
 
 \begin{IEEEkeywords}

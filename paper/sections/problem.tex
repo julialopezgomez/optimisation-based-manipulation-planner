@@ -1,24 +1,24 @@
 \section{Problem Formulation}
 \label{sec:problem}
 
-\subsection{Transit, transfer and switch sets}
+\subsection{Transit, transfer and transition sets}
 A robot with configuration $x\in\mathcal{X}\subset\R^{n_r}$ (arm and fingers)
 manipulates an object with configuration $\alpha$ in a known static scene. The
 state $q=(x,\alpha)$ lives in the composite configuration space
-$\CS$~\cite{simeon2004manipulation}, of dimension $n=n_r+n_o$, and
-$\CSfree\subseteq\CS$ is the set of states without collisions other than the
-contacts a grasp requires. The object cannot move on its own. In the
-\emph{placement space} $\CP$ it rests stably, and in the \emph{grasp space}
-$\CG$ the robot holds it. A manipulation path alternates \emph{transit}
-segments in $\CP$, where the robot moves alone and $\alpha$ is constant, and
-\emph{transfer} segments in $\CG$, where the robot carries the object with a
-fixed relative pose. Segments switch on $\CG\cap\CP$, where the robot can
-grasp or release the object.
+$\CS$~\cite{simeon2004manipulation}, and $\CSfree\subseteq\CS$ is the set of
+states without collisions other than the contacts a grasp requires. The object
+cannot move on its own. In the \emph{placement space} $\CP$ it rests stably,
+and in the \emph{grasp space} $\CG$ the robot holds it. A manipulation path
+alternates \emph{transit} segments in $\CP$, where the robot moves alone and
+$\alpha$ is constant, and \emph{transfer} segments in $\CG$, where the robot
+moves the object at a fixed relative pose. The two can only meet in the
+\emph{transition sets} $\CG\cap\CP\cap\CSfree$, where the robot can grasp or
+release the object. These are the nodes of the manipulation
+graph~\cite{simeon2004manipulation}.
 
 \subsection{Multi-regrasp tasks with a coupled object coordinate}
-We study the class of tasks captured by the following assumption, which
-includes caps, knobs, valves and other objects that rotate about a fixed
-axis.
+We study the tasks captured by the following assumption, which include caps,
+knobs, valves and cranks.
 \begin{assumption}
 \label{ass:task}
 (i) The object has one coordinate $\alpha\in[\alpha_{\min},\alpha_{\max}]$
@@ -32,30 +32,31 @@ $\CSfree=\Xfree\times[\alpha_{\min},\alpha_{\max}]$ for some
 $G,\Xfree\subseteq\mathcal{X}$.
 \end{assumption}
 Point (iii) holds for rotationally symmetric objects, such as the cap in our
-experiments, whose collision geometry is a cylinder.
+experiments. By (i), every grasping configuration is also a placement, so the
+transition sets reduce to $G\cap\Xfree$ (times the object range). Transfer
+motions also happen inside them.
 
-Since $w$ has a limited range $[w_{\min},w_{\max}]$, turning the object by more
-than the range requires several grasps. Without loss of generality, let
-$\agoal\le\ainit$. Since $\alpha$ affects neither collisions nor grasps, a
-plan never gains from turning the object backwards. It therefore works like a
+The wrist has a limited range $[w_{\min},w_{\max}]$, so turning the object by
+more than this range requires several grasps. Without loss of generality, let
+$\agoal\le\ainit$. Since $\alpha$ affects neither collisions nor grasps, a plan
+never gains from turning the object backwards, and the task works like a
 ratchet. A \emph{stroke} grasps the object and moves the wrist forward, so
-$\alpha$ decreases by the wrist travel. A \emph{return} releases the object,
-rotates the wrist back with $\alpha$ fixed, and grasps again. A
-\emph{release} lets go of the object before the robot leaves the grasp set.
-Free motion between grasps is transit in $\Xfree$, with $\alpha$ fixed.
+$\alpha$ decreases by the wrist travel. A \emph{return} releases the object
+and rotates the wrist back with $\alpha$ fixed, ready for the next stroke. A
+\emph{release} lets go of the object before the robot leaves the transition
+set. Every other motion is transit in $\Xfree$ with $\alpha$ fixed.
 
 \subsection{Problem statement}
 \label{sec:problem:statement}
 Given $\qinit=(\xinit,\ainit)$ and $\qgoal=(\xgoal,\agoal)$, find a continuous
 path from $\qinit$ to $\qgoal$ in $\CSfree$, made of transit segments and
-strokes, that minimises the number of grasp and ungrasp actions (strokes,
-returns and releases). Ties are broken by the number of changes of convex set
-along the path, and, secondarily, by path length.
+strokes, that uses the minimum number of grasps. Ties are broken by the number
+of changes of convex set along the path. Path length is not optimised.
 
-In the reachability view, let $\mathcal{R}_k\subseteq\CSfree$ be the set of
-states reachable from $\qinit$ with at most $k$ grasp actions. The minimum
-number of actions is the smallest $k$ such that $\qgoal\in\mathcal{R}_k$.
-Neither $\mathcal{R}_k$ nor $\CSfree$ can be computed exactly. Our planner
-computes $\mathcal{R}_k$ exactly for an inner approximation of $\CSfree$ and
-$\CG$ by convex polytopes, and its guarantees hold relative to that
-approximation.
+In terms of reachability, let $\mathcal{R}_k\subseteq\CSfree$ be the set of
+states reachable from $\qinit$ with at most $k$ grasps. The minimum number of
+grasps is the smallest $k$ such that $\qgoal\in\mathcal{R}_k$, and the goal
+is unreachable if there is no such $k$. Neither $\mathcal{R}_k$ nor $\CSfree$
+can be computed exactly. Our planner computes $\mathcal{R}_k$ exactly for an
+inner approximation of $\Xfree$ and $G$ by convex polytopes, and its
+guarantees hold relative to that approximation.

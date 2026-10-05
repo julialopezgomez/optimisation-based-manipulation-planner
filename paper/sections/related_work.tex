@@ -1,56 +1,74 @@
 \section{Related Work}
 \label{sec:related}
 
-\subsection{Manipulation and regrasp planning}
-Regrasp planners first searched over finite sets of grasps and
-placements~\cite{tournassoud1987regrasping,alami1990geometrical}, an approach
-that continues in regrasp graphs over thousands of precomputed
-grasps~\cite{wan2017regrasp}. Lertkultanon and
-Pham~\cite{lertkultanon2018certified} certify completeness for bimanual
-regrasping relative to such a discretisation. The manipulation
-graph~\cite{simeon2004manipulation} made grasps and placements continuous, and
-was generalised to multi-modal
-planning~\cite{hauser2010multimodal,hauser2011randomized}, asymptotically
-optimal sampling~\cite{schmitt2017optimal,vegabrown2016asymptotically} and
-constraint graphs with constrained
-samplers~\cite{mirabel2016hpp,berenson2011tsr,kingston2018sampling}. TAMP adds
-symbolic decisions on top~\cite{garrett2021integrated,garrett2020pddlstream}.
-In optimisation-based TAMP, an outer search enumerates skeletons with a fixed
-number of mode switches~\cite{toussaint2015lgp}, and regrasp
-maps~\cite{levit2025regrasp} guide that search towards regions where several
-regrasps are possible. Closest in spirit to our work, Liu
-et al.~\cite{liu2026graph} precompute a graph of mutually reachable sets of
-object orientations and grasps for planar contact-rich manipulation. We also
-reason about reachable sets. Ours are polytopes of the robot--object
-configuration space, and we guarantee completeness and the minimum number of
-grasps relative to the decomposition.
+\subsection{Regrasp and manipulation planning}
+The first regrasp planners searched over finite sets of grasps and
+placements~\cite{tournassoud1987regrasping,alami1990geometrical}. This
+continues in regrasp graphs over thousands of precomputed
+grasps~\cite{wan2017regrasp}, and in a bimanual planner that is certified
+complete relative to its discretisation~\cite{lertkultanon2018certified}.
+Such planners are complete only with respect to the grasps they enumerate: a
+solution that needs a grasp between two discretised ones is missed. The
+manipulation graph~\cite{simeon2004manipulation} made grasps and placements
+continuous. It was extended to multi-modal
+planning~\cite{hauser2010multimodal}, to asymptotically
+optimal sampling~\cite{schmitt2017optimal,vegabrown2016asymptotically}, and to
+constraint graphs explored with constrained
+samplers~\cite{mirabel2016hpp,berenson2011tsr,kingston2018sampling}. All of
+these offer probabilistic or asymptotic guarantees, which hold in the limit of
+infinitely many samples. Task and motion planners add symbolic decisions on
+top~\cite{garrett2021integrated,garrett2020pddlstream}. In optimisation-based
+TAMP, an outer search enumerates skeletons with a fixed number of mode
+switches, and a local solver handles each one~\cite{toussaint2015lgp}.
+Closest in spirit, Liu et al.~\cite{liu2026graph} plan contact-rich planar
+manipulation on a graph of reachable sets of object poses
+\tocheck{characterisation}. Our transition sets are the nodes of the
+manipulation graph of~\cite{simeon2004manipulation}, built as convex sets
+rather than sampled. This is what lets us guarantee completeness and the
+minimum number of grasps after a finite computation, relative to the sets.
 
-\subsection{Reachability in contact planning}
-Our search follows CASSR~\cite{wang2026cassr}. There, a node is the subset of a
-contact surface reachable from its parent. It is expanded by Minkowski sums
-and intersections with neighbouring surfaces, and a quadratic program places
-the footsteps once the surfaces are fixed. Regrasping changes two things.
-Reachability grows only inside grasp pieces, and with one coupled object
-coordinate the reachable sets are intervals. Dominance is therefore exact and
-the heuristic admissible, whereas CASSR scales its heuristic, which then is
-not admissible, and discretises yaw.
+\subsection{Contact planning over convex sets}
+Footstep planning faces the same combinatorics of contact sequences of unknown
+length. A* over discretised footholds~\cite{chestnutt2005footstep,griffin2019footstep}
+is complete only at the resolution of the discretisation. Mixed-integer
+programs over convex
+terrain~\cite{deits2014footstep,aceituno2018simultaneous} avoid
+discretisation and are globally optimal, but the number of steps, or a bound
+on it, must be fixed, and their solve times are hard to bound. $\ell_1$
+relaxations~\cite{tonneau2020sl1m,song2021solving} make them fast at the cost
+of these guarantees. \tocheck{SL1M characterisation.} CASSR~\cite{wang2026cassr} instead searches with A* over
+convex sets of footholds reachable from the start, expanded by Minkowski sums,
+and places the footsteps with a quadratic program once the sets are chosen.
+CASSR discretises the yaw of the feet, and inflates its heuristic for speed,
+so its optimality is empirical rather than guaranteed. Our search follows the
+same principle in a different space. The reachable set of a node carries the
+configuration of the object rather than a foothold. In the coupled tasks we
+consider it is an interval, so we can keep an admissible heuristic and exact
+pruning without discretisation.
 
-\subsection{Convex decompositions and Graphs of Convex Sets}
-Configuration-space obstacles cannot be described exactly in
-general~\cite{lozano1983spatial,canny1988complexity}, so free space is
-inner-approximated by convex sets. IRIS grows such sets by alternating
-separating hyperplanes and inscribed ellipsoids~\cite{deits2015computing}.
-C-IRIS certifies them~\cite{amice2022finding,dai2024certified}, while IRIS-NP,
-IRIS-NP2 and IRIS-ZO trade certification for speed and give probabilistic
-guarantees~\cite{petersen2023growing,werner2024faster}. Clique covers automate
+Graphs of Convex Sets (GCS)~\cite{marcucci2024shortest,marcucci2023motion}
+compute shortest paths over convex decompositions through a convex
+relaxation, and are globally optimal relative to the decomposition when the
+relaxation is tight. They plan the motion of a robot in one mode, with no
+switches of grasp and no object state carried from one switch to the next.
+They have been extended to contact-rich planar
+pushing~\cite{graesdal2024tight}. Heuristic searches handle graphs too large to
+solve at once~\cite{chia2024gcsstar,natarajan2024implicit}. GCS* is complete
+and optimal when it can decide exactly whether one partial path dominates
+another, i.e., whether its reachable set contains the other's at lower cost.
+In general this check must be approximated~\cite{chia2024gcsstar}. With
+interval reachable sets, it is exact.
+
+\subsection{Convex decompositions of free space}
+Convex decompositions inner-approximate free space with convex sets. IRIS
+grows them by alternating separating
+hyperplanes and inscribed ellipsoids~\cite{deits2015computing}. C-IRIS
+certifies regions as collision-free with sums-of-squares
+programs~\cite{amice2022finding,dai2024certified}. IRIS-NP, IRIS-NP2 and
+IRIS-ZO scale to more dimensions, with a probabilistic guarantee: the fraction
+of a region's volume in collision is below a threshold, with a given
+confidence~\cite{petersen2023growing,werner2024faster}. Clique covers automate
 the seeding~\cite{werner2024approximating}, and GPU implementations approach
-online rates~\cite{werner2025superfast}. Graphs of Convex Sets (GCS) find
-optimal paths over decompositions through a tight convex
-relaxation~\cite{marcucci2024shortest,marcucci2023motion}. Extensions cover
-non-Euclidean joints~\cite{cohn2023noneuclidean}, temporal
-logic~\cite{kurtz2023temporal} and planar contact-rich
-manipulation~\cite{graesdal2024tight}, and heuristic searches handle graphs too
-large to solve at once~\cite{chia2024gcsstar,natarajan2024implicit}. GCS*
-prunes partial paths by domination checks on reachable sets, which in general
-must be approximated~\cite{chia2024gcsstar}. With our reachable sets, the
-check is exact.
+online rates~\cite{werner2025superfast}. A volume guarantee says nothing
+about sets of near-zero volume, such as grasp sets. This is why we validate
+the transition sets separately (Section~\ref{sec:method:graph}).

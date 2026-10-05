@@ -3,131 +3,131 @@
 
 \begin{figure*}[t]
 \centering
-% ---------------------------------------------------------------- (a) schematic
-\begin{minipage}[b]{0.33\textwidth}\centering
-\begin{tikzpicture}[scale=1.0, font=\scriptsize]
-  \fill[blue!10, draw=blue!50] (-0.2,0) -- (3.0,0) -- (3.0,0.9) -- (1.1,2.25) -- (-0.2,2.25) -- cycle;
-  \fill[blue!10, draw=blue!50, fill opacity=0.8] (5.2,0) -- (2.0,0) -- (2.0,0.9) -- (3.9,2.25) -- (5.2,2.25) -- cycle;
-  \fill[blue!5, draw=blue!50, fill opacity=0.7] (0.0,1.75) rectangle (5.0,2.4);
-  \fill[green!55!black] (0.3,1.97) rectangle (4.7,2.03);
-  \node[blue!60!black] at (0.1,0.22) {$F_2$};
-  \node[blue!60!black] at (4.9,0.22) {$F_0$};
-  \node[blue!60!black, anchor=west] at (5.0,2.1) {$F_6$};
-  \node[green!35!black, anchor=south] at (2.5,2.03) {$G_6=G\cap F_6$};
-  \node[anchor=south, font=\tiny] at (0.35,2.03) {$w{=}{-}1$};
-  \node[anchor=south, font=\tiny] at (4.65,2.03) {$w{=}1$};
-  \node[font=\tiny] at (2.5,2.6) {stroke, return, stroke: $G_6\times[-1,3]$};
-  \coordinate (s) at (2.5,0.45);
-  \draw[densely dashed, -{Stealth[length=2mm]}] (s) -- (0.33,1.94);
-  \draw[densely dashed, -{Stealth[length=2mm]}] (4.67,1.94) -- (2.58,0.5);
-  \fill (s) circle (1.5pt) node[below=1pt] {$\xinit=\xgoal$};
-  \node[align=center, font=\tiny] at (0.62,1.0) {enter\\$F_2{\times}\{3\}$};
-  \node[align=center, font=\tiny] at (4.38,1.0) {release\\$F_0{\times}[-1,1.65]$};
-\end{tikzpicture}\\[-1pt]
-{\footnotesize (a)}
-\end{minipage}\hfill
-% ---------------------------------------------------- (b) intervals along search
-\begin{minipage}[b]{0.31\textwidth}\centering
+% =========================================================== (a) what A* tracks
+\begin{minipage}[b]{0.56\textwidth}\centering
 \begin{tikzpicture}
-\begin{axis}[width=\linewidth, height=4.1cm, ymin=-1.6, ymax=3.9, xmin=-0.5, xmax=5.5,
-  ylabel={$\alpha$ [rad]}, ylabel style={yshift=-6pt}, font=\scriptsize,
-  xtick={0,...,5}, xticklabels={$F_2$,e,h,r,h,$F_0$},
-  x tick label style={font=\tiny}, ytick={-1,0,1,2,3}, grid=major, grid style={gray!20}]
-  \addplot[dashed, red!70!black, domain=-0.5:5.5, samples=2] {-1};
-  \node[font=\tiny, red!70!black, anchor=north] at (axis cs:2.5,-1.05) {$\agoal$};
-  \foreach \i/\lo/\hi in {0/3/3, 1/3/3, 2/1/3, 3/1/3, 4/-1/3, 5/-1/1.645} {
-    \edef\temp{\noexpand\draw[line width=3pt, blue!60, line cap=round] (axis cs:\i,\lo) -- (axis cs:\i,\hi);}
+\begin{axis}[width=\linewidth, height=4.9cm,
+  xmin=-0.55, xmax=5.55, ymin=-1.75, ymax=3.75,
+  ylabel={cap angle $\alpha$ [rad]}, ylabel style={yshift=-4pt},
+  xtick={0,...,5},
+  xticklabels={start, enter, stroke 1, return, stroke 2, release},
+  x tick label style={font=\scriptsize},
+  ytick={-1,0,1,2,3}, font=\scriptsize,
+  grid=major, grid style={gray!15}, clip=false]
+  \addplot[dashed, red!70!black, domain=-0.55:5.55, samples=2] {-1};
+  \node[font=\scriptsize, red!70!black, anchor=south west] at (axis cs:-0.5,-1.0) {$\agoal$};
+  \foreach \i/\lo/\hi in {0/3/3, 1/3/3, 2/1/3, 3/1/3, 4/-1/3, 5/-1/1.65} {
+    \edef\temp{\noexpand\fill[blue!18, draw=blue!55, rounded corners=1pt]
+      (axis cs:\i-0.24,\lo-0.07) rectangle (axis cs:\i+0.24,\hi+0.07);}
     \temp
   }
-  \foreach \i/\y/\g in {0/3/0, 1/3/\mu, 2/3/1{+}\mu, 3/3/2{+}\mu, 4/3/3{+}\mu, 5/1.645/4{+}\mu} {
-    \edef\temp{\noexpand\node[font=\noexpand\tiny, anchor=south] at (axis cs:\i,\y+0.12) {$\g$};}
-    \temp
-  }
+  \addplot[thick, black!70, densely dotted] coordinates {(0,3) (1,3)};
+  \addplot[very thick, green!45!black] coordinates {(1,3) (2,1)};
+  \addplot[thick, orange!85!black, dashed] coordinates {(2,1) (3,1)};
+  \addplot[very thick, green!45!black] coordinates {(3,1) (4,-1)};
+  \addplot[thick, black!70, densely dotted] coordinates {(4,-1) (5,-1)};
+  \addplot[only marks, mark=*, mark size=1.3pt, black] coordinates {(0,3) (1,3) (2,1) (3,1) (4,-1) (5,-1)};
+  \node[font=\scriptsize, green!35!black] at (axis cs:3,3.48)
+    {each stroke widens the reachable interval};
+  \draw[-{Stealth[length=1.6mm]}, blue!60!black] (axis cs:4.75,2.55) -- (axis cs:4.3,2.2);
+  \node[font=\scriptsize, blue!60!black, anchor=west, align=left] at (axis cs:4.7,2.75) {reachable\\[-2pt]cap angles};
+  \node[font=\scriptsize, black!70, anchor=north west] at (axis cs:4.55,-1.05) {goal \checkmark};
+  \fill[blue!12, draw=blue!50] (axis cs:-0.3,-2.95) rectangle (axis cs:0.3,-2.55);
+  \node[font=\scriptsize] at (axis cs:0,-2.75) {$F_2$};
+  \fill[green!15, draw=green!45!black] (axis cs:0.7,-2.95) rectangle (axis cs:4.3,-2.55);
+  \node[font=\scriptsize, green!25!black] at (axis cs:2.5,-2.75) {transition set $T_6=G\cap F_6$};
+  \fill[blue!12, draw=blue!50] (axis cs:4.7,-2.95) rectangle (axis cs:5.3,-2.55);
+  \node[font=\scriptsize] at (axis cs:5,-2.75) {$F_0$};
+  \node[font=\scriptsize, anchor=east, gray] at (axis cs:-0.38,-2.75) {set};
 \end{axis}
-\end{tikzpicture}\\[-1pt]
-{\footnotesize (b)}
+\end{tikzpicture}\\[-2pt]
+{\footnotesize (a) What the search tracks}
 \end{minipage}\hfill
-% ------------------------------------------------------ (c) wrist--cap waypoints
-\begin{minipage}[b]{0.31\textwidth}\centering
+% =========================================================== (b) wrist-cap plane
+\begin{minipage}[b]{0.40\textwidth}\centering
 \begin{tikzpicture}
-\begin{axis}[width=\linewidth, height=4.1cm, xmin=-1.1, xmax=1.1, ymin=-1.6, ymax=3.6,
-  xlabel={wrist $w$ [rad]}, ylabel={$\alpha$ [rad]}, ylabel style={yshift=-6pt},
-  xlabel style={yshift=3pt}, font=\scriptsize, ytick={-1,0,1,2,3}, grid=major, grid style={gray!20}]
-  \fill[red!12] (axis cs:-0.192,-1.6) rectangle (axis cs:0.697,3.6);
-  \fill[red!12] (axis cs:0.919,-1.6) rectangle (axis cs:1.0,3.6);
-  \fill[green!12] (axis cs:-1.0,-1.6) rectangle (axis cs:-0.192,3.6);
-  \fill[green!12] (axis cs:0.697,-1.6) rectangle (axis cs:0.919,3.6);
-  \addplot[densely dotted, thick, black, -{Stealth[length=1.6mm]}] coordinates {(0.037,3) (-1,3)};
-  \addplot[very thick, green!45!black, -{Stealth[length=1.6mm]}] coordinates {(-1,3) (1,1)};
-  \addplot[dashed, thick, orange!80!black, -{Stealth[length=1.6mm]}] coordinates {(1,1) (-1,1)};
-  \addplot[very thick, green!45!black, -{Stealth[length=1.6mm]}] coordinates {(-1,1) (1,-1)};
-  \addplot[densely dotted, thick, black, -{Stealth[length=1.6mm]}] coordinates {(1,-1) (0.037,-1)};
-  \addplot[only marks, mark=*, mark size=1.2pt] coordinates {(0.037,3) (0.037,-1)};
-  \node[font=\tiny, anchor=south] at (axis cs:0.05,3.05) {start};
-  \node[font=\tiny, anchor=north] at (axis cs:0.05,-1.05) {goal};
-  \node[font=\tiny, green!35!black, rotate=-38] at (axis cs:-0.05,2.25) {stroke};
-  \node[font=\tiny, orange!70!black, anchor=south] at (axis cs:0.2,1.0) {return};
+\begin{axis}[width=\linewidth, height=4.9cm,
+  xmin=-1.15, xmax=1.15, ymin=-1.75, ymax=3.75,
+  xlabel={wrist angle $w$ [rad]}, ylabel={cap angle $\alpha$ [rad]},
+  ylabel style={yshift=-4pt}, xlabel style={yshift=3pt},
+  ytick={-1,0,1,2,3}, xtick={-1,0,1}, font=\scriptsize,
+  grid=major, grid style={gray!15}]
+  \addplot[thick, black!70, densely dotted, -{Stealth[length=1.6mm]}] coordinates {(0.04,3) (-0.98,3)};
+  \addplot[very thick, green!45!black, -{Stealth[length=1.8mm]}] coordinates {(-1,3) (1,1)};
+  \addplot[thick, orange!85!black, dashed, -{Stealth[length=1.6mm]}] coordinates {(1,1) (-0.98,1)};
+  \addplot[very thick, green!45!black, -{Stealth[length=1.8mm]}] coordinates {(-1,1) (1,-1)};
+  \addplot[thick, black!70, densely dotted, -{Stealth[length=1.6mm]}] coordinates {(1,-1) (0.06,-1)};
+  \addplot[only marks, mark=*, mark size=1.4pt] coordinates {(0.04,3) (0.04,-1)};
+  \node[font=\scriptsize, anchor=south] at (axis cs:0.04,3.05) {start};
+  \node[font=\scriptsize, anchor=north] at (axis cs:0.04,-1.08) {goal};
+  \node[font=\scriptsize, green!35!black, rotate=-36] at (axis cs:0.12,2.35) {stroke 1};
+  \node[font=\scriptsize, green!35!black, rotate=-36] at (axis cs:0.12,0.35) {stroke 2};
+  \node[font=\scriptsize, orange!80!black, anchor=south] at (axis cs:-0.45,1.02) {return};
+  \node[font=\scriptsize, anchor=west, align=left] at (axis cs:-1.1,-0.55) {$\Delta\alpha=-\Delta w$\\[-2pt]while grasping};
 \end{axis}
-\end{tikzpicture}\\[-1pt]
-{\footnotesize (c)}
+\end{tikzpicture}\\[-2pt]
+{\footnotesize (b) The same plan in the wrist--cap plane}
 \end{minipage}
-\caption{Reachability A* on the 10-DOF cap task, turning the cap from
-$\ainit=3$ to $\agoal=-1$\,rad with the arm returning to its start
-configuration. (a)~Sets on the returned path. The arm enters the grasp piece
-$G_6$ from region $F_2$, performs stroke--return--stroke, and releases into
-$F_0$. (b)~The interval $[\alo,\ahi]$ of each node on the path (bars; e, h, r:
-$G_6$ entered, holding, released), labelled with its cost-to-come $g$. Only strokes widen the interval, and the release lowers
-$\ahi$ by the forced turning $d=1.35$\,rad. (c)~Placed waypoints projected on
-the wrist--cap plane: strokes turn the cap ($\Delta\alpha=-\Delta w$), and
-returns and transit keep it fixed. Shading shows the true collision status of
-the wrist sweep at the seed grasp (green: free, red: in collision). Every
-region contains the full sweep, so the plan is valid relative to the
-decomposition but not physically (Section~\ref{sec:results:fidelity}).}
+\caption{Reachability A* on the 10-DOF cap task (query Q0): turn the cap from
+$\alpha=3$ to $-1$\,rad and bring the arm back to its start.
+(a)~Each column is one node on the returned path: the set the robot is in
+(strip) and the interval of cap angles reachable there (bar). The black line
+is the cap angle along the final plan. Entering the transition set $T_6$
+changes nothing; each stroke widens the interval by up to the wrist range of
+$T_6$ (2\,rad); returns and transit keep it. Leaving $T_6$ towards $F_0$ needs
+some further wrist motion, which lowers the top of the last bar. The search
+stops at the first node whose set contains the goal arm configuration and
+whose interval contains $\agoal$. (b)~While grasping, the cap turns as the
+wrist moves forward; returns move the wrist back with the cap fixed. Two
+strokes are the minimum, since each turns the cap by at most 2\,rad.
+\todo{regenerate once the transition sets are validated (E5).}}
 \label{fig:reach}
 \end{figure*}
 
-
 The planner has an offline stage, which depends only on the robot, the object
-and the scene, and an online stage per query. Offline, it decomposes free
-space into polytopes (Section~\ref{sec:method:decomp}), builds grasp polytopes
-(Section~\ref{sec:method:grasp}), and intersects them into grasp pieces and a
-polytope graph using only LPs (Section~\ref{sec:method:graph}). Online, a
-reachability A* chooses the sequence of sets and grasp actions
-(Section~\ref{sec:method:search}), and a placement stage turns it into
-certified motions (Section~\ref{sec:method:placement}).
-Fig.~\ref{fig:reach} illustrates both stages on our 10-DOF task.
+and the scene, and an online stage that is run for each query. Offline, it
+builds the free sets (Section~\ref{sec:method:free}) and the grasp set
+(Section~\ref{sec:method:grasp}), and intersects them into validated
+transition sets and a graph, using only linear programs
+(Section~\ref{sec:method:graph}). Online, the reachability A* chooses the
+sequence of sets and grasps (Section~\ref{sec:method:search}), and a second
+stage turns it into motions (Section~\ref{sec:method:recovery}).
+Fig.~\ref{fig:reach} illustrates the online stage. New goals and start
+configurations reuse the offline stage unchanged.
 
-\subsection{Convex decomposition of free space}
-\label{sec:method:decomp}
-We inner-approximate $\CSfree$ by polytopes
-$P_j=\{q:A_jq\le b_j\}$, $j=1,\dots,J$, computed with clique covers of
-visibility graphs~\cite{werner2024approximating} and IRIS-NP2
-regions~\cite{werner2024faster} in Drake~\cite{tedrake2019drake}. Each region
-is collision-free up to a fraction $\varepsilon$ of its volume, with
-confidence $1-\delta$. Certified alternatives exist~\cite{dai2024certified}
-but scale poorly to 10 dimensions. By Assumption~\ref{ass:task}(iii), the
-object coordinate does not affect collisions. We therefore replace each region
-by its slice at $\alpha=0$, $F_j=\{x:(x,0)\in P_j\}$, dropping rows that only
-bound $\alpha$. This is sound: if $(x,0)$ is collision-free, so is $(x,\alpha)$
-for every $\alpha$. The robot can then occupy any $x\in F_j$ at any object
-angle, and the planner tracks $\alpha$ separately.
+\subsection{Free sets}
+\label{sec:method:free}
+We inner-approximate $\CSfree$ by polytopes $P_j=\{q:A_jq\le b_j\}$,
+$j=1,\dots,J$, computed with clique covers of visibility
+graphs~\cite{werner2024approximating} and IRIS-NP2
+regions~\cite{werner2024faster} in Drake~\cite{tedrake2019drake}. By
+Assumption~\ref{ass:task}(iii), the object coordinate does not affect
+collisions. We therefore replace each region by its slice at $\alpha=0$,
+$F_j=\{x:(x,0)\in P_j\}$. This is sound: if $(x,0)$ is collision-free, so is
+$(x,\alpha)$ for every $\alpha$. The robot can then occupy any $x\in F_j$ at
+any object angle, and the planner tracks $\alpha$ separately.
 
-\subsection{Grasp polytopes for a 7-DOF arm}
+\subsection{Grasp set}
 \label{sec:method:grasp}
-For a gripper with a few joints, $G$ is a box in configuration
-space~\cite{lopezgomez2025minf}. For a 7-DOF arm, a grasp constrains the pose
-of the hand frame $E$ relative to the cap frame $C$, a nonlinear function of
-the arm joints. The hand must be centred above the cap, within a height band,
-with its approach axis $z_E={}^{C}R^{E}(x)\,e_z$ pointing down:
+For a 7-DOF arm, a grasp constrains the pose of the hand frame $E$ relative to
+the cap frame $C$, a nonlinear function of the arm joints. The hand must be
+centred above the cap, within a height band, with its approach axis
+$z_E={}^{C}R^{E}(x)\,e_z$ pointing down:
 \begin{align}
   h(x) &= [\,p_x,\; p_y,\; z_{E,x},\; z_{E,y}\,]^\top = 0, \label{eq:grasp_h}\\
   g(x) &= [\,p_z - z_{\max},\; z_{\min} - p_z,\; z_{E,z} + c\,]^\top \le 0, \label{eq:grasp_g}
 \end{align}
 with $p={}^{C}p^{E}(x)$, $[z_{\min},z_{\max}]=[0.105,0.110]$\,m and $c=0.9$.
-The fingers are restricted to a 1\,mm band around the cap width. The set
-$\{h=0,\,g\le0\}$ is a thin, curved manifold. We find a seed grasp $x_0$ on it
-with the Gauss--Newton phase of NLP sampling~\cite{toussaint2024nlp} and
-linearise around it:
+The fingers are restricted to a 1\,mm band around the width of the cap. The
+set $\{h=0,\,g\le0\}$ is thin and curved, so it cannot be written as a
+polytope. We approximate it locally, using two ideas from NLP
+sampling~\cite{toussaint2024nlp}. First, a seed grasp $x_0$ is found by
+Gauss--Newton minimisation of the constraint violation
+$\|[h(x);\max(g(x),0)]\|^2$ from a random start. Second, the directions that
+preserve the grasp to first order are the null space of the Jacobian $J_h$ of
+the equality constraints, which NLP sampling uses to move along constraint
+manifolds. The grasp set keeps the configurations that stay within $\epsilon$
+of this null space, around $x_0$:
 \begin{equation}
 \begin{aligned}
 G=\{x:\ & |h_0+J_h(x-x_0)|\le\epsilon,\ \ g_0+J_g(x-x_0)\le\epsilon,\\
@@ -136,76 +136,94 @@ G=\{x:\ & |h_0+J_h(x-x_0)|\le\epsilon,\ \ g_0+J_g(x-x_0)\le\epsilon,\\
 \label{eq:graspPoly}
 \end{equation}
 where $h_0,J_h,g_0,J_g$ are evaluated at $x_0$, $\epsilon=10^{-3}$, and
-$\mathcal{A}$ are the arm joints other than the wrist. Two properties of the
-task shape this construction. First, the wrist axis passes through the origin
-of $E$ along $z_E$, so rotating the wrist changes neither $p$ nor $z_E$: $h$
-and $g$ are \emph{exactly} invariant along $w$. We verified this to machine
-precision over the whole wrist range. The wrist columns of $J_h$ and $J_g$
-therefore vanish, and $G$ spans the full wrist range. Second, $J_h$ has rank
-4, so without the last constraint in~\eqref{eq:graspPoly} the null directions
-of $J_h$ would be bounded only by the joint limits. The extreme points that
-the graph construction computes would then lie where the linearisation is
-meaningless. Without this \emph{trust region}, they moved an arm joint by
-2.27\,rad from $x_0$, with $\|h\|_\infty=0.95$ and the hand 0.80\,m away from
-the cap. With $\rho=0.05$\,rad, $\|h\|_\infty$ stays around $2\times10^{-3}$
-along our plans \tocheck{guide numbers, q0 run}. Seeds drawn from other
-components of the grasp manifold, e.g., with NLP sampling's manifold-RRT
-interior phase, give further grasp polytopes $G^{s}$ that the search treats in
-the same way. We use a single seed in this paper.
+$\mathcal{A}$ are the arm joints other than the wrist.
 
-\subsection{Grasp pieces and the polytope graph}
+Two properties of the task shape this set. First, the wrist axis passes
+through the origin of $E$ along $z_E$, so rotating the wrist changes neither
+$p$ nor $z_E$. The grasp constraints are therefore \emph{exactly} invariant
+along $w$, which we verified to machine precision over the whole wrist range,
+and $G$ spans the full wrist range. Second, $J_h$ has rank 4, so the null
+space has 6 dimensions, and without the trust region $\rho$ in
+\eqref{eq:graspPoly} it would only be bounded by the joint limits. Far from
+$x_0$, the linearisation is meaningless: without the trust region, the
+extreme points used by the graph moved an arm joint by 2.27\,rad from $x_0$,
+with $\|h\|_\infty=0.95$ and the hand 0.80\,m away from the cap. With
+$\rho=0.05$\,rad, $\|h\|_\infty$ stays around $2\times10^{-3}$ along our plans
+\tocheck{numbers from the guide's q0 run}. Seeds on other parts of the grasp
+manifold give further grasp sets that the search treats in the same way. We
+use a single seed in this paper (see Section~\ref{sec:discussion}).
+
+\subsection{Transition sets and the graph}
 \label{sec:method:graph}
-For every region with $F_k\cap G\ne\emptyset$ we form the \emph{grasp piece}
-$G_k=G\cap F_k$. Grasp pieces are the switch sets of the manipulation graph,
-and the only sets in which the object moves. Two LPs give the extreme wrist
-values $w_k^{\pm}=\max/\min\{\pm w: x\in G_k\}$ and points
-$x_k^{\pm}\in G_k$ attaining them. A stroke inside $G_k$ turns the object by
-at most $L_k=w_k^+-w_k^-$, and we discard pieces with $L_k<\Lmin$. Since $G$ is
-thin in every direction but the wrist, a piece is essentially a wrist
-interval, and by convexity the segment $[x_k^-,x_k^+]$ lies in $G_k$.
+For every free set with $F_k\cap G\ne\emptyset$, we form the transition set
+$T_k=G\cap F_k$. Two LPs give its extreme wrist values
+$w_k^{\pm}=\max/\min\{\pm w: x\in T_k\}$ and points $x_k^{\pm}\in T_k$
+attaining them. A stroke inside $T_k$ turns the object by at most
+$L_k=w_k^+-w_k^-$, and we discard sets with $L_k<\Lmin$. Since $G$ is thin in
+every direction but the wrist, a transition set is essentially a wrist
+interval, and by convexity the segment $[x_k^-,x_k^+]$ lies in $T_k$.
 
-The graph has two kinds of edges. A \emph{transit} edge joins $F_i$ and $F_j$
-if they intersect. Its door point is the Chebyshev centre of $F_i\cap F_j$. A
-\emph{switch} edge joins $F_i$ and $G_k$ if they intersect. For it, we store
-the wrist range $[a_{ik}^-,a_{ik}^+]$ of $F_i\cap G_k$ and the points attaining
-its ends. Every quantity is an LP feasibility check, a Chebyshev centre or an
-extreme point. No binaries and no vertex enumeration are needed, and the
-number of LPs is $O(J^2+JK)$ for $J$ regions and $K$ pieces.
+\paragraph{Validation} The free sets are collision-free only in a volume
+sense: IRIS-NP2 bounds the fraction of each region's volume in
+collision~\cite{werner2024faster}. A transition set has almost no volume, so
+it can be entirely in collision without violating that bound, and it lies
+exactly where the hand is closest to the object and the obstacles. We
+therefore validate each $T_k$ separately. Since $T_k$ is essentially a
+segment, we check densely spaced configurations on $[x_k^-,x_k^+]$ with a
+collision checker, and replace $T_k$ by the sub-intervals of the wrist on
+which every check passes. Each of these is $T_k$ intersected with a bound on
+$w$, and is therefore still a polytope. \todo{implement (E5); state the check
+resolution; this is a dense check, not a certificate. Certifying these thin
+sets with C-IRIS~\cite{dai2024certified} is an alternative.}
+
+\paragraph{Graph} The graph has two kinds of edges. A \emph{transit} edge
+joins $F_i$ and $F_j$ if they intersect, and its door point is the Chebyshev
+centre of $F_i\cap F_j$. A \emph{switch} edge joins $F_i$ and $T_k$ if they
+intersect. For it, we store the wrist range $[a_{ik}^-,a_{ik}^+]$ of
+$F_i\cap T_k$ and the points attaining its ends. Each of these quantities is
+an LP feasibility check, a Chebyshev centre or an extreme point. No integer
+variables or vertex enumeration are needed, and the number of LPs is
+$O(J^2+JK)$ for $J$ free sets and $K$ transition sets.
 
 \subsection{Reachability A*}
 \label{sec:method:search}
-\paragraph{Nodes} Following CASSR~\cite{wang2026cassr}, a node does not
-represent a configuration but a set reachable from the start. A \emph{transit
-node} $(F_i,[\alo,\ahi])$ states that every $x\in F_i$ is reachable together
-with every $\alpha\in[\alo,\ahi]$. Since $F_i$ is convex and $\alpha$ is
-frozen during transit, any point of $F_i$ can be reached from any other along
-a straight line. A \emph{grasp node} $(G_k,[\alo,\ahi],\phi,[a^-,a^+])$
-additionally records the wrist range $[a^-,a^+]$ through which the piece was
-entered and a phase $\phi$. In phase \emph{entered}, the robot is in the piece
-and has not grasped yet. In phase \emph{holding}, it has just completed a
-stroke. In phase \emph{released}, it has completed a return and the wrist is
-back at $w_k^-$. All path information is carried by the interval. Reaching
-$F_3$ before any grasp and after a stroke of 2\,rad gives the same polytope
-with intervals $\{3\}$ and $[1,3]$, two different nodes.
+\paragraph{Nodes} As in CASSR~\cite{wang2026cassr}, a node does not represent
+a configuration but a set reachable from the start. A \emph{free node}
+$(F_i,[\alo,\ahi])$ states that every $x\in F_i$ is reachable together with
+every $\alpha\in[\alo,\ahi]$. Since $F_i$ is convex and $\alpha$ is constant
+during transit, any point of $F_i$ can be reached from any other along a
+straight line. A \emph{transition node} $(T_k,[\alo,\ahi],\phi,[a^-,a^+])$
+also records the wrist range $[a^-,a^+]$ through which the set was entered,
+and a phase $\phi$: \emph{entered} (in the set, not yet grasping),
+\emph{holding} (just completed a stroke) or \emph{released} (just completed a
+return, with the wrist back at $w_k^-$). The interval carries all the
+information about the path so far. For example, reaching $F_3$ before any
+grasp and after a stroke of 2\,rad gives the same set with the intervals
+$\{3\}$ and $[1,3]$, which are two different nodes.
 
-\paragraph{Moves} Table~\ref{tab:moves} lists the successors of a node. Only
-strokes widen the interval: a stroke can turn the object by any amount up to
-its cap, so it lowers $\alo$ and keeps $\ahi$. Since grasping happens only
-inside grasp pieces, these are the only sets where reachability grows in
-$\alpha$, which is the reachability counterpart of the switch sets of the
-manipulation graph. Leaving a piece towards $F_j$ can also force turning.
-Inside $G_k$ the wrist moves forward only while grasped, so reaching the exit
-range from the entry range turns the object by at least
-$d=\max(0,a_{jk}^- - a^+)$, which lowers $\ahi$. We clip $\alo$ at
-$\max(\agoal,\alpha_{\min})$. Each grasp, return and release costs 1, and
-each change of set costs $\mu\ll1$ ($\mu=10^{-3}$), so the search minimises
-grasp actions first and set changes second. A release must cost 1, otherwise
-leaving and re-entering a piece would be a free substitute for a return.
+\paragraph{Moves and costs} Table~\ref{tab:moves} lists the successors of a
+node. Only strokes widen the interval. A stroke can turn the object by any
+amount up to its maximum, so it lowers $\alo$ and keeps $\ahi$. Since the
+object can only be grasped inside transition sets, these are the only sets
+where reachability grows in $\alpha$. Leaving a transition set towards $F_j$
+can also force some turning. Inside $T_k$, the wrist only moves forward while
+grasping, so reaching the exit range from the entry range turns the object by
+at least $d=\max(0,a_{jk}^- - a^+)$, which lowers $\ahi$. We clip $\alo$ at
+$\max(\agoal,\alpha_{\min})$. Strokes, returns and releases cost 1 each, and
+every other move costs $\mu\ll1$ ($\mu=10^{-3}$). Every stroke is followed by
+exactly one return or release, so the cost of a plan is twice its number of
+grasps, plus $\mu$ times its number of set changes. Minimising the cost
+therefore minimises the number of grasps first and the set changes second.
+Releasing must cost 1, otherwise leaving and re-entering a transition set
+would be a cheaper substitute for a return.
+\tocheck{the code also allows a return from the \emph{entered} phase at cost
+1, before any grasp; such a move should cost $\mu$ for the cost to be exactly
+twice the number of grasps.}
 
 \begin{table}[t]
 \centering
-\caption{Moves of the reachability A*. $c_1=w_k^+-a^-$ after
-entering, $c_1=L_k$ after a return; $d=\max(0,a_{jk}^- - a^+)$.}
+\caption{Moves of the reachability A*. $c_1=w_k^+-a^-$ after entering,
+$c_1=L_k$ after a return; $d=\max(0,a_{jk}^- - a^+)$.}
 \label{tab:moves}
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}l l l l@{}}
@@ -213,10 +231,10 @@ entering, $c_1=L_k$ after a return; $d=\max(0,a_{jk}^- - a^+)$.}
 Move & From $\to$ to & Interval update & Cost\\
 \midrule
 transit & $F_i\to F_j$, $F_i\cap F_j\ne\emptyset$ & -- & $\mu$\\
-enter   & $F_i\to G_k$ (entered), $F_i\cap G_k\ne\emptyset$ & -- & $\mu$\\
+enter   & $F_i\to T_k$ (entered), $F_i\cap T_k\ne\emptyset$ & -- & $\mu$\\
 stroke  & entered/released $\to$ holding & $\alo\gets\alo-c_1$ & 1\\
-return  & entered/holding $\to$ released & -- & 1\\
-release & holding $\to F_j$, $F_j\cap G_k\ne\emptyset$ & $\ahi\gets\ahi-d$ & 1\\
+return  & holding $\to$ released & -- & 1\\
+release & holding $\to F_j$, $F_j\cap T_k\ne\emptyset$ & $\ahi\gets\ahi-d$ & 1\\
 leave   & entered $\to F_j$, only if $d=0$ & -- & $\mu$\\
 \bottomrule
 \end{tabular}
@@ -228,26 +246,23 @@ heuristic
   h(\nu)=2\Big\lceil\frac{\alo-\agoal}{\Lmax}\Big\rceil+\mathbf{1}[\phi=\text{holding}]
   \label{eq:heuristic}
 \end{equation}
-is admissible. Each remaining stroke turns the object by at most $\Lmax$ and
-must be followed by an ungrasp, either a return or the final release, and a
-holding node must still release. It is also consistent, since no move lowers
-$h$ by more than its cost. A transit node is a goal if $\xgoal\in F_i$ and
-$\agoal\in[\alo,\ahi]$. A node is \emph{dominated}, and skipped, if an expanded
-node with the same key has an interval that contains its interval at no
-higher cost. The key is the set for transit nodes, and the set, phase and
-entry range for grasp nodes. Because the abstraction describes reachability
-completely by key and interval, this check is exact. By contrast, the
-domination checks of GCS*~\cite{chia2024gcsstar} must in general be
-approximated, and CASSR uses a non-admissible
-heuristic~\cite{wang2026cassr}. Algorithm~\ref{alg:astar} summarises the
-search.
+is admissible: each remaining stroke turns the object by at most $\Lmax$ and
+is followed by a return or the final release, and a holding node must still
+release. It is also consistent, since no move lowers $h$ by more than its
+cost. A free node is a goal if $\xgoal\in F_i$ and $\agoal\in[\alo,\ahi]$. A
+node is \emph{dominated}, and skipped, if an expanded node with the same key
+has an interval that contains its interval at no higher cost. The key is the
+set for free nodes, and the set, phase and entry range for transition nodes.
+Because the key and the interval describe everything that can still be
+reached from a node, this check is exact. Algorithm~\ref{alg:astar}
+summarises the search.
 
 \begin{algorithm}[t]
 \caption{Reachability A*}
 \label{alg:astar}
 \begin{algorithmic}[1]
 \Input graph of Sec.~\ref{sec:method:graph}; $(\xinit,\ainit)$, $(\xgoal,\agoal)$
-\Output node sequence with grasp actions, or \textsc{none}
+\Output sequence of sets and grasp actions, or \textsc{none}
 \State $\mathcal{O}\gets\{(F_i,[\ainit,\ainit]) : \xinit\in F_i\}$;\ \ $\mathcal{E}\gets\emptyset$
 \While{$\mathcal{O}\neq\emptyset$}
   \State $\nu\gets\arg\min_{\nu\in\mathcal{O}} g(\nu)+h(\nu)$; remove $\nu$ from $\mathcal{O}$
@@ -260,85 +275,70 @@ search.
     \If{$\nu'$ not dominated by $\mathcal{E}$} add $\nu'$ to $\mathcal{O}$ \EndIf
   \EndFor
 \EndWhile
-\State \Return \textsc{none}
+\State \Return \textsc{none} \Comment{no plan within the sets}
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Placing configurations}
-\label{sec:method:placement}
-The search fixes the sets and the grasp actions, for example
-\emph{enter, stroke, return, stroke, release}. As in CASSR, a second stage
-places the configurations. We do this without a solver. First, a backward pass
-from $\agoal$ allocates the turning to each grasp visit. Visit $v$ turns
-$T_v=\min(\ahi_v,\alpha_v^{\mathrm{after}}+\sum_s c_s)-\alpha_v^{\mathrm{after}}$,
-where $\ahi_v$ is the upper end of the interval before the visit and $c_s$
-are the caps of its strokes. $T_v$ is split among the strokes by
-water-filling. The pass ends exactly at $\ainit$, because the search proved
-$\agoal$ reachable. Second, waypoints are placed: door points for transit, an
-entry point in $F_i\cap G_k$ at the wrist value from which the first stroke
-ends at the top of the piece, points on $[x_k^-,x_k^+]$ for strokes and
-returns, an exit point in $G_k\cap F_j$, and finally $\qgoal$. Each waypoint
-records a \emph{certifying set}, a region $F_j$ or a piece $G_k$ that contains
-both ends of the straight motion into it. By convexity, it contains the whole
-motion. We check containment and the coupling rule ($\Delta\alpha=-\Delta w$
-on strokes, $\Delta\alpha=0$ otherwise) for every motion. Path length is not
-optimised. Since the discrete structure is fixed, a convex program over the
-chosen sets could shorten the path, e.g., GCS~\cite{marcucci2023motion}
-restricted to these sets, or a QP as in CASSR. \todo{implement, or keep as
-future work.}
+\subsection{From sets to motions}
+\label{sec:method:recovery}
+The search fixes the sets and the grasp actions, for example \emph{enter,
+stroke, return, stroke, release}. As in CASSR, a second stage computes the
+configurations, here without a solver. A backward pass from $\agoal$ first
+decides how much each visit to a transition set turns the object, within the
+maximum turn of each of its strokes. It ends exactly at $\ainit$, because the
+search proved $\agoal$ reachable. Waypoints are then placed at the door points
+for transit, at points of $F_i\cap T_k$ for entering and leaving, and on the
+segment $[x_k^-,x_k^+]$ for strokes and returns. Each motion between two
+waypoints is a straight line, and we record a set, $F_j$ or $T_k$, that
+contains both of its ends. By convexity, that set contains the whole motion.
+We check this containment and the coupling ($\Delta\alpha=-\Delta w$ on
+strokes, $\Delta\alpha=0$ otherwise) for every motion. Path length is not
+optimised. Since the sequence of sets is fixed, a convex program over these
+sets, e.g., GCS~\cite{marcucci2023motion} restricted to them, could shorten
+the path. \todo{implement, or keep as future work.}
 
 \subsection{Properties}
 \label{sec:method:properties}
 \begin{proposition}[informal]
 \label{prop:guarantees}
-Relative to the regions $\{F_j\}$ and the pieces $\{G_k\}$:
-(i) every motion returned is a straight line inside one region or piece that
-satisfies the coupling of Assumption~\ref{ass:task}, so the path is
-collision-free whenever the regions are;
-(ii) the search terminates, and if a plan exists whose transit motions lie in
-the regions and whose grasp motions lie in the pieces, it returns one with
-the minimum number of grasp actions, ties broken by the number of set changes;
-(iii) placement succeeds on every sequence the search returns.
+Relative to the free sets $\{F_j\}$ and the transition sets $\{T_k\}$:
+(i) every motion returned is a straight line inside one set that satisfies
+the coupling of Assumption~\ref{ass:task}, so the path is collision-free
+whenever the sets are;
+(ii) the search terminates. If a plan exists whose transit motions lie in the
+free sets and whose strokes lie in the transition sets, it returns one with
+the minimum number of grasps, with ties broken by the number of set changes.
+Otherwise, it returns \textsc{none};
+(iii) the second stage succeeds on every sequence the search returns.
 \end{proposition}
-\noindent\emph{Sketch.} (i) follows from the certifying sets and convexity.
+\noindent\emph{Sketch.} (i) follows from convexity of the recorded sets.
 (ii) Each stroke lowers $\alo$ by at least $\Lmin$ until it reaches $\agoal$,
-so finitely many intervals arise per key and the search terminates. With a
+so finitely many intervals arise per key, and the search terminates. With a
 consistent heuristic and exact dominance, A* expands a goal node of minimum
-cost first~\cite{hart1968astar}. Entering at the highest and leaving at the
-lowest wrist value of each switch set minimises forced turning, so restricting
-entries and exits to these points loses no plan. (iii) The backward pass
-mirrors the interval updates of Table~\ref{tab:moves}.
-\tocheck{write the full proof; (iii) is asserted in our implementation but
-not yet proven. A merged chain of overlapping pieces needs chain-aware
-placement, so each piece is its own segment for now.}
+cost first~\cite{hart1968astar}. Entering at the highest wrist value and
+leaving at the lowest wrist value of each switch edge minimises forced
+turning, so restricting entries and exits to these points loses no plan.
+(iii) The backward pass mirrors the interval updates of
+Table~\ref{tab:moves}. \tocheck{write the full proof; (iii) is asserted in our
+implementation but not yet proven. Overlapping transition sets would need
+chain-aware placement, so each set is its own segment for now.}
 \hfill$\square$
 
-The guarantees are relative: a plan the search reports as optimal uses the
-fewest grasps \emph{that the decomposition allows}. Section~\ref{sec:results:fidelity}
-shows that this number can differ from the true one. Path length is not
-optimal, which is also a stated limitation of CASSR~\cite{wang2026cassr}.
+These guarantees are relative: a plan reported as optimal uses the fewest
+grasps \emph{that the sets allow}. This is why the transition sets must be
+validated (Section~\ref{sec:results:fidelity}).
 
-\subsection{Why not a mixed-integer program?}
+\subsection{Relation to a mixed-integer formulation}
 \label{sec:method:miqp}
-The same problem can be posed as an MIQP over keyframes
-$x_0=\qinit,x_1,\dots,x_{2\ell+1}=\qgoal$ for a fixed number of grasps $\ell$,
-minimising $\sum_i\|x_{i+1}-x_i\|^2$ subject to the linear transit and
-transfer constraints. Region membership is enforced with big-M constraints
-$A_jx_i\le b_j+M(1-z_{ij})$, $\sum_j z_{ij}\ge1$, and binaries for the
-connected component of each pair. The MIQP is solved for
-$\ell=1,2,\dots$ until feasible~\cite{lopezgomez2025minf}. This worked for 3-
-and 4-DOF tasks, but it is fragile at 10-DOF for three reasons. (a) Big-M:
-with $M=10^6$ and MOSEK's default integrality tolerance of
-$10^{-5}$~\cite{mosek}, a binary accepted as 1 may relax each row of its region
-by $M\cdot10^{-5}=10$\,rad. That is more than any joint range, while grasp
-polytopes are $2\epsilon=2\times10^{-3}$\,rad thick. Tight per-row constants or
-convex-hull formulations~\cite{vielma2015mixed} mitigate this at the cost of
-a larger model. (b) Components: connected components of the switch sets were
-merged through convex hulls of their vertices, which requires vertex
-enumeration of thin 10-D polytopes (Qhull fails without joggling). The hull of
-a union is also not contained in the union. (c) Scaling: the binaries grow as
-$(2\ell+2)(J+C)$ for $C$ components, and $\ell$ is found by an outer loop. The
-reachability A* has none of these issues. It solves LPs offline and does
-interval arithmetic online, and the number of grasps is an output.
-\tocheck{record the MOSEK status/log for the 10-DOF MIQP failure.}
-
+Our earlier planner~\cite{lopezgomez2025minf} posed the same problem as an
+MIQP. For a fixed number of grasps $\ell$, it chose keyframes
+$\qinit,x_1,\dots,x_{2\ell},\qgoal$, with binary variables for the set
+containing each keyframe and big-M constraints $A_jx_i\le b_j+M(1-z_{ij})$,
+and solved for $\ell=1,2,\dots$ until feasible. This works on 3- and 4-DOF
+tasks. On the 10-DOF task, the grasp set is $2\epsilon=2\times10^{-3}$ thick,
+whereas with $M=10^6$ and MOSEK's default integrality tolerance of
+$10^{-5}$~\cite{mosek}, a binary accepted as 1 may relax its constraints by
+$M\cdot10^{-5}=10$\,rad, more than any joint range. Tight big-M constants or
+convex-hull formulations~\cite{vielma2015mixed} would mitigate this at the
+cost of a larger model, but the number of grasps would still be fixed by an
+outer loop. \tocheck{record the MOSEK status/log for the 10-DOF MIQP failure.}

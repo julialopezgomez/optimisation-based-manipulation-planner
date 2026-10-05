@@ -1,19 +1,19 @@
 \section{Conclusion}
 \label{sec:conclusion}
-We posed multi-regrasp manipulation planning as a reachability problem over a
-convex decomposition of free space, and solved it with an A* search whose
-nodes pair polytopes with intervals of reachable object configurations. This
-transfers to manipulation an idea that recently matured in footstep planning.
-For objects with one coordinate coupled to the wrist, propagation is interval
-arithmetic and dominance is exact. The graph needs only LPs, and the search
-returns the minimum number of grasp actions relative to the decomposition,
-without fixing the number of regrasps in advance and without the numerical
-fragility of a mixed-integer formulation. On a 10-DOF Franka cap-turning task
-it plans in milliseconds where the MIQP fails. The same experiment shows that
-these guarantees are only as good as the decomposition near contact. We
-believe that certifying the switch sets, rather than covering free space, is
-the key requirement for planners of this kind.
-\todo{one sentence on E1--E4 once run.}
+Tasks such as turning a cap, a valve or a knob require a robot to grasp the
+same object many times, and the number of grasps depends on the goal, the
+kinematics and the obstacles. We represented the manipulation graph with
+convex sets, so that the switches between moving alone and moving the object
+are convex transition sets, and searched them with an A* whose nodes pair a
+set with the interval of object configurations reachable inside it. For
+objects with one coordinate coupled to the wrist, this search is complete and
+returns the minimum number of grasps relative to the sets, without fixing
+that number in advance and without integer variables. It brings to
+regrasping the idea, matured in footstep planning, of searching over convex
+reachable sets rather than individual contacts, extended to contact sets that
+must be constructed and to contacts that move the object. Its guarantees are
+only as good as the transition sets near contact, which is why we validate
+them. \todo{one sentence on E1--E5 once run.}
 
 \section*{Acknowledgment}
 \todo{acknowledgments; funding is in the title footnote.}
