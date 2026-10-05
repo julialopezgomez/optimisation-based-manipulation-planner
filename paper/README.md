@@ -114,7 +114,8 @@ The introduction and method were pinned to the Franka cap task; they are now sta
 6. **T1:** decide between the WSG gripper (MInf) and the locked Franka.
 7. **Figures:** there is no teaser figure on page 1 (the Franka/cap photo was dropped for space); `figures/franka_cap_grasp.png` is still in the repo. The E1/E4 results figure is commented out in `sections/experiments.tex` because `figures/generalisation.pdf` does not exist yet — that empty grey box was the old Fig. 2.
 8. **Citations removed for space**, when the A\* section grew: Aceituno-Cabezas 2018, Song 2021, Vega-Brown & Roy 2016, Berenson 2011, PDDLStream, Natarajan 2024, Chestnutt 2005 and Amice 2022. They are still in `references.bib`. Long author lists were shortened to "et al.".
-9. **Bibliography:** entries marked `VERIFY` in `references.bib`, and all older entries, still need checking against DBLP.
+9. **Author emails:** Julia's is as she gave it; Steve's (`stonneau@ed.ac.uk`) was taken from the author footnote of his CASSR paper. Confirm it is the address he wants on this submission, and remember both must come out if the venue is double-blind.
+10. **Bibliography:** entries marked `VERIFY` in `references.bib`, and all older entries, still need checking against DBLP.
 
 ## Sources
 
