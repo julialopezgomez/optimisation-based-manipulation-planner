@@ -112,7 +112,7 @@ of Section~\ref{sec:method:graph}.
 Table~\ref{tab:franka} and Fig.~\ref{fig:reach} report Q0, before validation.
 Of the 42 free sets, 8 intersect the grasp set. Four of these transition sets
 span the whole wrist range ($L_k=2$\,rad), and the others span between 0.06 and
-0.36\,rad. The search expands 63 nodes in 4\,ms and returns two strokes, one
+0.36\,rad. The search expands 63 nodes in 0.004\,s and returns two strokes, one
 return and one release: it enters $T_6$ from $F_2$, performs stroke, return
 and stroke, and releases into $F_0$. Its cost, $4+\mu$, equals the initial
 heuristic plus one set change, so the heuristic is tight on this query. With
@@ -138,7 +138,7 @@ Stage & Quantity & Value\\
  & decomposition time & \tbd\\
 \midrule
 \multirow{5}{*}{Online} & nodes expanded & 63\\
- & search time & 4\,ms\\
+ & search time & 0.004\,s\\
  & strokes / returns / releases & 2 / 1 / 1\\
  & set changes & 1\\
  & motions contained in their set & 6 / 6\\
@@ -164,7 +164,7 @@ numbers make the argument of Section~\ref{sec:method:miqp} concrete: the grasp
 set is $2\epsilon=2\times10^{-3}$ thick, while $M=10^{6}$ and MOSEK's default
 integrality tolerance $\tau=10^{-5}$~\cite{mosek} give $M\tau=10$\,rad of
 slack on a set reported as occupied, more than any joint range. The
-reachability A* returns the plan above in milliseconds. \tocheck{MIQP outcome and solve time on T2; run the
+reachability A* returns the plan above in 0.004\,s. \tocheck{MIQP outcome and solve time on T2; run the
 reachability A* on T1 and check that it also returns 11.}
 
 \begin{table}[t]
@@ -180,7 +180,7 @@ Task & Method & Grasps & Time & Outcome\\
  & Reach.\ A* & \tbd & \tbd & \tbd\\
 \midrule
 \multirow{2}{*}{T2 (10-DOF)} & MIQP & -- & \tbd & numerical failure \tocheck{}\\
- & Reach.\ A* & 2 & 4\,ms & solved (rel.\ sets)\\
+ & Reach.\ A* & 2 & 0.004\,s & solved (rel.\ sets)\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -242,62 +242,62 @@ MOSEK unless stated. Machine: AMD Ryzen 9 9950X (16 cores), 60\,GB.}
 \setlength{\tabcolsep}{3.2pt}
 \begin{tabular}{@{}l r l r r r r r l@{}}
 \toprule
-Run & $D$ & Method & $|V|$\,/\,$|E|$ & Grasps & Length & Time & Memory & Outcome\\
+Run & $D$ & Method & $|V|$\,/\,$|E|$ & Grasps & Length & Time [s] & Memory [GB] & Outcome\\
 \midrule
-\multirow{9}{*}{A$^{a}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 18.06 & 3.7\,ms & $<$1\,MB & solved, 83 nodes expanded\\
- & & GCS on A* seq. & 8 / 7 & 1 & 11.49 & 0.44\,s & $<$1\,MB & solved\\
- & & Full GCS & 48 / 543 & 1 & 11.49 & 191\,s & 3.0\,GB & solved, cost 21.50\\
+\multirow{9}{*}{A$^{a}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 18.06 & 0.0037 & $<$0.001 & solved, 83 nodes expanded\\
+ & & GCS on A* seq. & 8 / 7 & 1 & 11.49 & 0.44 & $<$0.001 & solved\\
+ & & Full GCS & 48 / 543 & 1 & 11.49 & 191 & 3.0 & solved, cost 21.50\\
 \cmidrule(l){2-9}
- & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 20.30 & 5.3\,ms & $<$1\,MB & solved, 122 nodes expanded\\
- & & GCS on A* seq. & 10 / 9 & 2 & 13.62 & 0.54\,s & 7\,MB & solved\\
- & & Full GCS & 64 / 749 & 2 & 13.62 & 403\,s & 4.3\,GB & solved, cost 33.62\\
+ & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 20.30 & 0.0053 & $<$0.001 & solved, 122 nodes expanded\\
+ & & GCS on A* seq. & 10 / 9 & 2 & 13.62 & 0.54 & 0.007 & solved\\
+ & & Full GCS & 64 / 749 & 2 & 13.62 & 403 & 4.3 & solved, cost 33.62\\
 \cmidrule(l){2-9}
- & \multirow{3}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 31.16 & 14\,ms & $<$1\,MB & solved, 369 nodes expanded\\
- & & GCS on A* seq. & 22 / 21 & 8 & 24.48 & 0.54\,s & 25\,MB & solved\\
+ & \multirow{3}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 31.16 & 0.014 & $<$0.001 & solved, 369 nodes expanded\\
+ & & GCS on A* seq. & 22 / 21 & 8 & 24.48 & 0.54 & 0.025 & solved\\
  & & Full GCS & \multicolumn{6}{l}{not run (see Run E)}\\
 \midrule
-\multirow{8}{*}{B$^{b}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 12.07 & 3.7\,ms & $<$1\,MB & solved\\
- & & GCS on A* seq. & 7 / 6 & 1 & 11.98 & 20\,ms & $<$1\,MB & solved\\
- & & Full GCS & 61 / 911 & 1 & 11.98 & 243\,s & 9.2\,GB & solved, cost 21.99\\
+\multirow{8}{*}{B$^{b}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 12.07 & 0.0037 & $<$0.001 & solved\\
+ & & GCS on A* seq. & 7 / 6 & 1 & 11.98 & 0.02 & $<$0.001 & solved\\
+ & & Full GCS & 61 / 911 & 1 & 11.98 & 243 & 9.2 & solved, cost 21.99\\
 \cmidrule(l){2-9}
- & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 14.29 & 4.0\,ms & $<$1\,MB & solved\\
- & & GCS on A* seq. & 9 / 8 & 2 & 14.16 & 23\,ms & $<$1\,MB & solved\\
- & & Full GCS & 77 / 1117 & 2 & 14.16 & 421\,s & $\ge$5.7\,GB & solved, cost 34.16\\
+ & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 14.29 & 0.004 & $<$0.001 & solved\\
+ & & GCS on A* seq. & 9 / 8 & 2 & 14.16 & 0.023 & $<$0.001 & solved\\
+ & & Full GCS & 77 / 1117 & 2 & 14.16 & 421 & $\ge$5.7 & solved, cost 34.16\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 25.15 & 9.1\,ms & $<$1\,MB & solved\\
- & & GCS on A* seq. & 21 / 20 & 8 & 25.02 & 46\,ms & $<$1\,MB & solved\\
+ & \multirow{2}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 25.15 & 0.0091 & $<$0.001 & solved\\
+ & & GCS on A* seq. & 21 / 20 & 8 & 25.02 & 0.046 & $<$0.001 & solved\\
 \midrule
 \multirow{8}{*}{C$^{c}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 15.29 & -- & -- & solved\\
- & & GCS on A* seq. & -- & 1 & 12.47 & 0.05\,s & -- & solved\\
- & & Full GCS & -- & 1 & 12.47 & 231\,s & -- & solved\\
+ & & GCS on A* seq. & -- & 1 & 12.47 & 0.05 & -- & solved\\
+ & & Full GCS & -- & 1 & 12.47 & 231 & -- & solved\\
 \cmidrule(l){2-9}
  & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 17.56 & -- & -- & solved\\
- & & GCS on A* seq. & -- & 2 & 14.63 & 0.01\,s & -- & solved\\
- & & Full GCS & -- & 2 & 14.63 & 254\,s & -- & solved\\
+ & & GCS on A* seq. & -- & 2 & 14.63 & 0.01 & -- & solved\\
+ & & Full GCS & -- & 2 & 14.63 & 254 & -- & solved\\
 \cmidrule(l){2-9}
  & \multirow{2}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 28.43 & -- & -- & solved\\
- & & GCS on A* seq. & -- & 8 & 25.49 & 0.05\,s & -- & solved\\
+ & & GCS on A* seq. & -- & 8 & 25.49 & 0.05 & -- & solved\\
 \midrule
-\multirow{8}{*}{D$^{d}$} & \multirow{2}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 19.13 & 4\,ms & -- & solved\\
- & & Full GCS & 63 / 1049 & 1 & 6.30 & 414\,s & $\le$12.1\,GB & solved, cost 16.31 (bound 13.50)\\
+\multirow{8}{*}{D$^{d}$} & \multirow{2}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 19.13 & 0.004 & -- & solved\\
+ & & Full GCS & 63 / 1049 & 1 & 6.30 & 414 & $\le$12.1 & solved, cost 16.31 (bound 13.50)\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 21.36 & 5\,ms & -- & solved\\
- & & Full GCS & 79 / 1255 & 2 & 8.52 & 415\,s & $\le$15.6\,GB & solved, cost 28.52 (bound 26.90)\\
+ & \multirow{2}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 21.36 & 0.005 & -- & solved\\
+ & & Full GCS & 79 / 1255 & 2 & 8.52 & 415 & $\le$15.6 & solved, cost 28.52 (bound 26.90)\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{2.4} & Reach.\ A* & 50 / 900 & 3 & 23.49 & 6\,ms & -- & solved\\
- & & Full GCS & 95 / 1461 & 3 & 10.69 & 680\,s & $\le$18.2\,GB & solved, cost 40.69 (bound 40.27)\\
+ & \multirow{2}{*}{2.4} & Reach.\ A* & 50 / 900 & 3 & 23.49 & 0.006 & -- & solved\\
+ & & Full GCS & 95 / 1461 & 3 & 10.69 & 680 & $\le$18.2 & solved, cost 40.69 (bound 40.27)\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{3.2} & Reach.\ A* & 50 / 900 & 4 & 25.43 & 5\,ms & -- & solved\\
- & & Full GCS & 111 / 1667 & 4 & 12.62 & 200\,s & $\le$18.2\,GB & solved, cost 52.63 (bound 52.13)\\
+ & \multirow{2}{*}{3.2} & Reach.\ A* & 50 / 900 & 4 & 25.43 & 0.005 & -- & solved\\
+ & & Full GCS & 111 / 1667 & 4 & 12.62 & 200 & $\le$18.2 & solved, cost 52.63 (bound 52.13)\\
 \midrule
-\multirow{8}{*}{E$^{e}$} & \multirow{8}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 26.06 & 13\,ms$^{f}$ & -- & solved, 369 nodes expanded$^{f}$\\
- & & GCS on A* seq. & 20 / 19 & 8 & 25.96 & 18\,ms & $\le$0.36\,GB & solved\\
- & & Full GCS, pruned & 179 / 2280 & -- & -- & 140\,s & 13.7\,GB & relaxation solved (bound 98.66)\\
- & & \quad rounding & 179 / 2280 & -- & -- & -- & $>$15\,GB$^{g}$ & stopped by us\\
- & & Full GCS, 42 / 8 / 42 & $\approx$240 / 5.4k & -- & -- & $\approx$3\,min & $>$59\,GB$^{h}$ & killed by the OS\\
- & & Full GCS, all 42 & $\approx$540 / 20k & -- & -- & $\approx$20\,min & $>$35\,GB$^{h}$ & killed by the OS\\
- & & Full GCS, all 42, Clarabel$^{i}$ & $\approx$540 / 20k & -- & -- & 9\,min$^{j}$ & $>$57, 57, 35\,GB$^{h}$ & killed by the OS (3 runs)\\
- & & 1 grasp layer, 42 / -- / 42 & 94 / 3554 & -- & -- & -- & $>$12\,GB$^{g}$ & memory test; stopped by us\\
+\multirow{8}{*}{E$^{e}$} & \multirow{8}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 26.06 & 0.013$^{f}$ & -- & solved, 369 nodes expanded$^{f}$\\
+ & & GCS on A* seq. & 20 / 19 & 8 & 25.96 & 0.018 & $\le$0.36 & solved\\
+ & & Full GCS, pruned & 179 / 2280 & -- & -- & 140 & 13.7 & relaxation solved (bound 98.66)\\
+ & & \quad rounding & 179 / 2280 & -- & -- & -- & $>$15$^{g}$ & stopped by us\\
+ & & Full GCS, 42 / 8 / 42 & $\approx$240 / 5.4k & -- & -- & $\approx$180 & $>$59$^{h}$ & killed by the OS\\
+ & & Full GCS, all 42 & $\approx$540 / 20k & -- & -- & $\approx$1200 & $>$35$^{h}$ & killed by the OS\\
+ & & Full GCS, all 42, Clarabel$^{i}$ & $\approx$540 / 20k & -- & -- & 540$^{j}$ & $>$57, 57, 35$^{h}$ & killed by the OS (3 runs)\\
+ & & 1 grasp layer, 42 / -- / 42 & 94 / 3554 & -- & -- & -- & $>$12$^{g}$ & memory test; stopped by us\\
 \bottomrule
 \end{tabular}
 
@@ -336,23 +336,22 @@ $^{j}$~Third run; the first two were not timed.
   \item In every run, all methods return the same number of grasps,
     $\lceil D/\Lmax\rceil$.
   \item GCS on the A* sequence keeps the A*'s sets and grasps, and shortens its
-    path by 0.4--36\%, depending on how far from the shortest the A*'s placement happens to be in that run. In Run~A almost all of its 0.5\,s is
+    path by 0.4--36\%, depending on how far from the shortest the A*'s placement happens to be in that run. In Run~A almost all of its 0.44--0.54\,s is
     spent building the layered graph; the convex program itself takes
-    11--28\,ms.
+    0.011--0.028\,s.
   \item In Runs A--C, the full GCS returns the same path as GCS on the A*
     sequence, to four digits: searching over all sets picked the sets the A*
     had already picked.
-  \item The full GCS costs minutes, against milliseconds for the search. It
-    solved every turn up to 3.2\,rad (4 grasps) in 3--11 minutes, using
-    3--18\,GB, but no version of the 6\,rad turn (8 grasps) fit on the
-    machine.
+  \item The full GCS takes 191--680\,s, against 0.004--0.014\,s for the
+    search. It solved every turn up to 3.2\,rad (4 grasps), using 3--18\,GB,
+    but no version of the 6\,rad turn (8 grasps) fit on the machine.
   \item In Run~D its paths are much shorter than the A*'s, e.g.\ 6.30 against
     19.13. That run has no GCS-on-A* row, so it does not tell whether GCS chose
     different sets or only placed the configurations better.
     \todo{rerun Run~D's turns on the saved scenario of Run~A.}
   \item The A*'s paths are longer because its second stage places waypoints
     without optimising length (Section~\ref{sec:method:recovery}). The convex
-    program on its sets, at tens of milliseconds, is a natural replacement for
+    program on its sets, at 0.011--0.046\,s, is a natural replacement for
     that stage.
 \end{itemize}
 
