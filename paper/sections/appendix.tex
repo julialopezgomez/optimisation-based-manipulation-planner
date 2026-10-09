@@ -31,7 +31,7 @@ better. In Runs A--C, where both ran, the full GCS chose the A*'s sets.
 \caption{All A* and GCS runs on T2 (10-DOF, two obstacles, 42 free sets,
 $\Lmax=0.81$\,rad), grouped by run. Each run has its own start and goal.
 $|V|/|E|$: the graph each method works on (for GCS on the A* sequence, the
-sets of that sequence). Length: Euclidean, in $(x,\alpha)$. All returned plans
+sets of that sequence). Length: Euclidean, in $(x,\alpha)$. ``Reach.\ A* (ours)'' is the method of this paper. All returned plans
 are certified: every motion lies in its convex set and respects the coupling.
 MOSEK unless stated. Machine: AMD Ryzen 9 9950X (16 cores), 60\,GB.}
 \label{tab:gcs:all}
@@ -41,53 +41,53 @@ MOSEK unless stated. Machine: AMD Ryzen 9 9950X (16 cores), 60\,GB.}
 \toprule
 Run & $D$ & Method & $|V|$\,/\,$|E|$ & Grasps & Length & Time [s] & Memory [GB] & Outcome\\
 \midrule
-\multirow{9}{*}{A$^{a}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 18.06 & 0.0037 & $<$0.001 & solved, 83 nodes expanded\\
- & & GCS on A* seq. & 8 / 7 & 1 & 11.49 & 0.44 & $<$0.001 & solved\\
- & & Full GCS & 48 / 543 & 1 & 11.49 & 191 & 3.0 & solved, cost 21.50\\
+\multirow{9}{*}{A$^{a}$} & \multirow{3}{*}{0.5} & Reach.\ A* (ours) & 50 / 900 & 1 & 18.06 & 0.0037 & $<$0.001 & solved, 83 nodes expanded\\
+ & & GCS on A* seq. & 8 / 7 & 1 & 11.49 & 0.016 & $<$0.001 & solved\\
+ & & Full GCS & 48 / 543 & 1 & 11.49 & 44 & 4.0 & solved, cost 21.50\\
 \cmidrule(l){2-9}
- & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 20.30 & 0.0053 & $<$0.001 & solved, 122 nodes expanded\\
- & & GCS on A* seq. & 10 / 9 & 2 & 13.62 & 0.54 & 0.007 & solved\\
- & & Full GCS & 64 / 749 & 2 & 13.62 & 403 & 4.3 & solved, cost 33.62\\
+ & \multirow{3}{*}{1.5} & Reach.\ A* (ours) & 50 / 900 & 2 & 20.30 & 0.0048 & $<$0.001 & solved, 122 nodes expanded\\
+ & & GCS on A* seq. & 10 / 9 & 2 & 13.62 & 0.022 & $<$0.001 & solved\\
+ & & Full GCS & 64 / 749 & 2 & 13.62 & 93 & 5.6 & solved, cost 33.62\\
 \cmidrule(l){2-9}
- & \multirow{3}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 31.16 & 0.014 & $<$0.001 & solved, 369 nodes expanded\\
- & & GCS on A* seq. & 22 / 21 & 8 & 24.48 & 0.54 & 0.025 & solved\\
+ & \multirow{3}{*}{6} & Reach.\ A* (ours) & 50 / 900 & 8 & 31.16 & 0.014 & $<$0.001 & solved, 369 nodes expanded\\
+ & & GCS on A* seq. & 22 / 21 & 8 & 24.48 & 0.052 & 0.001 & solved\\
  & & Full GCS & \multicolumn{6}{l}{not run (see Run E)}\\
 \midrule
-\multirow{8}{*}{B$^{b}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 12.07 & 0.0037 & $<$0.001 & solved\\
+\multirow{8}{*}{B$^{b}$} & \multirow{3}{*}{0.5} & Reach.\ A* (ours) & 50 / 900 & 1 & 12.07 & 0.0037 & $<$0.001 & solved\\
  & & GCS on A* seq. & 7 / 6 & 1 & 11.98 & 0.02 & $<$0.001 & solved\\
  & & Full GCS & 61 / 911 & 1 & 11.98 & 243 & 9.2 & solved, cost 21.99\\
 \cmidrule(l){2-9}
- & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 14.29 & 0.004 & $<$0.001 & solved\\
+ & \multirow{3}{*}{1.5} & Reach.\ A* (ours) & 50 / 900 & 2 & 14.29 & 0.004 & $<$0.001 & solved\\
  & & GCS on A* seq. & 9 / 8 & 2 & 14.16 & 0.023 & $<$0.001 & solved\\
  & & Full GCS & 77 / 1117 & 2 & 14.16 & 421 & $\ge$5.7 & solved, cost 34.16\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 25.15 & 0.0091 & $<$0.001 & solved\\
+ & \multirow{2}{*}{6} & Reach.\ A* (ours) & 50 / 900 & 8 & 25.15 & 0.0091 & $<$0.001 & solved\\
  & & GCS on A* seq. & 21 / 20 & 8 & 25.02 & 0.046 & $<$0.001 & solved\\
 \midrule
-\multirow{8}{*}{C$^{c}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 15.29 & -- & -- & solved\\
+\multirow{8}{*}{C$^{c}$} & \multirow{3}{*}{0.5} & Reach.\ A* (ours) & 50 / 900 & 1 & 15.29 & -- & -- & solved\\
  & & GCS on A* seq. & -- & 1 & 12.47 & 0.05 & -- & solved\\
  & & Full GCS & -- & 1 & 12.47 & 231 & -- & solved\\
 \cmidrule(l){2-9}
- & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 17.56 & -- & -- & solved\\
+ & \multirow{3}{*}{1.5} & Reach.\ A* (ours) & 50 / 900 & 2 & 17.56 & -- & -- & solved\\
  & & GCS on A* seq. & -- & 2 & 14.63 & 0.01 & -- & solved\\
  & & Full GCS & -- & 2 & 14.63 & 254 & -- & solved\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 28.43 & -- & -- & solved\\
+ & \multirow{2}{*}{6} & Reach.\ A* (ours) & 50 / 900 & 8 & 28.43 & -- & -- & solved\\
  & & GCS on A* seq. & -- & 8 & 25.49 & 0.05 & -- & solved\\
 \midrule
-\multirow{8}{*}{D$^{d}$} & \multirow{2}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 19.13 & 0.004 & -- & solved\\
+\multirow{8}{*}{D$^{d}$} & \multirow{2}{*}{0.5} & Reach.\ A* (ours) & 50 / 900 & 1 & 19.13 & 0.004 & -- & solved\\
  & & Full GCS & 63 / 1049 & 1 & 6.30 & 414 & $\le$12.1 & solved, cost 16.31 (bound 13.50)\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 21.36 & 0.005 & -- & solved\\
+ & \multirow{2}{*}{1.5} & Reach.\ A* (ours) & 50 / 900 & 2 & 21.36 & 0.005 & -- & solved\\
  & & Full GCS & 79 / 1255 & 2 & 8.52 & 415 & $\le$15.6 & solved, cost 28.52 (bound 26.90)\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{2.4} & Reach.\ A* & 50 / 900 & 3 & 23.49 & 0.006 & -- & solved\\
+ & \multirow{2}{*}{2.4} & Reach.\ A* (ours) & 50 / 900 & 3 & 23.49 & 0.006 & -- & solved\\
  & & Full GCS & 95 / 1461 & 3 & 10.69 & 680 & $\le$18.2 & solved, cost 40.69 (bound 40.27)\\
 \cmidrule(l){2-9}
- & \multirow{2}{*}{3.2} & Reach.\ A* & 50 / 900 & 4 & 25.43 & 0.005 & -- & solved\\
+ & \multirow{2}{*}{3.2} & Reach.\ A* (ours) & 50 / 900 & 4 & 25.43 & 0.005 & -- & solved\\
  & & Full GCS & 111 / 1667 & 4 & 12.62 & 200 & $\le$18.2 & solved, cost 52.63 (bound 52.13)\\
 \midrule
-\multirow{8}{*}{E$^{e}$} & \multirow{8}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 26.06 & 0.013$^{f}$ & -- & solved, 369 nodes expanded$^{f}$\\
+\multirow{8}{*}{E$^{e}$} & \multirow{8}{*}{6} & Reach.\ A* (ours) & 50 / 900 & 8 & 26.06 & 0.013$^{f}$ & -- & solved, 369 nodes expanded$^{f}$\\
  & & GCS on A* seq. & 20 / 19 & 8 & 25.96 & 0.018 & $\le$0.36 & solved\\
  & & Full GCS, pruned & 179 / 2280 & -- & -- & 140 & 13.7 & relaxation solved (bound 98.66)\\
  & & \quad rounding & 179 / 2280 & -- & -- & -- & $>$15$^{g}$ & stopped by us\\
@@ -102,8 +102,11 @@ Run & $D$ & Method & $|V|$\,/\,$|E|$ & Grasps & Length & Time [s] & Memory [GB] 
 \begin{minipage}{\textwidth}
 \footnotesize
 $^{a}$~Start, goal and sets saved; reproduces exactly. Times and memory as in
-the setup. Each full GCS solve runs in its own process, so its memory is the
-solve's own.
+the setup: one MOSEK licence held throughout, and each full GCS solve in a
+fresh process. An earlier measurement of this run solved GCS in forked
+processes, where MOSEK ran single-threaded and took 191 and 403\,s.
+Run~B held a licence too; Runs C--E did not, so their times include a licence
+checkout per small program.
 $^{b}$~As A, but both full GCS solves ran in one process. The second figure
 excludes memory the first left allocated, so it understates the need.
 $^{c}$~GCS times are the convex program or \texttt{SolvePath} only. Memory and

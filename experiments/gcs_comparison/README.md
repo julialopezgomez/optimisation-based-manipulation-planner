@@ -7,6 +7,7 @@ scripts only run its cells, time and measure each method, and render the plans.
 | file | what it does |
 |---|---|
 | `run_notebook.py` | Runs the notebook's code cells headlessly, up to its "GCS baseline" section (scene, free-set fixing, brute force, A*). |
+| `full_gcs_child.py` | One full GCS solve in a fresh process, started by `compare_plans.py`. |
 | `compare_plans.py` | From one start and goal, and for each turn: A*, GCS on the A*'s sequence and full GCS, with time and peak memory. Renders every plan and writes the comparison pages. |
 
 ## Run
@@ -32,11 +33,12 @@ Expected on an AMD Ryzen 9 9950X with 60 GB:
 
 | turn | grasps | full GCS time | full GCS memory |
 |---|---|---|---|
-| 0.5 rad | 1 | ~3 min | ~3 GB |
-| 1.5 rad | 2 | ~7 min | ~4 GB |
+| 0.5 rad | 1 | ~45 s | ~4 GB |
+| 1.5 rad | 2 | ~95 s | ~6 GB |
 | 6 rad | 8 | does not fit | — |
 
-Everything else takes seconds. A full run with the defaults takes ~12 min.
+Everything else takes seconds. A full run with the defaults takes ~8 min, mostly loading the notebook
+once per process and rendering.
 
 ## Output (`--out`)
 
@@ -53,8 +55,10 @@ The same as the paper:
 
 - A*: the search + placing the waypoints.
 - GCS on the A* sequence: the A* search + building the layered GCS graph + one convex program.
-- Full GCS: building the layered graph + `SolvePath`, each solve in its own forked process. That way
-  its memory is not hidden by memory an earlier solve left allocated.
+- Full GCS: building the layered graph + `SolvePath`. Each solve runs in a fresh process
+  (`full_gcs_child.py`), which reloads the saved scenario. That way its memory is not hidden by memory an
+  earlier solve left allocated, and MOSEK stays multithreaded: a forked child ran the same solve ~4×
+  slower.
 
 Not counted for any method: the shared preprocessing that builds the A*'s graph (transition sets,
 extreme points, transit and switch edges, ~1 s), which the GCS graph reuses; and the decomposition.

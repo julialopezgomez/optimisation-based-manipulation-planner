@@ -2,8 +2,8 @@
 
 From ONE start and goal, for each turn D:
   - the reachability A*, GCS on the A*'s sequence of sets and, for --full-turns, the full GCS;
-  - the compute time and peak extra memory of each. Each full GCS solve runs in its own forked process,
-    so its memory is not hidden by memory an earlier solve left allocated;
+  - the compute time and peak extra memory of each. Each full GCS solve runs in a fresh process
+    (full_gcs_child.py), so its memory is not hidden by memory an earlier solve left allocated;
   - an offscreen render (Drake VTK) of every plan, with the start/goal and wrist-limit markers as scene
     geometry;
   - for --page-turns, a self-contained side-by-side comparison page (compare_D*.html).
@@ -112,11 +112,11 @@ alpha_init = float(q_init_astar[idx_cap])
 # edges): used by every method. Re-run here to time it (and, with --scenario, to rebuild it).
 PREP_PREFIXES = ("import itertools\nfrom pydrake.solvers import MathematicalProgram, Solve", "def extreme_point(",
                  "L_MIN = 0.05", "n_free = len(free_sets)")
-licence = MosekSolver.AcquireLicense() if MosekSolver().enabled() else None   # one checkout, not one per LP
+# One MOSEK licence is held for the whole run (the notebook's cell acquires it; this is a fallback), so no
+# method pays a licence checkout per solve. Each full GCS child process holds its own.
+licence = MosekSolver.AcquireLicense() if MosekSolver().enabled() else None
 with contextlib.redirect_stdout(io.StringIO()):
     _, t_prep, _ = measured(lambda: [exec(code_cell(p), globals()) for p in PREP_PREFIXES])
-licence = None                       # release before the full GCS solves, which run in forked children
-globals().pop("mosek_licence", None)  # the notebook's own licence, likewise
 print(f"shared preprocessing: {t_prep:.2f}s; MOSEK enabled: {MosekSolver().enabled()}", flush=True)
 np.savez(OUT / "scenario.npz", q_init=q_init_astar, q_goal_base=q_goal_astar, idx_cap=idx_cap, idx_wrist=idx_wrist)
 SaveIrisRegionsYamlFile(str(OUT / "cfree_fixed.yaml"), {f"region_{i:03d}": r for i, r in enumerate(planner.cs_free)})
@@ -153,27 +153,18 @@ for D in TURNS:
 
     del b
     if D in FULL_TURNS:
-        # Full GCS in a forked child: identical state (same sets, start and goal), and its peak memory is not
-        # hidden by memory an earlier solve left allocated in this process. The child builds its own graph.
-        import multiprocessing as mp
-        def child(conn, D=D, q_goal=q_goal, N=N, keep={n.set_id for n in apath if n.kind == "F"}):
-            peak, base = [0.0], rss_gb()
-            def sample():
-                while True:
-                    peak[0] = max(peak[0], rss_gb()); _t.sleep(0.05)
-            threading.Thread(target=sample, daemon=True).start()
-            t0 = _t.perf_counter(); bb = build_layered_gcs(q_init_astar, q_goal, N, keep=keep); t_build = _t.perf_counter() - t0
-            t0 = _t.perf_counter(); _, r = bb["gcs"].SolvePath(bb["source"], bb["target"], o); t_solve = _t.perf_counter() - t0
-            out = dict(time_parts=dict(build=t_build, solve=t_solve), base=base, peak=peak[0])
-            if r.is_success():
-                fseq = solved_vertex_sequence(bb, r)
-                out.update(waypoints=gcs_waypoints(bb, r, fseq), cost=r.get_optimal_cost())
-            else:
-                out.update(failed=str(r.get_solution_result()))
-            conn.send(out); conn.close(); os._exit(0)
-        parent_conn, child_conn = mp.get_context("fork").Pipe()
-        proc = mp.get_context("fork").Process(target=child, args=(child_conn,)); proc.start()
-        res = parent_conn.recv(); proc.join()
+        # A fresh process per full solve (it reloads the scenario saved above): clean memory, unaffected by
+        # earlier solves, and MOSEK stays multithreaded (a forked child ran the same solve ~4x slower).
+        import subprocess
+        result_file = OUT / f"_full_gcs_{tag}.json"
+        subprocess.run([sys.executable, str(Path(__file__).resolve().parent / "full_gcs_child.py"),
+                        "--scenario", str(OUT), "--turn", str(D), "--result", str(result_file)],
+                       check=True, cwd=REPO_ROOT)
+        res = json.loads(result_file.read_text())
+        result_file.unlink()
+        if "waypoints" in res:
+            res["waypoints"] = [(np.array(q), label, tuple(cert)) for q, label, cert in res["waypoints"]]
+        size = dict(vertices=res["vertices"], edges=res["edges"], layers=res["layers"], build_time=res["time_parts"]["build"])
         tp = res["time_parts"]; mem = res["peak"] - res["base"]
         if "waypoints" in res:
             fw = res["waypoints"]; plans[(D, "gcs_full")] = fw

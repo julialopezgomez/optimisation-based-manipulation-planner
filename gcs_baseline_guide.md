@@ -180,21 +180,24 @@ any method.
 | turn | method | grasps | path length | time | peak extra memory |
 |---|---|---|---|---|---|
 | 0.5 rad | A* (graph 50 / 900, 83 nodes expanded) | 1 | 18.06 | 3.7 ms | ~0 |
-| | GCS on A* sequence | 1 | 11.49 | 0.44 s (convex program: 11 ms) | <1 MB |
-| | full GCS (48 vertices / 543 edges) | 1 | 11.49 | 191 s | 3.0 GB |
-| 1.5 rad | A* (122 nodes expanded) | 2 | 20.30 | 5.3 ms | ~0 |
-| | GCS on A* sequence | 2 | 13.62 | 0.54 s (15 ms) | 7 MB |
-| | full GCS (64 / 749) | 2 | 13.62 | 403 s | 4.3 GB |
+| | GCS on A* sequence | 1 | 11.49 | 0.016 s (convex program: 3 ms) | <1 MB |
+| | full GCS (48 vertices / 543 edges) | 1 | 11.49 | 44 s | 4.0 GB |
+| 1.5 rad | A* (122 nodes expanded) | 2 | 20.30 | 4.8 ms | ~0 |
+| | GCS on A* sequence | 2 | 13.62 | 0.022 s (5 ms) | <1 MB |
+| | full GCS (64 / 749) | 2 | 13.62 | 93 s | 5.6 GB |
 | 6 rad | A* (369 nodes expanded) | 8 | 31.16 | 14 ms | ~0 |
-| | GCS on A* sequence | 8 | 24.48 | 0.54 s (28 ms) | 25 MB |
+| | GCS on A* sequence | 8 | 24.48 | 0.052 s (8 ms) | 1 MB |
 
 Takeaways:
 
 - All methods use the same number of grasps.
 - The full GCS returns exactly the path of GCS on the A*'s sets: it picks the same sets.
 - The A*'s path is 21–36 % longer only because its placement stage does not optimise length.
-- The time of "GCS on A* sequence" is almost all graph building in Python; the convex program
-  itself takes milliseconds.
+- Where the full GCS time goes (0.5 rad): the convex relaxation is 43.9 of the 44.1 s; rounding ~0.3 s.
+  It is not branch and bound: `SolvePath` solves the relaxation of the mixed-integer program and rounds.
+  Drake's preprocessing (one small program per edge) pays for itself: 61.9 s without it.
+- Timings need one MOSEK licence held, and the solve in a normal process: a forked child runs MOSEK
+  single-threaded (191 s instead of 44 s for the same solve).
 
 **Why the full problem is heavy.**
 

@@ -212,7 +212,11 @@ Task & Method & Grasps & Time & Outcome\\
     which GCS reuses instead of repeating its intersection checks; and the
     decomposition.
   \item Memory is the peak resident memory of the computation. Each full GCS
-    solve runs in its own process. MOSEK solves all programs.
+    solve runs in a fresh process, so earlier solves do not hide its memory.
+  \item MOSEK solves all programs, with one licence held throughout. Without
+    it, every small program checks a licence out again, which made the A*'s
+    graph take 50--90\,s instead of 1.1\,s, and inflated earlier GCS timings
+    (Appendix~\ref{app:gcs}).
   \item Appendix~\ref{app:gcs} lists every run, including those that failed.
 \end{itemize}
 Before these runs we checked the encoding on a two-variable toy, not a scene:
@@ -224,23 +228,24 @@ vertex it is infeasible, as the next paragraph explains.
 \centering
 \caption{Plans on T2 from one start and goal. Length: Euclidean, in
 $(x,\alpha)$. Every plan is certified: each motion lies in its convex set and
-respects the coupling.}
+respects the coupling. All methods find the same number of grasps; for each
+turn, the best length, time and memory are in bold (ties all in bold).}
 \label{tab:gcs}
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{@{}r l r r r r@{}}
 \toprule
 $D$ [rad] & Method & Grasps & Length & Time [s] & Mem. [GB]\\
 \midrule
-\multirow{3}{*}{0.5} & Reach.\ A* & 1 & 18.06 & 0.0037 & $<$0.001\\
- & GCS on A* seq. & 1 & 11.49 & 0.44 & $<$0.001\\
- & Full GCS & 1 & 11.49 & 191 & 3.0\\
+\multirow{3}{*}{0.5} & Reach.\ A* (ours) & 1 & 18.06 & \textbf{0.0037} & \textbf{$<$0.001}\\
+ & GCS on A* seq. & 1 & \textbf{11.49} & 0.016 & \textbf{$<$0.001}\\
+ & Full GCS & 1 & \textbf{11.49} & 44 & 4.0\\
 \midrule
-\multirow{3}{*}{1.5} & Reach.\ A* & 2 & 20.30 & 0.0053 & $<$0.001\\
- & GCS on A* seq. & 2 & 13.62 & 0.54 & 0.007\\
- & Full GCS & 2 & 13.62 & 403 & 4.3\\
+\multirow{3}{*}{1.5} & Reach.\ A* (ours) & 2 & 20.30 & \textbf{0.0048} & \textbf{$<$0.001}\\
+ & GCS on A* seq. & 2 & \textbf{13.62} & 0.022 & \textbf{$<$0.001}\\
+ & Full GCS & 2 & \textbf{13.62} & 93 & 5.6\\
 \midrule
-\multirow{3}{*}{6} & Reach.\ A* & 8 & 31.16 & 0.014 & $<$0.001\\
- & GCS on A* seq. & 8 & 24.48 & 0.54 & 0.025\\
+\multirow{3}{*}{6} & Reach.\ A* (ours) & 8 & 31.16 & \textbf{0.014} & \textbf{$<$0.001}\\
+ & GCS on A* seq. & 8 & \textbf{24.48} & 0.052 & 0.001\\
  & Full GCS & \multicolumn{4}{l}{did not fit in 60\,GB (Table~\ref{tab:gcs:scaling})}\\
 \bottomrule
 \end{tabular}
@@ -250,20 +255,21 @@ $D$ [rad] & Method & Grasps & Length & Time [s] & Mem. [GB]\\
 \centering
 \caption{Cost of each method against the number of grasps. The A*'s graph is
 the same for every query: 50 vertices (42 free and 8 transition sets) and 900
-edges. The GCS graph is copied once per grasp. Memory: GB.}
+edges. The GCS graph is copied once per grasp. Memory: GB. The faster time
+per number of grasps is in bold.}
 \label{tab:gcs:scaling}
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}r r r r r r@{}}
 \toprule
- & \multicolumn{2}{c}{Reach.\ A*} & \multicolumn{3}{c}{Full GCS}\\
+ & \multicolumn{2}{c}{Reach.\ A* (ours)} & \multicolumn{3}{c}{Full GCS}\\
 \cmidrule(lr){2-3}\cmidrule(l){4-6}
 Grasps & Nodes & Time [s] & $|V|$\,/\,$|E|$ & Time [s] & Mem.\\
 \midrule
-1 & 83 & 0.0037 & 48 / 543 & 191 & 3.0\\
-2 & 122 & 0.0053 & 64 / 749 & 403 & 4.3\\
-3$^{a}$ & -- & 0.006 & 95 / 1461 & 680 & $\le$18.2\\
-4$^{a}$ & -- & 0.005 & 111 / 1667 & 200 & $\le$18.2\\
-8 & 369 & 0.014 & 179 / 2280$^{b}$ & -- & $>$15$^{b}$\\
+1 & 83 & \textbf{0.0037} & 48 / 543 & 44 & 4.0\\
+2 & 122 & \textbf{0.0048} & 64 / 749 & 93 & 5.6\\
+3$^{a}$ & -- & \textbf{0.006} & 95 / 1461 & 680 & $\le$18.2\\
+4$^{a}$ & -- & \textbf{0.005} & 111 / 1667 & 200 & $\le$18.2\\
+8 & 369 & \textbf{0.014} & 179 / 2280$^{b}$ & -- & $>$15$^{b}$\\
 \bottomrule
 \end{tabular}
 
@@ -271,7 +277,8 @@ Grasps & Nodes & Time [s] & $|V|$\,/\,$|E|$ & Time [s] & Mem.\\
 \footnotesize
 \begin{minipage}{\columnwidth}
 $^{a}$~From another run (Run~D in Appendix~\ref{app:gcs}), with its own
-start and goal; memory there is an upper bound. $^{b}$~From another run (Run~E), with its own start and goal. The
+start and goal and no licence held, so its times include a licence checkout
+per small program; memory there is an upper bound. $^{b}$~From another run (Run~E), with its own start and goal. The
 relaxation solved in 140\,s at 13.7\,GB; the rounding was stopped at our
 15\,GB limit. Without
 pruning, the 8-grasp graph has about 20k edges and ran out of the machine's
@@ -283,17 +290,41 @@ pruning, the 8-grasp graph has about 20k edges and ran out of the machine's
 \begin{itemize}
   \item All methods return the same number of grasps, $\lceil D/\Lmax\rceil$.
   \item GCS on the A* sequence keeps the A*'s sets and grasps, and shortens its
-    path by 21--36\%. Almost all of its 0.44--0.54\,s is spent building the
-    layered graph; the convex program itself takes 0.011--0.028\,s.
+    path by 21--36\%, in 0.016--0.052\,s; the convex program itself takes
+    0.003--0.008\,s.
   \item The A*'s paths are longer because its second stage places waypoints
     without optimising length (Section~\ref{sec:method:recovery}). That convex
     program is a natural replacement for the second stage.
   \item The full GCS returns the same path as GCS on the A* sequence, to four
     digits. Searching over all sets picked the sets the A* had already picked,
-    at 191--403\,s and 3--4\,GB, against 0.004--0.005\,s for the search.
+    at 44--93\,s and 4.0--5.6\,GB, against 0.004--0.005\,s for the search.
   \item Its cost grows with the number of grasps
     (Table~\ref{tab:gcs:scaling}), and at 8 grasps it did not fit on the
     machine. The A*'s cost barely changes: 83 to 369 nodes, 0.004 to 0.014\,s.
+\end{itemize}
+
+\paragraph{Where the time goes}
+\begin{itemize}
+  \item \emph{Not branch and bound.} The exact GCS problem is a mixed-integer
+    convex program, with one binary variable per
+    edge~\cite{marcucci2024shortest}. \texttt{SolvePath} does not solve it as
+    one: it solves the convex relaxation of that program and rounds it.
+  \item \emph{The relaxation is almost all of it.} On the 0.5\,rad query it
+    takes 43.9 of the 44.1\,s. The rounding solves, for each candidate path,
+    the convex program with its sets fixed, and takes about 0.3\,s. Drake's
+    preprocessing, one small program per edge that removes edges no path can
+    use, is included and pays for itself: without it the relaxation takes
+    61.9\,s.
+  \item \emph{Its size follows the edges.} The relaxation is one large conic
+    program. Every edge carries a copy of the segment variables of both its
+    ends, constrained to their sets and scaled by the edge's flow, and the path
+    length adds a cone per edge. The number of edges grows with the number of
+    grasps (Table~\ref{tab:gcs:scaling}), and so do time and memory: 44\,s at
+    one grasp, 93\,s at two, out of memory at eight.
+  \item \emph{The A* solves no program online.} Its search does interval
+    arithmetic on extreme points computed once by LPs, and its placement is
+    solver-free. The convex program of GCS on the A* sequence spans the sets of
+    one path only, and takes 0.003--0.008\,s.
 \end{itemize}
 
 \paragraph{Why GCS needs the graph unrolled}
