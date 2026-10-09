@@ -46,20 +46,61 @@ MOSEK~\cite{mosek}. \todo{hardware; code release.}
 
 \subsection{Baselines and protocol}
 \label{sec:experiments:protocol}
-We compare against the mixed-integer formulation of
-Section~\ref{sec:method:miqp}, with GCS~\cite{marcucci2023motion} connecting
-its keyframes, and against a sampling-based planner on the manipulation
-graph~\cite{simeon2004manipulation}, with probabilistic roadmaps for transit
-and transfer. \todo{implement the sampling-based baseline (own
-implementation or HPP~\cite{mirabel2016hpp}); time limit.} For all methods,
-every returned motion is checked densely with Drake's collision checker.
+We compare against three baselines:
+\begin{itemize}
+  \item GCS~\cite{marcucci2023motion} on the same sets and the same graph as
+    the search (below);
+  \item the mixed-integer formulation of Section~\ref{sec:method:miqp}, with
+    GCS connecting its keyframes;
+  \item a sampling-based planner on the manipulation
+    graph~\cite{simeon2004manipulation}, with probabilistic roadmaps for transit
+    and transfer. \todo{implement the sampling-based baseline (own
+    implementation or HPP~\cite{mirabel2016hpp}); time limit.}
+\end{itemize}
+For all methods, every returned motion is checked densely with Drake's
+collision checker.
+
+\paragraph{GCS on the same sets}
+The free sets $F_j$ and the transition sets $T_k$, with $\alpha$ free within its
+limits, are the vertices, and the transit and switch edges of
+Section~\ref{sec:method:graph} are the edges. Each visited vertex holds one
+straight segment $r_0\to r_1$, with both ends in its set. The coupling
+becomes linear constraints on these two points: $r_1^{\alpha}=r_0^{\alpha}$ in
+every $F_j$, and in every $T_k$
+\[
+r_1^{\alpha}-r_1^{w}=r_0^{\alpha}-r_0^{w}, \qquad r_1^{w}\ge r_0^{w},
+\]
+which is a forward stroke. A GCS path visits each vertex at most once, but a
+plan can need several strokes in the same $T_k$, with returns in between. So
+the graph is copied once per grasp:
+\[
+\text{approach}\to\text{grasp}_1\to\text{between}_1\to\cdots\to\text{grasp}_N\to\text{depart},
+\]
+with $N=\lceil D/\Lmax\rceil+1$ for a turn $D$. Every $\text{grasp}_n$ also
+connects to the depart layer, and the approach layer also connects directly to
+the goal.
+
+The cost is the path length, plus 10 per grasp (each free-to-transition edge),
+plus $\mu$ per other change of set. Ten exceeds any path length on T2, so, as in
+the search, the fewest grasps come first. The between layers hold only the free
+sets that meet a transition set. The approach and depart layers hold those,
+the free sets containing $\xinit$ or $\xgoal$, and the free sets used by the A*
+plan. The reason for this pruning is memory (Section~\ref{sec:results:gcs}).
+
+We solve this graph with Drake's \texttt{SolvePath}: a convex relaxation,
+rounded to at most 10 candidate paths, each finished by a convex restriction,
+with MOSEK. We also solve only the convex restriction on the sequence of sets
+that the A* returns (\emph{GCS on the A* sequence}). It keeps the A*'s discrete
+plan and optimises its configurations, so it isolates the second stage
+(Section~\ref{sec:method:recovery}).
+
 Five experiments follow. \textbf{E1} sweeps $\agoal$ over the cap range at a
 fixed arm configuration, and reports the number of grasps against the lower
 bound $\lceil D/\Lmax\rceil$ for a turn $D=\agoal-\ainit$. \textbf{E2} draws random start and
 goal configurations from the free sets. \textbf{E3} varies the obstacle
 layout, each layout with its own offline stage, and separates offline from
-online cost. \textbf{E4} compares all three planners as a function of the
-number of grasps a query requires, reporting success within the time limit,
+online cost. \textbf{E4} compares the reachability A* with the baselines as a function of
+the number of grasps a query requires, reporting success within the time limit,
 planning time and grasps. \textbf{E5} runs Q0 with and without the validation
 of Section~\ref{sec:method:graph}.
 \todo{run E1--E5; this is the evidence for the main claim.}
@@ -143,6 +184,106 @@ Task & Method & Grasps & Time & Outcome\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection{Comparison with GCS on the same sets}
+\label{sec:results:gcs}
+Table~\ref{tab:gcs} reports every GCS run so far, including the runs that failed.
+
+\paragraph{Setup}
+\begin{itemize}
+  \item Every run uses T2: the 10-DOF Panda scene with the two cylindrical
+    obstacles and the 42-region IRIS-NP2 decomposition.
+  \item The transition sets are restricted to the wrist intervals that the
+    collision checker accepts, so $\Lmax=0.81$\,rad. This was implemented by
+    cutting the free sets with planes normal to the wrist where the wrist sweep
+    of Section~\ref{sec:results:fidelity} finds collisions.
+    \tocheck{same as the validation of Section~\ref{sec:method:graph}?}
+  \item There are two queries, both from $\ainit=-3$\,rad. $D=6$ turns the cap
+    to 3\,rad and needs at least $\lceil6/0.81\rceil=8$ grasps. $D=0.5$ turns
+    it to $-2.5$\,rad and needs one grasp. The second query uses the same scene
+    and sets, with only a smaller turn. The code uses the opposite sign
+    (3 to $-3$\,rad).
+  \item $\xinit$ and $\xgoal$ are the centroids of the free sets at the two
+    ends of the free wrist interval at a seed grasp. That seed is random, so
+    they differ between runs; only rows marked $^{a}$ come from one run.
+    \todo{fix the query (save $\qinit,\qgoal$) and rerun all rows together.}
+\end{itemize}
+
+Before these runs we checked the encoding on a two-variable toy, not a scene:
+$(w,\alpha)$ in a box, a 4\,rad turn, strokes of at most 2\,rad. GCS returned
+stroke, return and stroke, as the search does. It is not in the table.
+
+\paragraph{Results}
+The reachability A* returns $\lceil D/\Lmax\rceil$ grasps in milliseconds.
+Restricted to the A*'s sequence of sets, GCS keeps the same 8 grasps and
+shortens the path by 0.4\% in 18\,ms. So for this sequence the configurations
+that the second stage places are already close to the shortest.
+
+The full GCS problem is limited by memory. The relaxation copies both
+endpoints of the segments for every edge. It needed about 2\,MB per edge on a
+single layer of free sets (0.31, 0.64 and 1.24\,GB for 64, 265 and 552 edges),
+and about 6\,MB per edge on the pruned graph of the $D=6$ query.
+On T2, 850 of the 861 pairs of free sets intersect. Each layer that holds all
+42 sets therefore adds about 1700 edges, and a query needs one layer per grasp.
+
+With every layer full, the solve ran out of memory, on both solvers. With the
+pruned layers of Section~\ref{sec:experiments:protocol}, the relaxation of the
+$D=6$ query solves in 140\,s with a peak of 13.7\,GB, but the rounding exceeded
+our 15\,GB cap. A single grasp layer with full approach and depart layers
+exceeded 12\,GB even without the costs and the coupling constraints.
+
+The one-grasp query does fit. Its relaxation takes 415\,s and the full solve
+414\,s, against 4\,ms for the search. GCS returns the same single grasp with a
+path of 6.30 instead of 19.13, a third of the A*'s length, because the second
+stage of the A* does not optimise length. Its cost of 16.31 is 21\% above the
+relaxation's lower bound of 13.50. \tocheck{GCS on the A* sequence for this
+query would show how much of the gap comes from the A*'s sets and how much
+from its placement.}
+
+\begin{table*}[t]
+\centering
+\caption{Reachability A* and GCS on the same sets, T2 (10-DOF, two obstacles,
+42 free sets, $\Lmax=0.81$\,rad). Machine: AMD Ryzen 9 9950X (16 cores),
+60\,GB RAM. ``Cap'' is a memory limit we imposed to protect the machine;
+``out of memory'' means the operating system killed the process.}
+\label{tab:gcs}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}l l l r r r r r l@{}}
+\toprule
+Query & Method & Free sets per layer & $|V|$\,/\,$|E|$ & Grasps & Length & Time & Peak mem. & Outcome\\
+\midrule
+\multirow{8}{*}{\shortstack[l]{$D=6$\\($-3$\,$\to$\,3\,rad)}}
+ & Reach.\ A* & -- & -- & 8 & 26.06$^{a}$ & 13\,ms$^{b}$ & -- & solved\\
+ & GCS on A* seq. & the A*'s sets & 20 / 19 & 8 & 25.96$^{a}$ & 18\,ms & 0.36\,GB & solved\\
+ & GCS, Clarabel$^{c}$ & all 42, 11 layers & $\approx$540 / 20k & -- & -- & 9\,min$^{e}$ & 57, 57, 35\,GB & out of memory (3 runs)\\
+ & GCS & all 42, 11 layers & $\approx$540 / 20k & -- & -- & $\approx$20\,min & 35\,GB & out of memory\\
+ & GCS & 42 / 8 / 42 & $\approx$240 / 5.4k & -- & -- & $\approx$3\,min & 59\,GB & out of memory\\
+ & GCS, relaxation & 16 / 8 / 9 & 179 / 2280 & -- & -- & 140\,s & 13.7\,GB & lower bound 98.66\\
+ & GCS, rounding & 16 / 8 / 9 & 179 / 2280 & -- & -- & -- & $>$15\,GB & exceeded cap\\
+ & GCS, 1 grasp layer$^{d}$ & 42 / -- / 42 & 94 / 3554 & -- & -- & -- & $>$12\,GB & exceeded cap\\
+\midrule
+\multirow{3}{*}{\shortstack[l]{$D=0.5$\\($-3$\,$\to$\,$-2.5$\,rad)}}
+ & Reach.\ A* & -- & -- & 1 & 19.13$^{a}$ & 4\,ms & -- & solved\\
+ & GCS, relaxation & pruned, $N=2$ & 63 / 1049 & -- & -- & 415\,s$^{a}$ & 11.3\,GB & lower bound 13.50\\
+ & GCS, full solve & pruned, $N=2$ & 63 / 1049 & 1 & 6.30$^{a}$ & 414\,s$^{a}$ & 12.1\,GB & solved, cost 16.31\\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+\footnotesize
+``Free sets per layer'': approach / between / depart, or all layers.
+Length: Euclidean length in $(x,\alpha)$.
+Lower bound: relaxation cost, with 10 per grasp.
+$^{a}$~Rows from the same run (same $\qinit,\qgoal$).
+$^{b}$~Same query, different run.
+$^{c}$~The MOSEK licence was not loaded, so Drake fell back to Clarabel.
+$^{d}$~Memory test only: one grasp layer cannot complete $D=6$.
+$^{e}$~Third run; the time of the first two was not recorded.
+$|V|$ and $|E|$ include the start and goal vertices.
+\end{table*}
+\todo{GCS on the A* sequence for $D=0.5$ (the first run failed on a bug in
+mapping the A* plan, since fixed); full GCS for $D=1.5$, $2.4$, $3.2$ (2 to 4
+grasps), running.}
 
 \subsection{Why transition sets must be validated}
 \label{sec:results:fidelity}
