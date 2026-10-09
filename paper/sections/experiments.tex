@@ -187,7 +187,6 @@ Task & Method & Grasps & Time & Outcome\\
 
 \subsection{Comparison with GCS on the same sets}
 \label{sec:results:gcs}
-Table~\ref{tab:gcs} reports every GCS run so far, including the runs that failed.
 
 \paragraph{Setup}
 \begin{itemize}
@@ -198,92 +197,136 @@ Table~\ref{tab:gcs} reports every GCS run so far, including the runs that failed
     cutting the free sets with planes normal to the wrist where the wrist sweep
     of Section~\ref{sec:results:fidelity} finds collisions.
     \tocheck{same as the validation of Section~\ref{sec:method:graph}?}
-  \item There are two queries, both from $\ainit=-3$\,rad. $D=6$ turns the cap
-    to 3\,rad and needs at least $\lceil6/0.81\rceil=8$ grasps. $D=0.5$ turns
-    it to $-2.5$\,rad and needs one grasp. The second query uses the same scene
-    and sets, with only a smaller turn. The code uses the opposite sign
-    (3 to $-3$\,rad).
-  \item $\xinit$ and $\xgoal$ are the centroids of the free sets at the two
-    ends of the free wrist interval at a seed grasp. That seed is random, so
-    they differ between runs; only rows marked $^{a}$ come from one run.
-    \todo{fix the query (save $\qinit,\qgoal$) and rerun all rows together.}
+  \item All rows of Table~\ref{tab:gcs} share one start and one goal
+    configuration, saved with the sets. The cap starts at $\ainit=-3$\,rad and
+    turns by $D=0.5$, $1.5$ or $6$\,rad, which needs 1, 2 or 8 grasps. The code
+    uses the opposite sign.
+  \item MOSEK solves every program. The times count only each method's online
+    work:
+    \begin{itemize}
+      \item reachability A*: the search and the placement of the waypoints;
+      \item GCS on the A* sequence: the A* search, building the layered GCS
+        graph, and one convex program;
+      \item full GCS: building the layered graph and \texttt{SolvePath}.
+    \end{itemize}
+  \item Not counted for any method: the shared preprocessing that turns the
+    free sets into the graph of Section~\ref{sec:method:graph} (transition
+    sets, extreme points, transit and switch edges), 1.1\,s, which GCS reuses
+    instead of repeating its intersection checks; and the decomposition.
+  \item Memory is the peak resident memory of the computation above that of
+    the process before it. Each full GCS solve runs in its own child process,
+    so earlier solves do not hide it.
 \end{itemize}
-
 Before these runs we checked the encoding on a two-variable toy, not a scene:
 $(w,\alpha)$ in a box, a 4\,rad turn, strokes of at most 2\,rad. GCS returned
-stroke, return and stroke, as the search does. It is not in the table.
+stroke, return and stroke, as the search does. With a single copy of the grasp
+vertex the same toy is infeasible, for the reason given below.
+
+\begin{table}[t]
+\centering
+\caption{Plans on T2 from one start and goal, for three turns $D$.
+Path length: Euclidean, in $(x,\alpha)$. All plans are certified: every motion
+lies in its convex set and respects the coupling.}
+\label{tab:gcs}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l l r r r r@{}}
+\toprule
+$D$ & Method & Grasps & Length & Time & Memory\\
+\midrule
+\multirow{3}{*}{0.5\,rad} & Reach.\ A* & 1 & 18.06 & 3.7\,ms & $<$1\,MB\\
+ & GCS on A* seq. & 1 & 11.49 & 0.44\,s & $<$1\,MB\\
+ & Full GCS & 1 & 11.49 & 191\,s & 3.0\,GB\\
+\midrule
+\multirow{3}{*}{1.5\,rad} & Reach.\ A* & 2 & 20.30 & 5.3\,ms & $<$1\,MB\\
+ & GCS on A* seq. & 2 & 13.62 & 0.54\,s & 7\,MB\\
+ & Full GCS & 2 & 13.62 & 403\,s & 4.3\,GB\\
+\midrule
+\multirow{3}{*}{6\,rad} & Reach.\ A* & 8 & 31.16 & 14\,ms & $<$1\,MB\\
+ & GCS on A* seq. & 8 & 24.48 & 0.54\,s & 25\,MB\\
+ & Full GCS & \multicolumn{4}{l}{not solved; see Table~\ref{tab:gcs:size}}\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Results}
-The reachability A* returns $\lceil D/\Lmax\rceil$ grasps in milliseconds.
-Restricted to the A*'s sequence of sets, GCS keeps the same 8 grasps and
-shortens the path by 0.4\% in 18\,ms. So for this sequence the configurations
-that the second stage places are already close to the shortest.
+\begin{itemize}
+  \item All methods return the same number of grasps, $\lceil D/\Lmax\rceil$.
+  \item GCS on the A* sequence keeps the A*'s sets and grasps, and shortens its
+    path by 21--36\%. Almost all of its 0.5\,s is spent building the layered
+    graph; the convex program itself takes 11--28\,ms.
+  \item On both queries it solved, the full GCS returns the same path as GCS on
+    the A* sequence, to four digits. Searching over all sets picked the sets the
+    A* had already picked. It took 3--7 minutes and 3--4\,GB, against
+    milliseconds for the A*.
+  \item The A*'s paths are longer because its second stage places waypoints
+    without optimising length (Section~\ref{sec:method:recovery}). The
+    restriction, at 11--28\,ms, is a natural replacement for that stage.
+\end{itemize}
 
-The full GCS problem is limited by memory. The relaxation copies both
-endpoints of the segments for every edge. It needed about 2\,MB per edge on a
-single layer of free sets (0.31, 0.64 and 1.24\,GB for 64, 265 and 552 edges),
-and about 6\,MB per edge on the pruned graph of the $D=6$ query.
-On T2, 850 of the 861 pairs of free sets intersect. Each layer that holds all
-42 sets therefore adds about 1700 edges, and a query needs one layer per grasp.
-
-With every layer full, the solve ran out of memory, on both solvers. With the
-pruned layers of Section~\ref{sec:experiments:protocol}, the relaxation of the
-$D=6$ query solves in 140\,s with a peak of 13.7\,GB, but the rounding exceeded
-our 15\,GB cap. A single grasp layer with full approach and depart layers
-exceeded 12\,GB even without the costs and the coupling constraints.
-
-The one-grasp query does fit. Its relaxation takes 415\,s and the full solve
-414\,s, against 4\,ms for the search. GCS returns the same single grasp with a
-path of 6.30 instead of 19.13, a third of the A*'s length, because the second
-stage of the A* does not optimise length. Its cost of 16.31 is 21\% above the
-relaxation's lower bound of 13.50. \tocheck{GCS on the A* sequence for this
-query would show how much of the gap comes from the A*'s sets and how much
-from its placement.}
+\paragraph{Why the full GCS problem is large}
+\begin{itemize}
+  \item \emph{One visit per vertex.} In GCS, a path is a sequence of distinct
+    vertices, and each vertex holds one point~\cite{marcucci2024shortest}.
+    Several strokes in one transition set therefore need several copies of it.
+    The free sets that host the returns in between need copies too, since the
+    previous return already used them. We copy the graph once per grasp: an
+    approach layer, a grasp layer and a between layer per grasp, and a depart
+    layer.
+  \item \emph{Relaxation and rounding.} \texttt{SolvePath} first solves a
+    convex relaxation, in which every edge may be used fractionally; its cost
+    is a lower bound on the optimum. It then rounds: it draws up to 10
+    candidate paths from the fractional solution, solves for the trajectory of
+    each with its sets fixed, and keeps the best.
+  \item \emph{Size.} The relaxation keeps both endpoints of the segments for
+    every edge, so its size grows with the number of edges. On T2, 850 of the
+    861 pairs of free sets intersect, so a copy of all 42 free sets adds about
+    1700 edges.
+  \item \emph{Pruning.} The between layers keep only the 8 free sets that
+    meet a transition set. The approach and depart layers keep those, the free
+    sets that contain the start or the goal, and the free sets of the A*'s
+    plan. Only detours through free sets that touch none of these are lost.
+\end{itemize}
+Table~\ref{tab:gcs:size} lists every full GCS configuration we ran.
 
 \begin{table*}[t]
 \centering
-\caption{Reachability A* and GCS on the same sets, T2 (10-DOF, two obstacles,
-42 free sets, $\Lmax=0.81$\,rad). Machine: AMD Ryzen 9 9950X (16 cores),
-60\,GB RAM. ``Cap'' is a memory limit we imposed to protect the machine;
-``out of memory'' means the operating system killed the process.}
-\label{tab:gcs}
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}l l l r r r r r l@{}}
+\caption{Size and memory of the full GCS problem on T2. ``Free sets kept''
+gives the free sets in each copy of the graph as approach / between / depart.
+``Near'' means the 8 free sets that meet a transition set; ``start'' and
+``goal'' mean the free sets containing them.}
+\label{tab:gcs:size}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}r l r r r r l@{}}
 \toprule
-Query & Method & Free sets per layer & $|V|$\,/\,$|E|$ & Grasps & Length & Time & Peak mem. & Outcome\\
+$D$ & Free sets kept & Grasp layers & $|V|$\,/\,$|E|$ & Memory & Time & Outcome\\
 \midrule
-\multirow{8}{*}{\shortstack[l]{$D=6$\\($-3$\,$\to$\,3\,rad)}}
- & Reach.\ A* & -- & -- & 8 & 26.06$^{a}$ & 13\,ms$^{b}$ & -- & solved\\
- & GCS on A* seq. & the A*'s sets & 20 / 19 & 8 & 25.96$^{a}$ & 18\,ms & 0.36\,GB & solved\\
- & GCS, Clarabel$^{c}$ & all 42, 11 layers & $\approx$540 / 20k & -- & -- & 9\,min$^{e}$ & 57, 57, 35\,GB & out of memory (3 runs)\\
- & GCS & all 42, 11 layers & $\approx$540 / 20k & -- & -- & $\approx$20\,min & 35\,GB & out of memory\\
- & GCS & 42 / 8 / 42 & $\approx$240 / 5.4k & -- & -- & $\approx$3\,min & 59\,GB & out of memory\\
- & GCS, relaxation & 16 / 8 / 9 & 179 / 2280 & -- & -- & 140\,s & 13.7\,GB & lower bound 98.66\\
- & GCS, rounding & 16 / 8 / 9 & 179 / 2280 & -- & -- & -- & $>$15\,GB & exceeded cap\\
- & GCS, 1 grasp layer$^{d}$ & 42 / -- / 42 & 94 / 3554 & -- & -- & -- & $>$12\,GB & exceeded cap\\
+0.5\,rad & near${}+{}$start / near / near${}+{}$goal & 2 & 48 / 543 & 3.0\,GB & 191\,s & solved, 1 grasp (Table~\ref{tab:gcs})\\
+1.5\,rad & near${}+{}$start / near / near${}+{}$goal & 3 & 64 / 749 & 4.3\,GB & 403\,s & solved, 2 grasps (Table~\ref{tab:gcs})\\
+2.4\,rad & near${}+{}$start / near / near${}+{}$goal & 4 & 95 / 1461 & $\le$18.2\,GB$^{a}$ & 680\,s$^{b}$ & solved, 3 grasps$^{c}$\\
+3.2\,rad & near${}+{}$start / near / near${}+{}$goal & 5 & 111 / 1667 & $\le$18.2\,GB$^{a}$ & 200\,s$^{b}$ & solved, 4 grasps$^{c}$\\
 \midrule
-\multirow{3}{*}{\shortstack[l]{$D=0.5$\\($-3$\,$\to$\,$-2.5$\,rad)}}
- & Reach.\ A* & -- & -- & 1 & 19.13$^{a}$ & 4\,ms & -- & solved\\
- & GCS, relaxation & pruned, $N=2$ & 63 / 1049 & -- & -- & 415\,s$^{a}$ & 11.3\,GB & lower bound 13.50\\
- & GCS, full solve & pruned, $N=2$ & 63 / 1049 & 1 & 6.30$^{a}$ & 414\,s$^{a}$ & 12.1\,GB & solved, cost 16.31\\
+6\,rad & near${}+{}$start / near / near${}+{}$goal & 10 & 179 / 2280 & $>$15\,GB$^{d}$ & -- & relaxation solved in 140\,s at 13.7\,GB; rounding stopped by us\\
+6\,rad & all 42 / near / all 42 & 10 & $\approx$240 / 5.4k & $>$59\,GB$^{e}$ & -- & killed by the OS\\
+6\,rad & all 42 in every layer & 10 & $\approx$540 / 20k & $>$35\,GB$^{e}$ & -- & killed by the OS (4 runs)$^{f}$\\
+6\,rad & all 42 / -- / all 42 & 1 & 94 / 3554 & $>$12\,GB$^{d}$ & -- & memory test only; stopped by us during the relaxation\\
 \bottomrule
 \end{tabular}
 
 \vspace{2pt}
 \footnotesize
-``Free sets per layer'': approach / between / depart, or all layers.
-Length: Euclidean length in $(x,\alpha)$.
-Lower bound: relaxation cost, with 10 per grasp.
-$^{a}$~Rows from the same run (same $\qinit,\qgoal$).
-$^{b}$~Same query, different run.
-$^{c}$~The MOSEK licence was not loaded, so Drake fell back to Clarabel.
-$^{d}$~Memory test only: one grasp layer cannot complete $D=6$.
-$^{e}$~Third run; the time of the first two was not recorded.
-$|V|$ and $|E|$ include the start and goal vertices.
+$^{a}$~Peak of a process that ran the previous turns first: an upper bound.
+$^{b}$~\texttt{SolvePath} only, with one licence checkout per MOSEK solve.
+$^{c}$~Different start and goal from Table~\ref{tab:gcs}.
+$^{d}$~A memory limit we set to protect the machine (60\,GB): the run needed
+more, not that it cannot be solved.
+$^{e}$~Size of the process when the operating system killed it, which depends
+on the memory the rest of the machine used at the time: a lower bound.
+$^{f}$~Three of them used Clarabel, because the MOSEK licence path was not set
+in that shell.
 \end{table*}
-\todo{GCS on the A* sequence for $D=0.5$ (the first run failed on a bug in
-mapping the A* plan, since fixed); full GCS for $D=1.5$, $2.4$, $3.2$ (2 to 4
-grasps), running.}
+\todo{Full GCS with returns inside copies of the transition sets instead of
+free sets (the A*'s model), which would roughly halve the graph; rerun $D=6$
+with a higher memory limit.}
 
 \subsection{Why transition sets must be validated}
 \label{sec:results:fidelity}

@@ -168,20 +168,48 @@ intersection checks.
   preprocessing take ~50–90 s that way, and ~1 s with
   `licence = MosekSolver.AcquireLicense()` held for the whole run. The big GCS solve barely changes.
 
-## 8. Why the full problem is heavy
+## 8. Results so far, and why the full problem is heavy
 
-The relaxation has variables for **every edge** (a copy of both segments per edge) and needs roughly
-2–6 MB per edge here.
+**One start and goal for every row** (`artifacts/plan_comparison/`; side-by-side videos in
+`compare_D0p5.html` and `compare_D1p5.html`). The shared preprocessing (1.1 s) is not counted for
+any method.
 
-850 of the 861 pairs of free regions intersect, so the free graph is almost complete: about 1,700
-edges per layer with all 42 regions. A 6 rad turn needs 8 strokes (the longest piece gives
-L_max = 0.81 rad), so about 10 layers.
+| turn | method | grasps | path length | time | peak extra memory |
+|---|---|---|---|---|---|
+| 0.5 rad | A* | 1 | 18.06 | 3.7 ms | ~0 |
+| | GCS on A* sequence | 1 | 11.49 | 0.44 s (convex program: 11 ms) | <1 MB |
+| | full GCS (48 vertices / 543 edges) | 1 | 11.49 | 191 s | 3.0 GB |
+| 1.5 rad | A* | 2 | 20.30 | 5.3 ms | ~0 |
+| | GCS on A* sequence | 2 | 13.62 | 0.54 s (15 ms) | 7 MB |
+| | full GCS (64 / 749) | 2 | 13.62 | 403 s | 4.3 GB |
+| 6 rad | A* | 8 | 31.16 | 14 ms | ~0 |
+| | GCS on A* sequence | 8 | 24.48 | 0.54 s (28 ms) | 25 MB |
 
-| version | edges | result |
+Takeaways:
+
+- All methods use the same number of grasps.
+- The full GCS returns exactly the path of GCS on the A*'s sets: it picks the same sets.
+- The A*'s path is 21–36 % longer only because its placement stage does not optimise length.
+- The time of "GCS on A* sequence" is almost all graph building in Python; the convex program
+  itself takes milliseconds.
+
+**Why the full problem is heavy.**
+
+- The relaxation has variables for every edge (a copy of both segments per edge), a few MB per edge
+  here.
+- 850 of the 861 pairs of free regions intersect, so a copy of all 42 free regions adds ~1,700 edges.
+- A 6 rad turn needs 8 strokes (L_max = 0.81 rad), so about 10 layers.
+
+| 6 rad version | edges | result |
 |---|---|---|
-| full layers | ~19k | killed at 35–59 GB |
-| pruned layers | ~2.3k | relaxation 140 s at 13.7 GB; rounding passes 15 GB |
-| GCS on the A* sequence | none (only the chosen sets) | 0.02 s |
+| all 42 free sets in every layer | ~20k | killed by the OS (process at 35–57 GB) |
+| all 42 in approach/depart, 8 between | ~5.4k | killed by the OS (59 GB) |
+| pruned (start/goal + 8 near) | ~2.3k | relaxation 140 s at 13.7 GB; rounding stopped by our 15 GB limit |
 
-The A* search takes ~0.01 s on the same problem because it works on α intervals and never builds
-these copies.
+How to read the memory figures:
+
+- **"Killed by the OS"**: how big the process was when the machine ran out of RAM. It depends on what
+  else was running, so it is a lower bound, not a requirement.
+- **"Stopped by our limit"**: a watchdog we added to protect the machine. It means "needed more than
+  that", not "cannot be solved".
+- **Comparable figures** come only from solves run in their own child process (the table above).
