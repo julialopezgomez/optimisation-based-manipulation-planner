@@ -1,0 +1,55 @@
+{
+ "D0p5_astar": {
+  "grasps": 1.0,
+  "polytope_changes": 3,
+  "path_length": 15.293449733160354,
+  "valid": true
+ },
+ "D0p5_gcs_on_astar": {
+  "grasps": 1.0,
+  "polytope_changes": 5,
+  "path_length": 12.4682510864791,
+  "valid": true,
+  "time": 0.04760091379284859
+ },
+ "D0p5_gcs_full": {
+  "grasps": 1.0,
+  "polytope_changes": 4,
+  "path_length": 12.46825361761616,
+  "valid": true,
+  "time": 230.58046816848218
+ },
+ "D1p5_astar": {
+  "grasps": 2.0,
+  "polytope_changes": 3,
+  "path_length": 17.563533734799314,
+  "valid": true
+ },
+ "D1p5_gcs_on_astar": {
+  "grasps": 2.0,
+  "polytope_changes": 7,
+  "path_length": 14.63051857062429,
+  "valid": true,
+  "time": 0.012533329427242279
+ },
+ "D1p5_gcs_full": {
+  "grasps": 2.0,
+  "polytope_changes": 6,
+  "path_length": 14.630518482301504,
+  "valid": true,
+  "time": 253.7956974711269
+ },
+ "D6p0_astar": {
+  "grasps": 8.0,
+  "polytope_changes": 3,
+  "path_length": 28.427494765478247,
+  "valid": true
+ },
+ "D6p0_gcs_on_astar": {
+  "grasps": 8.0,
+  "polytope_changes": 19,
+  "path_length": 25.494478048532795,
+  "valid": true,
+  "time": 0.0492419321089983
+ }
+}
