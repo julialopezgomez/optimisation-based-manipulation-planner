@@ -1,0 +1,9 @@
+{
+  "K": 3,
+  "F_L": 106,
+  "generation_time_s": 15.43735957145691,
+  "configuration_space_margin": 0.0001,
+  "delta": 0.05,
+  "epsilon": 0.01,
+  "coverage_termination_threshold": 0.98
+}

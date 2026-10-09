@@ -1,0 +1,76 @@
+{
+  "hard_feasible": true,
+  "K": 25,
+  "F_L": 120,
+  "rounds_needed": 5,
+  "round_reports": [
+    {
+      "round": 1,
+      "K": 27,
+      "F_L": 120,
+      "n_violations": 43,
+      "n_regions_with_violations": 9,
+      "coverage_probe": 0.986784140969163,
+      "n_missed_probe": 12
+    },
+    {
+      "round": 2,
+      "K": 23,
+      "F_L": 109,
+      "n_violations": 43,
+      "n_regions_with_violations": 10,
+      "coverage_probe": 0.9820022497187851,
+      "n_missed_probe": 16
+    },
+    {
+      "round": 3,
+      "K": 26,
+      "F_L": 126,
+      "n_violations": 26,
+      "n_regions_with_violations": 8,
+      "coverage_probe": 0.9814612868047983,
+      "n_missed_probe": 17
+    },
+    {
+      "round": 4,
+      "K": 26,
+      "F_L": 132,
+      "n_violations": 22,
+      "n_regions_with_violations": 10,
+      "coverage_probe": 0.9835526315789473,
+      "n_missed_probe": 15
+    },
+    {
+      "round": 5,
+      "K": 25,
+      "F_L": 120,
+      "n_violations": 23,
+      "n_regions_with_violations": 7,
+      "coverage_probe": 0.9837837837837838,
+      "n_missed_probe": 15
+    }
+  ],
+  "n_pos_constraint": 2200,
+  "n_neg_constraint": 2357,
+  "coverage": 0.9821448132325556,
+  "precision": 0.9890788747931605,
+  "iou": 0.9716081491114,
+  "v_tp": 0.16891944,
+  "v_fp": 0.0018651600000000003,
+  "v_fn": 0.00307092,
+  "domain_volume": 0.5652,
+  "stat_epsilon": 0.02,
+  "stat_delta": 0.05,
+  "coverage_target": 0.97,
+  "coverage_target_reached": true,
+  "timings": {
+    "T_sampling": 0.14880990982055664,
+    "T_boundary_refinement": 0.11071181297302246,
+    "T_fitting": 4637.837336778641,
+    "T_pruning": 16.880918264389038,
+    "T_validation": 4.649196147918701,
+    "T_coverage_probe": 0.3155479431152344,
+    "T_evaluation": 0.663440465927124,
+    "T_total": 4660.605961322784
+  }
+}

@@ -1,0 +1,72 @@
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Regrasp and manipulation planning}
+The first regrasp planners searched over finite sets of grasps and
+placements~\cite{tournassoud1987regrasping,alami1990geometrical}. The
+idea persists in regrasp graphs built over thousands of precomputed
+grasps~\cite{wan2017regrasp}, and in a bimanual planner certified complete
+with respect to its discretisation~\cite{lertkultanon2018certified}.
+Such planners are complete only with respect to the grasps they enumerate: a
+solution that needs a grasp between two discretised ones is missed. The
+manipulation graph~\cite{simeon2004manipulation} made grasps and placements
+continuous. It was extended to multi-modal
+planning~\cite{hauser2010multimodal}, to asymptotically
+optimal sampling~\cite{schmitt2017optimal}, and to
+constraint graphs explored with constrained
+samplers~\cite{mirabel2016hpp,kingston2018sampling}. Their guarantees are asymptotic: they hold in the
+limit of infinitely many samples. Task and motion planners add symbolic decisions on
+top~\cite{garrett2021integrated}. In optimisation-based
+TAMP, an outer search enumerates skeletons with a fixed number of mode
+switches, and a local solver handles each one~\cite{toussaint2015lgp}.
+Closest in spirit, Liu et al.~\cite{liu2026graph} plan contact-rich planar
+manipulation on a graph of reachable sets of object poses
+\tocheck{characterisation}. Our transition sets are the nodes of the
+manipulation graph of~\cite{simeon2004manipulation}, built as convex sets
+rather than sampled. This is what lets us guarantee completeness and the
+minimum number of grasps after a finite computation, relative to the sets.
+
+\subsection{Contact planning over convex sets}
+Footstep planning faces the same combinatorics as regrasping: a contact
+sequence whose length is not known in advance. A* over discretised footholds~\cite{griffin2019footstep}
+is complete only at the resolution of the discretisation. Mixed-integer
+programs over convex
+terrain~\cite{deits2014footstep} avoid
+discretisation and are globally optimal, but the number of steps, or a bound
+on it, must be fixed, and their solve times are hard to bound. $\ell_1$
+relaxations~\cite{tonneau2020sl1m} make them fast at the cost
+of these guarantees. \tocheck{SL1M characterisation.} CASSR~\cite{wang2026cassr} instead searches with A* over
+convex sets of footholds reachable from the start, expanded by Minkowski sums,
+and places the footsteps with a quadratic program once the sets are chosen.
+CASSR discretises the yaw of the feet, and inflates its heuristic for speed,
+so its optimality is empirical rather than guaranteed. We follow the same principle, but a node's
+reachable set carries the configuration of the object rather than a foothold.
+In the coupled tasks we consider it is an interval, which lets us keep an
+admissible heuristic and exact pruning, with nothing discretised.
+
+Graphs of Convex Sets (GCS)~\cite{marcucci2024shortest,marcucci2023motion}
+compute shortest paths over convex decompositions through a convex
+relaxation, and are globally optimal relative to the decomposition when the
+relaxation is tight. They plan the motion of a robot in one mode, with no
+switches of grasp and no object state carried from one switch to the next.
+They have been extended to contact-rich planar
+pushing~\cite{graesdal2024tight}. Heuristic searches handle graphs too large to
+solve at once~\cite{chia2024gcsstar}. GCS* is complete
+and optimal when it can decide exactly whether one partial path dominates
+another, i.e., whether its reachable set contains the other's at lower cost.
+In general this check must be approximated~\cite{chia2024gcsstar}. With
+interval reachable sets, it is exact.
+
+\subsection{Convex decompositions of free space}
+Convex decompositions inner-approximate free space with convex sets. IRIS
+grows them by alternating separating
+hyperplanes and inscribed ellipsoids~\cite{deits2015computing}. C-IRIS
+certifies regions as collision-free with sums-of-squares
+programs~\cite{dai2024certified}. IRIS-NP, IRIS-NP2 and
+IRIS-ZO scale to more dimensions, with a probabilistic guarantee: the fraction
+of a region's volume in collision is below a threshold, with a given
+confidence~\cite{petersen2023growing,werner2024faster}. Clique covers automate
+the seeding~\cite{werner2024approximating}, and GPU implementations approach
+online rates~\cite{werner2025superfast}. A volume guarantee says nothing
+about sets of near-zero volume, such as grasp sets. This is why we validate
+the transition sets separately (Section~\ref{sec:method:graph}).

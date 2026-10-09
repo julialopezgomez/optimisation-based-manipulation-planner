@@ -156,6 +156,18 @@ dim | drake mean  drake std |   nlp mean    nlp std |  KS stat     KS p
   different spot and never actually wandered from there. If the
   "within-chain" number is much smaller than the "across-seed" number,
   that's what's happening.
+- A third table/plot (`MSTS_1(D_n)`) - see #45's
+  `msts_metric_reference.md` for what this metric is in general. Here it's
+  a second, independent way of seeing the same slow-mixing story: since
+  both samplers are drawing from one connected polytope (no separate
+  modes to find), a lower MSTS for `nlp_sampling.py` at the same `n` means
+  it's covered less of the space with the same number of samples - not a
+  different finding from the KS table above, just a different lens on it
+  (rate-of-coverage instead of final-distribution-shape). On the test
+  polytope here, `nlp_sampling.py`'s MSTS starts around 5-10% of Drake's
+  at small `n` and climbs to roughly 50% by `n=9000` - still catching up,
+  consistent with everything else this script already found about the
+  default step size.
 
 **What we actually found, and what it means:**
 

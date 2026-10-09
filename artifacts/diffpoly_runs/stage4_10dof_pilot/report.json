@@ -1,0 +1,19 @@
+{
+  "hard_feasible": false,
+  "timings": {
+    "T_sampling": 0.6918704509735107,
+    "T_boundary_refinement": 0.26441121101379395,
+    "T_fitting": 4467.271955490112
+  },
+  "K_max": 64,
+  "F_max": 15,
+  "delta": 0.05,
+  "num_epochs": 25000,
+  "last_checkpoint": {
+    "epoch": 24999,
+    "n_pos_violations": 0,
+    "n_neg_violations": 2,
+    "worst_pos_score": 0.028142313465216326,
+    "worst_neg_score": -0.008389137685298587
+  }
+}

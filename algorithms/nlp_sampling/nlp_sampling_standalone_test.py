@@ -24,7 +24,7 @@ from pydrake.forwarddiff import jacobian as autodiff_jacobian
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import nlp_sampling
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 # -----------------------------------------------------------------------------
@@ -162,6 +162,7 @@ def joint_position_index(plant, joint_name, model_instance=None):
 
 
 def make_joint_indices(plant, panda_arm, panda_hand, cap):
+    """Joint limits for grasp constraints."""
     idx_arm = np.array([joint_position_index(plant, f"panda_joint{i}", panda_arm) for i in range(1, 8)])
     idx_wrist = joint_position_index(plant, "panda_joint7", panda_arm)
     idx_f1 = joint_position_index(plant, "panda_finger_joint1", panda_hand)

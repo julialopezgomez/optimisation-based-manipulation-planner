@@ -1,0 +1,21 @@
+{
+  "accept_rate": 0.0,
+  "cleanup_ran": 2697,
+  "cleanup_ran_fraction": 0.8981018981018981,
+  "elapsed_seconds": null,
+  "final_residual_summary": {
+    "max_err": 0.00566720828181928,
+    "mean_err": 0.004458322851261351
+  },
+  "num_nhr_failed": 1,
+  "num_phase1_failed": 96,
+  "num_restarts": 100,
+  "num_samples": 2861,
+  "num_success": 3,
+  "reason_counts": {
+    "?": 3,
+    "mrrt_step": 3000
+  },
+  "samples_per_second": null,
+  "total_interior_steps": 3003
+}

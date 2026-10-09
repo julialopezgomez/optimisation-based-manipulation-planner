@@ -1,0 +1,16 @@
+\section{Conclusion}
+\label{sec:conclusion}
+We represented the manipulation graph of multi-regrasp tasks with convex
+sets, so that the switches between moving alone and moving the object are
+convex transition sets, and searched them with an A* whose nodes pair a set
+with the interval of object configurations reachable inside it. For objects with one coordinate
+coupled to the wrist, the search is complete and returns the fewest grasps the
+sets allow, without fixing that number in advance and without integer
+variables. The search thus carries over to regrasping an idea matured in footstep
+planning, that of searching over convex reachable sets rather than individual
+contacts, and extends it to contact sets that have to be constructed and to
+contacts that move the object. Its guarantees are only as good as the
+transition sets are faithful near contact, which is why we validate them. \todo{one sentence on E1--E5 once run.}
+
+\section*{Acknowledgment}
+\todo{acknowledgments; funding is in the title footnote.}

@@ -1,0 +1,11 @@
+{
+  "label": "irisnp2_cov0.98",
+  "algorithm": "irisnp2",
+  "coverage_target": 0.98,
+  "K": 25,
+  "F_L": 948,
+  "generation_time_s": 120.43684124946594,
+  "validation_time_s": 0.09624314308166504,
+  "n_regions_with_violations": 2,
+  "n_violations_total": 2
+}

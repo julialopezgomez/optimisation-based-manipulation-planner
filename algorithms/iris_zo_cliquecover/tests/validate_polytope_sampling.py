@@ -223,6 +223,59 @@ def print_report(rows: list[dict]) -> None:
           "red-flag signal, not a rigorous test.")
 
 
+def compare_msts(
+    drake_samples: np.ndarray, nlp_samples: np.ndarray, p: float = 1.0, num_checkpoints: int = 15,
+) -> dict:
+    """
+    MSTS_p(D_n) for both samplers, in their own generation order (both
+    arrays are already chained/pooled in that order by the sample_* multi
+    seed functions). p=1 is the right lens here, not p>1: this is a single
+    connected polytope, not a multi-modal problem, so there's no
+    mode-separation signal to look for - just diversity/coverage rate.
+    """
+    ns_drake, scores_drake = nlp_sampling.minimum_spanning_tree_score_curve(
+        drake_samples, p=p, num_checkpoints=num_checkpoints)
+    ns_nlp, scores_nlp = nlp_sampling.minimum_spanning_tree_score_curve(
+        nlp_samples, p=p, num_checkpoints=num_checkpoints)
+    return {"ns_drake": ns_drake, "scores_drake": scores_drake, "ns_nlp": ns_nlp, "scores_nlp": scores_nlp, "p": p}
+
+
+def print_msts_report(msts: dict) -> None:
+    p = msts["p"]
+    print(f"\nMSTS_{p:g}(D_n) - diversity/coverage rate, drake vs. nlp_sampling:")
+    print(f"{'n':>6} | {'drake':>10} | {'nlp_sampling':>12} | {'nlp/drake':>9}")
+    for n, sd, sn in zip(msts["ns_drake"], msts["scores_drake"], msts["scores_nlp"]):
+        ratio = sn / sd if sd > 0 else float("nan")
+        flag = "  <-- nlp_sampling covering less ground" if ratio < 0.8 else ""
+        print(f"{n:>6} | {sd:>10.3f} | {sn:>12.3f} | {ratio:>9.2f}{flag}")
+    final_ratio = msts["scores_nlp"][-1] / msts["scores_drake"][-1]
+    print(f"\nAt n={msts['ns_drake'][-1]}: nlp_sampling's MSTS is {final_ratio:.2f}x drake's. "
+          "A ratio well below 1 here is the same slow-mixing-at-default-step-size finding from "
+          "the mean/std/KS check above, seen from a diversity-rate angle instead of a "
+          "distributional-match angle - see msts_metric_reference.md if this isn't the number "
+          "you expected.")
+
+
+def save_msts_plot(msts: dict, output_dir: Path) -> None:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    fig, ax = plt.subplots(figsize=(6, 4.5))
+    ax.plot(msts["ns_drake"], msts["scores_drake"], marker="o", markersize=3, label="Drake HR", color="#4c78a8")
+    ax.plot(msts["ns_nlp"], msts["scores_nlp"], marker="o", markersize=3, label="nlp_sampling", color="#f58518")
+    ax.set_xlabel("number of samples (n)")
+    ax.set_ylabel(f"MSTS_{msts['p']:g}")
+    ax.set_title("Diversity/coverage rate: Drake HR vs. nlp_sampling")
+    ax.grid(True, alpha=0.25)
+    ax.legend(loc="best", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(output_dir / "msts_comparison.png", dpi=150)
+    plt.close(fig)
+    print(f"Saved MSTS comparison plot to {output_dir / 'msts_comparison.png'}")
+
+
 def save_plots(drake_samples: np.ndarray, nlp_samples: np.ndarray, output_dir: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -276,6 +329,8 @@ def main():
                               "plain polytopes but would be unsafe near thin equality manifolds elsewhere.")
     parser.add_argument("--num-seeds", type=int, default=3, help="independent chains pooled per sampler")
     parser.add_argument("--seed", type=int, default=0, help="base seed; chains use seed, seed+1, ...")
+    parser.add_argument("--msts-p", type=float, default=1.0, help="MSTS exponent for the diversity-rate comparison")
+    parser.add_argument("--msts-checkpoints", type=int, default=15)
     parser.add_argument("--no-plots", action="store_true")
     parser.add_argument("--output-root", type=str, default="artifacts/iris_zo_validation")
     args = parser.parse_args()
@@ -317,8 +372,12 @@ def main():
             flag = "  <-- not mixing (within << across)" if within_std < 0.5 * across_std else ""
             print(f"{d:>3} | {within_std:>21.4f} | {across_std:>29.4f}{flag}")
 
+        msts = compare_msts(drake_samples, nlp_samples, p=args.msts_p, num_checkpoints=args.msts_checkpoints)
+        print_msts_report(msts)
+
         if not args.no_plots:
             save_plots(drake_samples, nlp_samples, run_dir / name)
+            save_msts_plot(msts, run_dir / name)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,16 @@
+{
+  "n_true_positive": 9098,
+  "n_covered": 8278,
+  "n_false_negative": 820,
+  "n_false_positive": 29,
+  "coverage_gap_fraction": 0.09012969883490878,
+  "trained_delta": 0.05,
+  "slack_min": 4.138972226508386e-06,
+  "slack_max": 0.08789310417528524,
+  "slack_mean": 0.017789836575814236,
+  "slack_median": 0.015141958939141609,
+  "frac_false_neg_within_delta": 0.9695121951219512,
+  "frac_false_neg_within_2delta": 1.0,
+  "false_neg_5nn_mean": 0.12956294604580584,
+  "false_neg_5nn_median": 0.12053460814679436
+}

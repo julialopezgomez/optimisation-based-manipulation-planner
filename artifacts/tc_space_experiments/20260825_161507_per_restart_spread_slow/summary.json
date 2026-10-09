@@ -1,0 +1,275 @@
+{
+  "args": {
+    "num_restarts": 60,
+    "num_samples": 50,
+    "num_seeds": 3,
+    "base_seed": 0,
+    "tc_evaluator": "slow"
+  },
+  "num_matched_restarts": 43,
+  "median_spread_regular": 0.2655812830242176,
+  "median_spread_tc": 0.24978468053829353,
+  "median_ratio_tc_over_regular": 0.9949791771391429,
+  "tc_wider_count": 21,
+  "total_pairs": 43,
+  "pairs": [
+    {
+      "seed": 0,
+      "restart": 0,
+      "spread_regular": 0.1882353877247631,
+      "spread_tc": 0.23163040757750622
+    },
+    {
+      "seed": 0,
+      "restart": 1,
+      "spread_regular": 0.3898479429365741,
+      "spread_tc": 0.371504975694397
+    },
+    {
+      "seed": 0,
+      "restart": 2,
+      "spread_regular": 0.2382049575771155,
+      "spread_tc": 0.1848504014551592
+    },
+    {
+      "seed": 0,
+      "restart": 6,
+      "spread_regular": 0.1721023730676046,
+      "spread_tc": 0.21824668178449622
+    },
+    {
+      "seed": 0,
+      "restart": 14,
+      "spread_regular": 0.3909085075015032,
+      "spread_tc": 0.31660898005379
+    },
+    {
+      "seed": 0,
+      "restart": 19,
+      "spread_regular": 0.34673539849075036,
+      "spread_tc": 0.40590912374214577
+    },
+    {
+      "seed": 0,
+      "restart": 22,
+      "spread_regular": 0.4364957687885289,
+      "spread_tc": 0.47051612637780155
+    },
+    {
+      "seed": 0,
+      "restart": 23,
+      "spread_regular": 0.3179945019291359,
+      "spread_tc": 0.21845689431331008
+    },
+    {
+      "seed": 0,
+      "restart": 29,
+      "spread_regular": 0.4316377162745932,
+      "spread_tc": 0.280453229754907
+    },
+    {
+      "seed": 0,
+      "restart": 34,
+      "spread_regular": 0.21572618971831933,
+      "spread_tc": 0.22586219704878874
+    },
+    {
+      "seed": 0,
+      "restart": 45,
+      "spread_regular": 0.16265973336886233,
+      "spread_tc": 0.42004520120908706
+    },
+    {
+      "seed": 0,
+      "restart": 46,
+      "spread_regular": 0.1734533258819806,
+      "spread_tc": 0.24686559036298192
+    },
+    {
+      "seed": 0,
+      "restart": 51,
+      "spread_regular": 0.1870437240311166,
+      "spread_tc": 0.24978468053829353
+    },
+    {
+      "seed": 0,
+      "restart": 54,
+      "spread_regular": 0.3245459457852141,
+      "spread_tc": 0.17258267110976555
+    },
+    {
+      "seed": 0,
+      "restart": 55,
+      "spread_regular": 0.2774751749276044,
+      "spread_tc": 0.33928852916107577
+    },
+    {
+      "seed": 0,
+      "restart": 57,
+      "spread_regular": 0.3803029339545709,
+      "spread_tc": 0.27651312107328685
+    },
+    {
+      "seed": 1,
+      "restart": 0,
+      "spread_regular": 0.19286211991745023,
+      "spread_tc": 0.2215842826627523
+    },
+    {
+      "seed": 1,
+      "restart": 1,
+      "spread_regular": 0.2730909569334359,
+      "spread_tc": 0.22794187656332152
+    },
+    {
+      "seed": 1,
+      "restart": 2,
+      "spread_regular": 0.428056094806391,
+      "spread_tc": 0.42590690097985784
+    },
+    {
+      "seed": 1,
+      "restart": 3,
+      "spread_regular": 0.2470018346839976,
+      "spread_tc": 0.24908169821609374
+    },
+    {
+      "seed": 1,
+      "restart": 5,
+      "spread_regular": 0.1766657958237056,
+      "spread_tc": 0.19544752626972212
+    },
+    {
+      "seed": 1,
+      "restart": 6,
+      "spread_regular": 0.2415489474645717,
+      "spread_tc": 0.19324143986648562
+    },
+    {
+      "seed": 1,
+      "restart": 24,
+      "spread_regular": 0.2814598660953206,
+      "spread_tc": 0.2746762686590843
+    },
+    {
+      "seed": 1,
+      "restart": 30,
+      "spread_regular": 0.1516375545252162,
+      "spread_tc": 0.38684258698666735
+    },
+    {
+      "seed": 1,
+      "restart": 51,
+      "spread_regular": 0.20895051541898485,
+      "spread_tc": 0.3081715995858843
+    },
+    {
+      "seed": 1,
+      "restart": 53,
+      "spread_regular": 0.27173995384209204,
+      "spread_tc": 0.24502344487670905
+    },
+    {
+      "seed": 1,
+      "restart": 59,
+      "spread_regular": 0.1817637656278904,
+      "spread_tc": 0.30699135426623414
+    },
+    {
+      "seed": 2,
+      "restart": 0,
+      "spread_regular": 0.3540183342428267,
+      "spread_tc": 0.40887731901775093
+    },
+    {
+      "seed": 2,
+      "restart": 1,
+      "spread_regular": 0.18466438648085265,
+      "spread_tc": 0.15262709856451998
+    },
+    {
+      "seed": 2,
+      "restart": 2,
+      "spread_regular": 0.19883584466243998,
+      "spread_tc": 0.17601070924444792
+    },
+    {
+      "seed": 2,
+      "restart": 4,
+      "spread_regular": 0.2703840143143198,
+      "spread_tc": 0.16056599738532962
+    },
+    {
+      "seed": 2,
+      "restart": 5,
+      "spread_regular": 0.28569210541885126,
+      "spread_tc": 0.17530697282027577
+    },
+    {
+      "seed": 2,
+      "restart": 9,
+      "spread_regular": 0.3754490538157945,
+      "spread_tc": 0.12907548661930157
+    },
+    {
+      "seed": 2,
+      "restart": 17,
+      "spread_regular": 0.2596201118064952,
+      "spread_tc": 0.28550934582432697
+    },
+    {
+      "seed": 2,
+      "restart": 24,
+      "spread_regular": 0.2118244273201134,
+      "spread_tc": 0.3773125134728373
+    },
+    {
+      "seed": 2,
+      "restart": 25,
+      "spread_regular": 0.21852686621898293,
+      "spread_tc": 0.4630568712601188
+    },
+    {
+      "seed": 2,
+      "restart": 30,
+      "spread_regular": 0.2655812830242176,
+      "spread_tc": 0.25862599929857105
+    },
+    {
+      "seed": 2,
+      "restart": 35,
+      "spread_regular": 0.48618735183457035,
+      "spread_tc": 0.3136035523210453
+    },
+    {
+      "seed": 2,
+      "restart": 42,
+      "spread_regular": 0.37695479288321815,
+      "spread_tc": 0.3117326573523381
+    },
+    {
+      "seed": 2,
+      "restart": 44,
+      "spread_regular": 0.1674252955425367,
+      "spread_tc": 0.21774219055923752
+    },
+    {
+      "seed": 2,
+      "restart": 45,
+      "spread_regular": 0.5310196249098676,
+      "spread_tc": 0.18804689576040992
+    },
+    {
+      "seed": 2,
+      "restart": 46,
+      "spread_regular": 0.22148362843014543,
+      "spread_tc": 0.22353277107435493
+    },
+    {
+      "seed": 2,
+      "restart": 59,
+      "spread_regular": 0.3091766184214077,
+      "spread_tc": 0.26680351739794306
+    }
+  ]
+}

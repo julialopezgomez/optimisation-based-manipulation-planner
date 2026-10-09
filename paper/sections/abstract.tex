@@ -1,0 +1,24 @@
+\begin{abstract}
+A robot opening a bottle or turning a valve runs out of wrist range long
+before the object reaches its goal, and must grasp, turn, release and grasp
+again. How many times depends on the goal, the joint limits and the obstacles,
+and is not known before planning. Sampling-based manipulation planners cannot
+establish, after a finite computation, that a plan uses the fewest grasps or
+that none exists, and optimisation-based ones must fix the number of grasps in
+advance. We build the manipulation graph out of convex sets: intersecting a
+convex decomposition of the collision-free space of robot and object with a
+convex set of grasping configurations gives \emph{transition sets}, the only
+places where the robot can grasp, turn and release. An A* searches them with
+nodes that pair a set with the interval of object configurations reachable
+inside it; reachability then propagates by interval arithmetic, and pruning is
+exact. The graph is built with linear programs alone, and the search returns a
+plan with the fewest grasps these sets allow, or reports that none exists,
+without fixing that number in advance. On a 10-DOF cap-turning task with a Franka Panda,
+where our earlier mixed-integer formulation is unreliable, it plans in 4\,ms.
+\todo{headline comparison (E1--E4) and validated result (E5).}
+\end{abstract}
+
+\begin{IEEEkeywords}
+Manipulation planning, regrasping, reachability, graph search, convex
+decompositions.
+\end{IEEEkeywords}

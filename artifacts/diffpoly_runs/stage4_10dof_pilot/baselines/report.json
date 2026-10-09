@@ -1,0 +1,67 @@
+[
+  {
+    "label": "irisnp_cov0.9",
+    "algorithm": "irisnp",
+    "coverage_target": 0.9,
+    "K": null,
+    "F_L": null,
+    "generation_time_s": null,
+    "timed_out": true,
+    "wall_time_s": 1800.0115013122559
+  },
+  {
+    "label": "irisnp_cov0.98",
+    "algorithm": "irisnp",
+    "coverage_target": 0.98,
+    "K": null,
+    "F_L": null,
+    "generation_time_s": null,
+    "timed_out": true,
+    "wall_time_s": 1800.0114994049072
+  },
+  {
+    "label": "irisnp2_cov0.9",
+    "algorithm": "irisnp2",
+    "coverage_target": 0.9,
+    "K": 5,
+    "F_L": 202,
+    "generation_time_s": 27.34659481048584,
+    "validation_time_s": 0.020189523696899414,
+    "n_regions_with_violations": 1,
+    "n_violations_total": 1,
+    "wall_time_s": 28.159083604812622
+  },
+  {
+    "label": "irisnp2_cov0.98",
+    "algorithm": "irisnp2",
+    "coverage_target": 0.98,
+    "K": 25,
+    "F_L": 948,
+    "generation_time_s": 120.43684124946594,
+    "validation_time_s": 0.09624314308166504,
+    "n_regions_with_violations": 2,
+    "n_violations_total": 2,
+    "wall_time_s": 121.31905388832092
+  },
+  {
+    "label": "iriszo_cov0.9",
+    "algorithm": "iriszo",
+    "coverage_target": 0.9,
+    "K": 3,
+    "F_L": 773,
+    "generation_time_s": 462.9064829349518,
+    "validation_time_s": 0.021164894104003906,
+    "n_regions_with_violations": 1,
+    "n_violations_total": 1,
+    "wall_time_s": 463.7079379558563
+  },
+  {
+    "label": "iriszo_cov0.98",
+    "algorithm": "iriszo",
+    "coverage_target": 0.98,
+    "K": null,
+    "F_L": null,
+    "generation_time_s": null,
+    "failed": true
+  }
+]

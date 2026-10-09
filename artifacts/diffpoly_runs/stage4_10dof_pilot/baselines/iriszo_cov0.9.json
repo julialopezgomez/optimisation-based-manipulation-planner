@@ -1,0 +1,11 @@
+{
+  "label": "iriszo_cov0.9",
+  "algorithm": "iriszo",
+  "coverage_target": 0.9,
+  "K": 3,
+  "F_L": 773,
+  "generation_time_s": 462.9064829349518,
+  "validation_time_s": 0.021164894104003906,
+  "n_regions_with_violations": 1,
+  "n_violations_total": 1
+}

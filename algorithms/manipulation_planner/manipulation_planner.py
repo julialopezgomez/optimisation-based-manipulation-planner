@@ -407,7 +407,11 @@ class ManipulationPlanner():
                 vertices_comp = visualizer.get_polytope_vertices(comp)
                 vertices_m = visualizer.get_polytope_vertices(m)
                 vertices = np.vstack([vertices_comp, vertices_m])
-                merged_hull = ConvexHull(vertices)
+                # QJ (joggle input): scipy's own recommendation for ConvexHull
+                # precision failures in 5-D+ - near-degenerate/thin regions
+                # (e.g. a very anisotropic grasp polytope) can otherwise raise
+                # QhullError here.
+                merged_hull = ConvexHull(vertices, qhull_options='QJ')
                 merged_poly = convex_hull_to_hpolyhedron(merged_hull)
                 merged.remove(m)
                 merged.append(merged_poly)
