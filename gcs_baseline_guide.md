@@ -170,19 +170,22 @@ intersection checks.
 
 ## 8. Results so far, and why the full problem is heavy
 
+Every run so far (Runs A–E, each with its own start and goal) is in Table III of the paper. This is
+Run A, the clean comparison.
+
 **One start and goal for every row** (`artifacts/plan_comparison/`; side-by-side videos in
 `compare_D0p5.html` and `compare_D1p5.html`). The shared preprocessing (1.1 s) is not counted for
 any method.
 
 | turn | method | grasps | path length | time | peak extra memory |
 |---|---|---|---|---|---|
-| 0.5 rad | A* | 1 | 18.06 | 3.7 ms | ~0 |
+| 0.5 rad | A* (graph 50 / 900, 83 nodes expanded) | 1 | 18.06 | 3.7 ms | ~0 |
 | | GCS on A* sequence | 1 | 11.49 | 0.44 s (convex program: 11 ms) | <1 MB |
 | | full GCS (48 vertices / 543 edges) | 1 | 11.49 | 191 s | 3.0 GB |
-| 1.5 rad | A* | 2 | 20.30 | 5.3 ms | ~0 |
+| 1.5 rad | A* (122 nodes expanded) | 2 | 20.30 | 5.3 ms | ~0 |
 | | GCS on A* sequence | 2 | 13.62 | 0.54 s (15 ms) | 7 MB |
 | | full GCS (64 / 749) | 2 | 13.62 | 403 s | 4.3 GB |
-| 6 rad | A* | 8 | 31.16 | 14 ms | ~0 |
+| 6 rad | A* (369 nodes expanded) | 8 | 31.16 | 14 ms | ~0 |
 | | GCS on A* sequence | 8 | 24.48 | 0.54 s (28 ms) | 25 MB |
 
 Takeaways:
