@@ -1,0 +1,104 @@
+{
+ "D0.5_astar": {
+  "grasps": 1.0,
+  "polytope_changes": 3,
+  "path_length": 18.05867402984941,
+  "valid": true,
+  "time": 0.0037422291934490204,
+  "mem": 0.0
+ },
+ "D0.5_gcs_on_astar": {
+  "grasps": 1.0,
+  "polytope_changes": 5,
+  "path_length": 11.494259213116822,
+  "valid": true,
+  "time": 0.44037124514579773,
+  "time_parts": {
+   "astar": 0.0037422291934490204,
+   "build": 0.4251909423619509,
+   "restriction": 0.011438073590397835
+  },
+  "mem": 0.0007079999999999864,
+  "sets": 6
+ },
+ "D0.5_gcs_full": {
+  "grasps": 1.0,
+  "polytope_changes": 4,
+  "path_length": 11.49425916110092,
+  "valid": true,
+  "time": 191.01343436725438,
+  "time_parts": {
+   "build": 0.39621532149612904,
+   "solve": 190.61721904575825
+  },
+  "mem": 2.98428,
+  "peak_process": 3.214876,
+  "cost": 21.49725915430453,
+  "vertices": 48,
+  "edges": 543,
+  "layers": 2,
+  "build_time": 0.4251909423619509
+ },
+ "D1.5_astar": {
+  "grasps": 2.0,
+  "polytope_changes": 3,
+  "path_length": 20.29552854902678,
+  "valid": true,
+  "time": 0.005318047478795052,
+  "mem": 0.0
+ },
+ "D1.5_gcs_on_astar": {
+  "grasps": 2.0,
+  "polytope_changes": 7,
+  "path_length": 13.620557980153347,
+  "valid": true,
+  "time": 0.5417322665452957,
+  "time_parts": {
+   "astar": 0.005318047478795052,
+   "build": 0.5217581670731306,
+   "restriction": 0.014656051993370056
+  },
+  "mem": 0.006767999999999996,
+  "sets": 8
+ },
+ "D1.5_gcs_full": {
+  "grasps": 2.0,
+  "polytope_changes": 6,
+  "path_length": 13.620557897601675,
+  "valid": true,
+  "time": 402.91853574104607,
+  "time_parts": {
+   "build": 0.4247269947081804,
+   "solve": 402.4938087463379
+  },
+  "mem": 4.284652,
+  "peak_process": 4.542968,
+  "cost": 33.62455787355031,
+  "vertices": 64,
+  "edges": 749,
+  "layers": 3,
+  "build_time": 0.5217581670731306
+ },
+ "D6.0_astar": {
+  "grasps": 8.0,
+  "polytope_changes": 3,
+  "path_length": 31.15948957970572,
+  "valid": true,
+  "time": 0.013725828379392624,
+  "mem": 0.0
+ },
+ "D6.0_gcs_on_astar": {
+  "grasps": 8.0,
+  "polytope_changes": 19,
+  "path_length": 24.48450069640714,
+  "valid": true,
+  "time": 0.5349925272166729,
+  "time_parts": {
+   "astar": 0.013725828379392624,
+   "build": 0.4929747376590967,
+   "restriction": 0.028291961178183556
+  },
+  "mem": 0.025216000000000016,
+  "sets": 20
+ }
+}

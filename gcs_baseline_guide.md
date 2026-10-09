@@ -46,6 +46,10 @@ G.AddVertexConstraint(r[idx_cap, 1] + r[idx_wrist, 1] == r[idx_cap, 0] + r[idx_w
 G.AddVertexConstraint(r[idx_wrist, 1] >= r[idx_wrist, 0])                                    # forward only
 ```
 
+**Sign.** The code turns the cap as α −= Δw (3 → −3 rad). The paper uses the opposite convention
+(α += Δw, so α_init ≤ α_goal); there the grasp constraint reads r₁[α] − r₁[w] = r₀[α] − r₀[w]. Same
+constraint, mirrored axis.
+
 These are the same equations as in `ManipulationPlanner._solve_for_n_grasps_CC` (placement:
 cap equal; grasp: cap − wrist constant, sign flipped for this plant). The difference is what they
 attach to. In the MIQP the mode of each pair of points is fixed by its index, and binaries with
@@ -66,6 +70,37 @@ source → approach → grasp1 → between1 → grasp2 → between2 → … → 
 - `between` layers: the 8 free regions that touch a grasp piece (returns and regrasps happen there).
 - `approach` / `depart`: the start (or goal) regions, those 8, and the regions the A* path uses.
 - N = ⌈|α_goal − α_init| / L_max⌉ + 1 grasp layers: the fewest strokes that could work, plus one spare.
+
+**Where the "at most once" comes from.**
+
+- Paper (Marcucci et al., *Shortest Paths in Graphs of Convex Sets*, arXiv 2101.11565, §2): "an s-t
+  path p is a sequence of **distinct** vertices", and there is one point x_v per vertex,
+  constraint (2.1c).
+- Drake v1.48, `geometry/optimization/graph_of_convex_sets.cc`:
+  - l. 1541–1543, the degree constraint `∑ ϕ_out ≤ 1 − δ(is_target)`: a vertex is left at most once;
+  - l. 1516, spatial conservation `∑ z_in = ∑ y_out`: one copy of the vertex's variables, so one segment;
+  - l. 1905–1916, the rounding's depth-first search skips vertices already in `visited_vertex_ids`.
+- Checked on the toy (a 4 rad turn, strokes ≤ 2 rad): with one grasp vertex and an edge back to
+  the free set it is infeasible, both relaxed and as the exact MIP; with two grasp layers it solves.
+
+**Pruning.** Only free sets are pruned, never grasp pieces:
+
+- `between` layers keep the 8 free sets that touch a transition set;
+- `approach` and `depart` keep those 8, the free sets containing the start or the goal, and the A*
+  path's free sets.
+850 of the 861 pairs of free sets intersect, so every set left out removes ~40 edges from each copy.
+What is lost: detours through free sets that touch neither the start, the goal nor a transition set.
+
+**Why not copy only the grasp pieces?** Between two strokes the hand lets go and turns the wrist back
+with the cap fixed. That move happens in a free vertex (F_k ⊇ G_k), and F_k was already used for the
+previous return, so it needs a fresh copy too. That is why a `between` layer exists, and it is
+already only 8 free sets, not the whole graph.
+
+You could also do the return inside a copy of the piece itself: a "return" vertex over G_k, with the
+cap frozen and the wrist free. Each layer is then only grasp-piece copies (stroke G_k → return G_k →
+stroke G_k …). Free sets appear only in `approach` and `depart`, and it matches the A* exactly (its
+returns are inside the piece). Not implemented yet. Most of the edges per layer are the grasp ↔ free
+links (~50 each way), so this would roughly halve the graph.
 
 ## 5. The cost
 
@@ -91,7 +126,7 @@ in the A* is 2 × grasps here, which gives the same ranking.
 | cap rule | α frozen outside a stroke, α −= Δw in a stroke | the same, as linear constraints |
 | forward-only stroke | yes | yes (r₁[w] ≥ r₀[w]) |
 | objective | fewest grasp/ungrasp actions, then hops | 10·grasps + path length + 0.001·hops |
-| where a return happens | in the piece G (cap fixed) | in F_k ⊇ G (cap fixed) |
+| where a return happens | in the piece G (cap fixed) | in F_k ⊇ G (cap fixed); see §4 for doing it in G |
 | configurations | placed afterwards by a heuristic (`build_waypoints`) | optimised together with the path |
 | optimality | exact on its abstraction (α intervals) | relaxation + rounding: not guaranteed |
 | free regions per layer | all | pruned (see §4) |
@@ -112,7 +147,26 @@ Timing in the notebook:
 - the sequence: the total minus that.
 
 **GCS on the A* sequence** is only stage 3, run on the A*'s sets. It answers "same polytopes, better
-configurations?".
+configurations?". When the A* leaves a piece after a stroke, it first moves ungrasped inside the
+piece, so the mapped sequence goes stroke G_k → F_k → F_j, not G_k → F_j.
+
+**What each time covers.** Both methods start from the same shared preprocessing: the transition
+sets, their extreme wrist points, and the transit and switch edges (A* Steps 1–4). It takes ~1 s and
+is reported separately, not in either method's time. Computing the free sets (IRIS) is offline for
+both.
+- A*: search + placing the waypoints.
+- GCS on the A* sequence: A* search + building the layered graph + one convex program.
+- Full GCS: building the layered graph + `SolvePath`.
+The GCS graph reuses the A*'s edges (`edges_between_regions=`), so GCS does not redo the
+intersection checks.
+
+**MOSEK licence.**
+- MOSEK reads the licence path from `MOSEKLM_LICENSE_FILE`. Only the conda env's activate script sets
+  it, so the GCS notebook now sets it itself (`os.environ.setdefault`). Without it, Drake silently uses
+  another solver.
+- Every MOSEK solve checks a licence out again unless one is held. The ~1,700 small LPs of the shared
+  preprocessing take ~50–90 s that way, and ~1 s with
+  `licence = MosekSolver.AcquireLicense()` held for the whole run. The big GCS solve barely changes.
 
 ## 8. Why the full problem is heavy
 
