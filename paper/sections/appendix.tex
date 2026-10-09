@@ -1,0 +1,129 @@
+\appendix
+\section{All runs of the GCS comparison}
+\label{app:gcs}
+Table~\ref{tab:gcs:all} lists every run of the comparison of
+Section~\ref{sec:results:gcs}, including the runs that failed or ran out of
+memory. All of them use T2, with the transition sets validated as in
+Section~\ref{sec:results:gcs} ($\Lmax=0.81$\,rad).
+\begin{itemize}
+  \item \emph{Start and goal.} Each run draws its own start and goal from a
+    randomly seeded grasp, so rows can be compared within a run but not across
+    runs.
+  \item \emph{Run~A} is the run of Tables~\ref{tab:gcs}
+    and~\ref{tab:gcs:scaling}. It saved its start, goal and sets, and
+    reproduces exactly.
+  \item \emph{Runs~B--E} are earlier runs. Their footnotes give what their time
+    and memory measure.
+  \item \emph{Pruning.} Unless stated otherwise, the free sets kept in each copy
+    of the graph are as follows. The between layers keep the 8 free sets that
+    meet a transition set. The approach and depart layers keep those, the free
+    sets that contain the start or the goal, and the free sets of the A*'s
+    plan. Only detours through free sets that touch none of these are lost.
+\end{itemize}
+In Run~D the full GCS paths are much shorter than the A*'s (e.g.\ 6.30
+against 19.13). That run has no row for GCS on the A* sequence, so it does not
+tell whether GCS chose different sets or only placed the configurations
+better. In Runs A--C, where both ran, the full GCS chose the A*'s sets.
+\todo{rerun Run~D's turns on the saved scenario of Run~A.}
+
+\begin{table*}[t]
+\centering
+\caption{All A* and GCS runs on T2 (10-DOF, two obstacles, 42 free sets,
+$\Lmax=0.81$\,rad), grouped by run. Each run has its own start and goal.
+$|V|/|E|$: the graph each method works on (for GCS on the A* sequence, the
+sets of that sequence). Length: Euclidean, in $(x,\alpha)$. All returned plans
+are certified: every motion lies in its convex set and respects the coupling.
+MOSEK unless stated. Machine: AMD Ryzen 9 9950X (16 cores), 60\,GB.}
+\label{tab:gcs:all}
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}l r l r r r r r l@{}}
+\toprule
+Run & $D$ & Method & $|V|$\,/\,$|E|$ & Grasps & Length & Time [s] & Memory [GB] & Outcome\\
+\midrule
+\multirow{9}{*}{A$^{a}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 18.06 & 0.0037 & $<$0.001 & solved, 83 nodes expanded\\
+ & & GCS on A* seq. & 8 / 7 & 1 & 11.49 & 0.44 & $<$0.001 & solved\\
+ & & Full GCS & 48 / 543 & 1 & 11.49 & 191 & 3.0 & solved, cost 21.50\\
+\cmidrule(l){2-9}
+ & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 20.30 & 0.0053 & $<$0.001 & solved, 122 nodes expanded\\
+ & & GCS on A* seq. & 10 / 9 & 2 & 13.62 & 0.54 & 0.007 & solved\\
+ & & Full GCS & 64 / 749 & 2 & 13.62 & 403 & 4.3 & solved, cost 33.62\\
+\cmidrule(l){2-9}
+ & \multirow{3}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 31.16 & 0.014 & $<$0.001 & solved, 369 nodes expanded\\
+ & & GCS on A* seq. & 22 / 21 & 8 & 24.48 & 0.54 & 0.025 & solved\\
+ & & Full GCS & \multicolumn{6}{l}{not run (see Run E)}\\
+\midrule
+\multirow{8}{*}{B$^{b}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 12.07 & 0.0037 & $<$0.001 & solved\\
+ & & GCS on A* seq. & 7 / 6 & 1 & 11.98 & 0.02 & $<$0.001 & solved\\
+ & & Full GCS & 61 / 911 & 1 & 11.98 & 243 & 9.2 & solved, cost 21.99\\
+\cmidrule(l){2-9}
+ & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 14.29 & 0.004 & $<$0.001 & solved\\
+ & & GCS on A* seq. & 9 / 8 & 2 & 14.16 & 0.023 & $<$0.001 & solved\\
+ & & Full GCS & 77 / 1117 & 2 & 14.16 & 421 & $\ge$5.7 & solved, cost 34.16\\
+\cmidrule(l){2-9}
+ & \multirow{2}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 25.15 & 0.0091 & $<$0.001 & solved\\
+ & & GCS on A* seq. & 21 / 20 & 8 & 25.02 & 0.046 & $<$0.001 & solved\\
+\midrule
+\multirow{8}{*}{C$^{c}$} & \multirow{3}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 15.29 & -- & -- & solved\\
+ & & GCS on A* seq. & -- & 1 & 12.47 & 0.05 & -- & solved\\
+ & & Full GCS & -- & 1 & 12.47 & 231 & -- & solved\\
+\cmidrule(l){2-9}
+ & \multirow{3}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 17.56 & -- & -- & solved\\
+ & & GCS on A* seq. & -- & 2 & 14.63 & 0.01 & -- & solved\\
+ & & Full GCS & -- & 2 & 14.63 & 254 & -- & solved\\
+\cmidrule(l){2-9}
+ & \multirow{2}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 28.43 & -- & -- & solved\\
+ & & GCS on A* seq. & -- & 8 & 25.49 & 0.05 & -- & solved\\
+\midrule
+\multirow{8}{*}{D$^{d}$} & \multirow{2}{*}{0.5} & Reach.\ A* & 50 / 900 & 1 & 19.13 & 0.004 & -- & solved\\
+ & & Full GCS & 63 / 1049 & 1 & 6.30 & 414 & $\le$12.1 & solved, cost 16.31 (bound 13.50)\\
+\cmidrule(l){2-9}
+ & \multirow{2}{*}{1.5} & Reach.\ A* & 50 / 900 & 2 & 21.36 & 0.005 & -- & solved\\
+ & & Full GCS & 79 / 1255 & 2 & 8.52 & 415 & $\le$15.6 & solved, cost 28.52 (bound 26.90)\\
+\cmidrule(l){2-9}
+ & \multirow{2}{*}{2.4} & Reach.\ A* & 50 / 900 & 3 & 23.49 & 0.006 & -- & solved\\
+ & & Full GCS & 95 / 1461 & 3 & 10.69 & 680 & $\le$18.2 & solved, cost 40.69 (bound 40.27)\\
+\cmidrule(l){2-9}
+ & \multirow{2}{*}{3.2} & Reach.\ A* & 50 / 900 & 4 & 25.43 & 0.005 & -- & solved\\
+ & & Full GCS & 111 / 1667 & 4 & 12.62 & 200 & $\le$18.2 & solved, cost 52.63 (bound 52.13)\\
+\midrule
+\multirow{8}{*}{E$^{e}$} & \multirow{8}{*}{6} & Reach.\ A* & 50 / 900 & 8 & 26.06 & 0.013$^{f}$ & -- & solved, 369 nodes expanded$^{f}$\\
+ & & GCS on A* seq. & 20 / 19 & 8 & 25.96 & 0.018 & $\le$0.36 & solved\\
+ & & Full GCS, pruned & 179 / 2280 & -- & -- & 140 & 13.7 & relaxation solved (bound 98.66)\\
+ & & \quad rounding & 179 / 2280 & -- & -- & -- & $>$15$^{g}$ & stopped by us\\
+ & & Full GCS, 42 / 8 / 42 & $\approx$240 / 5.4k & -- & -- & $\approx$180 & $>$59$^{h}$ & killed by the OS\\
+ & & Full GCS, all 42 & $\approx$540 / 20k & -- & -- & $\approx$1200 & $>$35$^{h}$ & killed by the OS\\
+ & & Full GCS, all 42, Clarabel$^{i}$ & $\approx$540 / 20k & -- & -- & 540$^{j}$ & $>$57, 57, 35$^{h}$ & killed by the OS (3 runs)\\
+ & & 1 grasp layer, 42 / -- / 42 & 94 / 3554 & -- & -- & -- & $>$12$^{g}$ & memory test; stopped by us\\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+\begin{minipage}{\textwidth}
+\footnotesize
+$^{a}$~Start, goal and sets saved; reproduces exactly. Times and memory as in
+the setup. Each full GCS solve runs in its own process, so its memory is the
+solve's own.
+$^{b}$~As A, but both full GCS solves ran in one process. The second figure
+excludes memory the first left allocated, so it understates the need.
+$^{c}$~GCS times are the convex program or \texttt{SolvePath} only. Memory and
+the A* time were not recorded.
+$^{d}$~\texttt{SolvePath} only, with one MOSEK licence checkout per solve.
+Memory: peak of a process that ran the previous turns first, an upper bound.
+Bound: cost of the convex relaxation, solved separately (415, 416, 674 and
+199\,s); costs include 10 per grasp. GCS on the A* sequence failed here on a
+bug in mapping the A* plan, since fixed.
+$^{e}$~Each row its own process and start and goal. Free sets kept in each
+copy of the graph (approach / between / depart): ``pruned'' = start or goal
+sets plus the 8 sets that meet a transition set / those 8 / those 8 plus goal
+sets.
+$^{f}$~From the run of the ``all 42'' row.
+$^{g}$~A memory limit we set to protect the machine: the run needed more, not
+that it cannot be solved.
+$^{h}$~Size of the process when the operating system killed it. It depends on
+the memory the rest of the machine used at the time: a lower bound.
+$^{i}$~The MOSEK licence path was not set in that shell, so Drake fell back to
+Clarabel.
+$^{j}$~Third run; the first two were not timed.
+\end{minipage}
+\end{table*}

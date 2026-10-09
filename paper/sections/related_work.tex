@@ -49,7 +49,10 @@ compute shortest paths over convex decompositions through a convex relaxation,
 and have been extended to contact-rich planar
 pushing~\cite{graesdal2024tight}. They plan the motion of a robot in one mode,
 with no switches of grasp and no object state carried from one switch to the
-next. GCS*~\cite{chia2024gcsstar} searches such graphs heuristically, and is
+next. A GCS path also visits each set at most once, so a plan that comes back
+to the same set, as every regrasp does, needs the graph unrolled once per
+grasp, with the number of grasps bounded in advance
+(Section~\ref{sec:results:gcs}). GCS*~\cite{chia2024gcsstar} searches such graphs heuristically, and is
 complete and optimal when it can decide exactly whether one partial path
 dominates another; in general that check must be approximated. With interval
 reachable sets, it is exact.
