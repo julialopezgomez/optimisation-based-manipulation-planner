@@ -59,6 +59,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 - **`grasping_space.ipynb`** - full 10-DOF unblocked Panda arm scene, similar scope to `data/generation/full_arm_c_free.ipynb` but ~2 weeks older; likely an earlier draft. **This is the closest existing precedent for the upcoming IRIS-ZO/clique-cover work** - it has a markdown header literally titled "Generate C-free for full franka arm with IRIS-ZO." Cross-referenced from `algorithms/iris_zo_cliquecover/README.md`.
 - **`grasping_space_3d.ipynb`** - oldest file in this group, toy WSG-gripper (not the Panda arm) IRIS-ZO/clique-cover exploration. Superseded prototype.
 - **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nlp_sampling.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nlp_sampling/nlp_sampling_standalone_test.py`.
+- **`gcs_comparison/`** - scripts (not a notebook) that regenerate the paper's reachability-A*-vs-GCS comparison (Table III, Run A) and the side-by-side pages in `artifacts/plan_comparison/`, by running `full_arm_planner_gcs.ipynb`'s own cells headlessly. See its README.
 - **`legacy_testing/`** - formerly the top-level `testing/` directory (see §7); merged in here as a frozen historical archive, separated from the notebooks above since it's older and untouched since April 2025.
 
 ## 5. `data/` - c-free polytope data and the notebook that generates it
