@@ -3,9 +3,9 @@
 
 Our experiments ask four questions. Does the search return plans with the
 minimum number of grasps for new goals, start configurations and obstacle
-layouts, from a single offline stage? How does it compare with our earlier
-MIQP and with a sampling-based manipulation planner as the number of required
-grasps grows? Why must the transition sets be validated? And does validation
+layouts, from a single offline stage? How does it compare with a mixed-integer
+formulation and with a sampling-based manipulation planner as the number of
+required grasps grows? Why must the transition sets be validated? And does validation
 change the plans?
 
 \subsection{Tasks and implementation}
@@ -22,7 +22,7 @@ so any turn larger than 2\,rad needs several grasps.
     cap is 0.5\,m in front of the robot base, with two cylindrical obstacles
     (radius 5\,mm) next to it. The free sets come from an IRIS-NP2 clique
     cover with 42 regions \tocheck{coverage target 0.98; $(\varepsilon,\delta)$;
-    generation time}. The reference query Q0 turns the cap from 3 to $-1$\,rad
+    generation time}. The reference query Q0 turns the cap from $-1$ to 3\,rad
     and returns the arm to its start configuration.
 \end{itemize}
 
@@ -46,27 +46,23 @@ MOSEK~\cite{mosek}. \todo{hardware; code release.}
 
 \subsection{Baselines and protocol}
 \label{sec:experiments:protocol}
-We compare against our earlier MIQP~\cite{lopezgomez2025minf}
-(Section~\ref{sec:method:miqp}), with GCS~\cite{marcucci2023motion} connecting
+We compare against the mixed-integer formulation of
+Section~\ref{sec:method:miqp}, with GCS~\cite{marcucci2023motion} connecting
 its keyframes, and against a sampling-based planner on the manipulation
 graph~\cite{simeon2004manipulation}, with probabilistic roadmaps for transit
 and transfer. \todo{implement the sampling-based baseline (own
 implementation or HPP~\cite{mirabel2016hpp}); time limit.} For all methods,
 every returned motion is checked densely with Drake's collision checker.
-\todo{Run E1--E5; this is the evidence for the main claim.}
-\textbf{E1, goal sweep:} $\agoal$ on a grid over the cap range, with the arm
-configuration fixed. We report the number of grasps against the lower bound
-$\lceil D/\Lmax\rceil$ for a turn $D$, and the search time.
-\textbf{E2, random queries:} $N$ start and goal arm configurations sampled in
-the free sets, with random turning angles.
-\textbf{E3, obstacle layouts:} $M$ placements of the obstacles, each with its
-own offline stage. We report offline time (decomposition, grasp set,
-transition sets, graph) and online time per query.
-\textbf{E4, baselines:} all three planners as a function of the number of
-grasps the query requires, on T1 and T2. We report success within the time
-limit, planning time and number of grasps.
-\textbf{E5, validation:} Q0 with and without the validation of
-Section~\ref{sec:method:graph}.
+Five experiments follow. \textbf{E1} sweeps $\agoal$ over the cap range at a
+fixed arm configuration, and reports the number of grasps against the lower
+bound $\lceil D/\Lmax\rceil$ for a turn $D=\agoal-\ainit$. \textbf{E2} draws random start and
+goal configurations from the free sets. \textbf{E3} varies the obstacle
+layout, each layout with its own offline stage, and separates offline from
+online cost. \textbf{E4} compares all three planners as a function of the
+number of grasps a query requires, reporting success within the time limit,
+planning time and grasps. \textbf{E5} runs Q0 with and without the validation
+of Section~\ref{sec:method:graph}.
+\todo{run E1--E5; this is the evidence for the main claim.}
 
 \section{Results}
 \label{sec:results}
@@ -165,10 +161,9 @@ different discrete structure, not just a different geometry.
 
 This is not a bug in the region generators: their guarantee bounds the
 fraction of a region's volume in collision, and transition sets have almost
-no volume (Section~\ref{sec:method:graph}). The same sensitivity appeared on
-low-dimensional versions of the task~\cite{lopezgomez2025minf}, where a
-decomposition at 0.90 coverage contained a grasp--release sequence that GCS
-could not connect. For regrasp planning, what matters is not coverage of free
+no volume (Section~\ref{sec:method:graph}). We observed the same sensitivity on low-dimensional versions of the task,
+where a decomposition at 0.90 coverage contained a grasp and release sequence
+that GCS could not connect. For regrasp planning, what matters is not coverage of free
 space but the fidelity of the transition sets.
 \todo{E5: Q0 with validated transition sets; expected 5 grasps with no
 change to the search.}

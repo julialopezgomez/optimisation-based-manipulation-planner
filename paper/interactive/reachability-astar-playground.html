@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reachability A* Playground</title>
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a65; --line:#dedcd4; --code:#f1efe8;
+  --accent:#2f6fde; --free:#3B6FB6; --freeF:#dce7f6; --trans:#2f8f4e; --transF:#d9f0e0;
+  --purple:#7E5AA2; --orange:#d97a2b; --red:#c0504d; --ok:#1f9d63; --bad:#c2410c;
+  --hl:#fff1c9; --hlEdge:#e0b84a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16171a; --panel:#1f2024; --ink:#ececea; --muted:#a2a19c; --line:#34363b; --code:#2a2b30;
+    --accent:#6f9cf0; --free:#6f9cf0; --freeF:#24303f; --trans:#49b06c; --transF:#1f3326;
+    --purple:#a98ae6; --orange:#f0a347; --red:#f07068; --ok:#3fc489; --bad:#f08a5a;
+    --hl:#3d3420; --hlEdge:#b8902c;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16171a; --panel:#1f2024; --ink:#ececea; --muted:#a2a19c; --line:#34363b; --code:#2a2b30;
+  --accent:#6f9cf0; --free:#6f9cf0; --freeF:#24303f; --trans:#49b06c; --transF:#1f3326;
+  --purple:#a98ae6; --orange:#f0a347; --red:#f07068; --ok:#3fc489; --bad:#f08a5a;
+  --hl:#3d3420; --hlEdge:#b8902c;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header.top{padding:18px 16px 0;max-width:1320px;margin:0 auto}
+header.top h1{font-size:20px;margin:0 0 2px}
+header.top p{margin:0;color:var(--muted);font-size:14px}
+nav.tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:1320px;margin:12px auto 0;padding:0 16px}
+nav.tabs button{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+nav.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+main{max-width:1320px;margin:0 auto;padding:12px 16px 48px}
+section.tab{display:none} section.tab.active{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px}
+@media (max-width:1000px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:15px}
+.card h4{margin:12px 0 6px;font-size:13.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+svg.world{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.controls{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:8px 0}
+.controls label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+select,button.btn,input[type=number],input[type=text]{font:inherit;font-size:13px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+button.btn{cursor:pointer}
+button.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.btn:disabled{opacity:.45;cursor:default}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+ol.pseudo{overflow-x:auto;list-style:none;margin:0;padding:8px 6px;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border-radius:8px}
+ol.pseudo li{padding:0 6px;border-left:3px solid transparent;white-space:pre}
+ol.pseudo li span.n{display:inline-block;width:24px;color:var(--muted)}
+ol.pseudo li.on{background:var(--hl);border-left-color:var(--hlEdge)}
+ol.pseudo li.dim{opacity:.42}
+ol.pseudo code{font:inherit}
+.note{font-size:13.5px;background:var(--code);border-radius:8px;padding:9px 11px;margin:8px 0}
+.note.warn{background:color-mix(in srgb,var(--bad) 13%,transparent);border:1px solid color-mix(in srgb,var(--bad) 35%,transparent)}
+table.q{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+table.q th,table.q td{text-align:left;padding:4px 7px;border-bottom:1px solid var(--line)}
+table.q th{color:var(--muted);font-weight:600}
+table.q tr.pick td{background:var(--hl)}
+table.q tr.clickable{cursor:pointer}
+table.q tr.clickable:hover td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.qfields{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:8px 0}
+.qfields label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
+.qfields input,.qfields select{font-size:13px}
+.qfields .right input,.qfields .right select{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,var(--panel))}
+.qfields .wrong input,.qfields .wrong select{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--panel))}
+.qfields label.off{opacity:.4}
+.chip{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin:0 4px 4px 0}
+.chip.free{background:var(--freeF);color:var(--free);border:1px solid var(--free)}
+.chip.trans{background:var(--transF);color:var(--trans);border:1px solid var(--trans)}
+.chip.phase{background:color-mix(in srgb,var(--purple) 20%,transparent);color:var(--purple)}
+.chip.cost{background:var(--code);color:var(--ink)}
+.stats{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:6px 0}
+.stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+.ok{color:var(--ok)} .bad{color:var(--bad)}
+.progress{height:5px;border-radius:999px;background:var(--code);overflow:hidden;margin:8px 0 10px}
+.progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .25s ease}
+.feedback{font-size:13px;margin:6px 0 0;min-height:1.2em}
+.nodecard{border:1px solid var(--line);border-radius:9px;padding:9px 11px;background:var(--code);font-size:13px;margin:6px 0}
+.nodecard .row{display:flex;gap:8px;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--line)}
+.nodecard .row:last-child{border-bottom:none}
+.nodecard .k{color:var(--muted)}
+.nodecard .v{font-variant-numeric:tabular-nums;font-weight:600}
+.kbd{font:12px ui-monospace,Menlo,monospace;background:var(--code);padding:1px 5px;border-radius:5px;border:1px solid var(--line)}
+.alphabar{position:relative;height:26px;background:var(--code);border-radius:6px;border:1px solid var(--line);margin:4px 0}
+.alphabar .fill{position:absolute;top:2px;bottom:2px;background:color-mix(in srgb,var(--trans) 35%,transparent);border:1px solid var(--trans);border-radius:4px}
+.alphabar .goal{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--red)}
+.alphabar .lab{position:absolute;font-size:10.5px;color:var(--muted);top:5px}
+details{margin:8px 0} details summary{cursor:pointer;font-size:13px;color:var(--accent)}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Reachability A* &mdash; interactive trace</h1>
+  <p>Algorithms 1 and 2, one line at a time. Fill in the node fields yourself and see which rule sets each one.</p>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="map" aria-selected="true">1 &middot; The map</button>
+  <button role="tab" data-tab="node" aria-selected="false">2 &middot; What is in a node</button>
+  <button role="tab" data-tab="expand" aria-selected="false">3 &middot; expandNode (Alg. 2)</button>
+  <button role="tab" data-tab="loop" aria-selected="false">4 &middot; The A* loop (Alg. 1)</button>
+  <button role="tab" data-tab="trace" aria-selected="false">5 &middot; Full trace</button>
+</nav>
+
+<main>
+
+<!-- ===================================================== 1 MAP -->
+<section class="tab active" id="tab-map">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>A small map, built to show every rule</h3>
+        <svg class="world" id="mapsvg" viewBox="0 0 640 360"></svg>
+        <div class="legend">
+          <span><i style="background:var(--freeF);border:1px solid var(--free)"></i>free set <span class="muted">F</span></span>
+          <span><i style="background:var(--transF);border:1px solid var(--trans)"></i>transition set <span class="muted">T</span></span>
+          <span><i style="background:var(--purple)"></i>switch edge <span class="muted">F&nbsp;&cap;&nbsp;T</span></span>
+          <span><i style="background:var(--line)"></i>transit edge</span>
+        </div>
+        <div class="note small">
+          Four free sets and two transition sets. The numbers on the switch edges are
+          <b>entry ranges</b>: the wrist values at which you can cross between that free set and
+          that transition set. They are what makes two visits to the same <span class="chip trans">T</span>
+          behave differently.
+        </div>
+      </div>
+      <div class="card">
+        <h3>The query</h3>
+        <div class="controls">
+          <label>&alpha;<sub>init</sub> <input type="number" id="ainit" value="-1" step="0.1" style="width:76px"></label>
+          <label>&alpha;<sub>goal</sub> <input type="number" id="agoal" value="3" step="0.1" style="width:76px"></label>
+          <label>start set
+            <select id="startset"></select>
+          </label>
+          <label>goal set
+            <select id="goalset"></select>
+          </label>
+          <button class="btn" id="resetq">Reset</button>
+        </div>
+        <div class="stats">
+          <span>&alpha;<sub>max</sub> <b id="amax">3.14</b></span>
+          <span>L<sub>max</sub> <b id="lmax">2.00</b></span>
+          <span>&mu; <b>0.001</b></span>
+        </div>
+        <p class="small muted">Both the wrist and the cap increase towards the goal, so &alpha;<sub>init</sub> &le; &alpha;<sub>goal</sub>. Reversing the task reflects both coordinates at once.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Transition sets</h3>
+        <table class="q"><thead><tr><th>set</th><th>w<sup>&minus;</sup></th><th>w<sup>+</sup></th><th>L<sub>k</sub></th></tr></thead>
+        <tbody id="ttab"></tbody></table>
+        <h4>Switch edges &mdash; entry ranges</h4>
+        <table class="q"><thead><tr><th>F &cap; T</th><th>a<sup>&minus;</sup></th><th>a<sup>+</sup></th><th>meaning</th></tr></thead>
+        <tbody id="ltab"></tbody></table>
+        <h4>Transit edges</h4>
+        <p class="small" id="adjlist"></p>
+      </div>
+      <div class="card">
+        <h3>Why the entry range matters</h3>
+        <p class="small">A stroke can only drive the wrist forward as far as the set allows, counted
+        <b>from where you came in</b>. Enter <span class="chip trans">T0</span> low and the first stroke
+        is long; enter high and it is short.</p>
+        <table class="q"><thead><tr><th>enter from</th><th>a<sup>&minus;</sup></th><th>first stroke c = w<sup>+</sup> &minus; a<sup>&minus;</sup></th></tr></thead>
+        <tbody id="whytab"></tbody></table>
+        <p class="small muted">After a <i>return</i> the wrist is back at w<sup>&minus;</sup>, so from then on a
+        stroke gets the whole range, c = L<sub>k</sub>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== 2 NODE -->
+<section class="tab" id="tab-node">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>The node record</h3>
+        <p class="small">A node is not a configuration. It is a <b>set</b>, plus the cap angles that are
+        reachable once the robot is in that set.</p>
+        <table class="q">
+          <thead><tr><th>field</th><th>when</th><th>what it means</th><th>what changes it</th></tr></thead>
+          <tbody>
+            <tr><td><b>set</b></td><td>always</td><td>which F or T the robot is in</td><td>transit, enter, release/leave</td></tr>
+            <tr><td><b>[&alpha;<sup>&minus;</sup>, &alpha;<sup>+</sup>]</b></td><td>always</td><td>cap angles reachable here</td>
+                <td><b>&alpha;<sup>&minus;</sup></b> only by forced turning <i>d</i> on exit;<br><b>&alpha;<sup>+</sup></b> only by a <i>stroke</i></td></tr>
+            <tr><td><b>phase</b></td><td>T only</td><td>entered / holding / released</td><td>stroke &rarr; holding, return &rarr; released</td></tr>
+            <tr><td><b>[a<sup>&minus;</sup>, a<sup>+</sup>]</b></td><td>T only</td><td>entry range: the wrist window you came in through</td>
+                <td>set once, by <i>enter</i>. Never changes while inside</td></tr>
+            <tr><td><b>g, h</b></td><td>always</td><td>cost so far, estimate to go</td><td>every move</td></tr>
+          </tbody>
+        </table>
+        <div class="note">
+          <b>The one that trips people up.</b> The entry range is <i>not</i> the wrist range of the
+          transition set, and it is <i>not</i> recoverable from the interval. It records
+          <b>which doorway you came through</b>, which is what decides how long the first stroke can
+          be, and how much turning is forced when you leave.
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Check yourself</h3>
+        <p class="small" id="nq-prompt"></p>
+        <div class="qfields" id="nq-fields"></div>
+        <div class="controls">
+          <button class="btn primary" id="nq-check">Check</button>
+          <button class="btn" id="nq-next" disabled>Next question</button>
+        </div>
+        <p class="feedback" id="nq-fb"></p>
+        <div class="progress"><span id="nq-bar"></span></div>
+        <p class="small muted" id="nq-count"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== 3 EXPAND -->
+<section class="tab" id="tab-expand">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>Algorithm 2 &mdash; expandNode</h3>
+        <ol class="pseudo" id="a2"></ol>
+        <p class="small muted" style="margin-top:8px">Lines dim when the branch does not apply to this parent.</p>
+      </div>
+      <div class="card">
+        <h3>Parent node</h3>
+        <div class="controls">
+          <label>pick one
+            <select id="parentsel"></select>
+          </label>
+          <button class="btn" id="exp-restart">Restart this expansion</button>
+        </div>
+        <div class="nodecard" id="parentcard"></div>
+        <div class="alphabar" id="parentbar"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Child <span id="exp-idx" class="muted"></span></h3>
+        <p class="small" id="exp-prompt"></p>
+        <div class="qfields" id="exp-fields"></div>
+        <div class="controls">
+          <button class="btn primary" id="exp-check">Check</button>
+          <button class="btn" id="exp-hint">Hint</button>
+          <button class="btn" id="exp-next" disabled>Next child</button>
+        </div>
+        <p class="feedback" id="exp-fb"></p>
+        <p class="small" id="exp-hinttext" hidden></p>
+        <div class="progress"><span id="exp-bar"></span></div>
+      </div>
+      <div class="card">
+        <h3>nodeList so far</h3>
+        <table class="q"><thead><tr><th>#</th><th>child</th><th>interval</th><th>phase</th><th>entry</th><th>cost</th><th>rule</th></tr></thead>
+        <tbody id="exp-list"></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== 4 LOOP -->
+<section class="tab" id="tab-loop">
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>Algorithm 1 &mdash; A* search</h3>
+        <ol class="pseudo" id="a1"></ol>
+      </div>
+      <div class="card">
+        <h3>Open queue</h3>
+        <p class="small muted" id="loop-hint2">Click the row the search should pop next.</p>
+        <table class="q"><thead><tr><th>#</th><th>set</th><th>interval</th><th>phase</th><th>entry</th><th>g</th><th>h</th><th>f</th></tr></thead>
+        <tbody id="openbody"></tbody></table>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Step <span id="loop-step" class="muted"></span></h3>
+        <p class="small" id="loop-prompt"></p>
+        <div class="qfields" id="loop-fields"></div>
+        <div class="controls">
+          <button class="btn primary" id="loop-check">Check</button>
+          <button class="btn" id="loop-next" disabled>Next</button>
+          <button class="btn" id="loop-restart">Restart</button>
+        </div>
+        <p class="feedback" id="loop-fb"></p>
+      </div>
+      <div class="card">
+        <h3>Expanded (the dominance table)</h3>
+        <p class="small muted">A node is skipped when a node with the same <b>key</b> was already
+        expanded with an interval that <b>contains</b> this one, at no higher cost.</p>
+        <table class="q"><thead><tr><th>key</th><th>interval</th><th>g</th></tr></thead>
+        <tbody id="expbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== 5 TRACE -->
+<section class="tab" id="tab-trace">
+  <div class="card">
+    <h3>The whole run</h3>
+    <div class="controls">
+      <button class="btn primary" id="run">Run the search</button>
+      <span class="stats" id="runstats"></span>
+    </div>
+    <table class="q"><thead><tr><th>#</th><th>action</th><th>set</th><th>interval</th><th>phase</th><th>entry</th><th>g</th><th>h</th><th>f</th></tr></thead>
+    <tbody id="tracebody"></tbody></table>
+    <div class="note" id="tracenote" hidden></div>
+  </div>
+  <div class="card">
+    <h3>Where this differs from the notebook</h3>
+    <div class="note warn">
+      <b>Return from <i>entered</i>.</b> Algorithm 2 as written in the paper allows a return only
+      from <i>holding</i> (line 12). <code>full_arm_planner.ipynb</code> also allows it from
+      <i>entered</i>, at cost 1, before any grasp has happened. This tool follows the paper. If the
+      notebook is right, the cost of a plan is no longer exactly twice the number of grasps.
+    </div>
+    <div class="note warn">
+      <b>Forced turning after a stroke.</b> <i>d</i> is measured from a<sup>+</sup>, the top of the
+      entry range. After a stroke the wrist has already moved, so a<sup>+</sup> is not where the
+      wrist is. The value is conservative, never optimistic, but it can refuse exits that are
+      actually reachable.
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+"use strict";
+/* ============================================================ THE MAP */
+const MU = 0.001, AMAX = 3.14;
+const MAP = {
+  free: [
+    {id:0, name:"F0", pts:"40,250 150,235 170,320 55,335"},
+    {id:1, name:"F1", pts:"215,120 330,105 350,195 230,212"},
+    {id:2, name:"F2", pts:"40,60 155,45 175,135 58,150"},
+    {id:3, name:"F3", pts:"460,235 575,222 592,308 472,322"}
+  ],
+  trans: [
+    {id:0, name:"T0", wlo:-1.0, whi:1.0, x:200, y:250, w:230, h:26},
+    {id:1, name:"T1", wlo:0.2, whi:0.8, x:395, y:120, w:120, h:22}
+  ],
+  // switch edges: free set i <-> transition set k, with the wrist window of the intersection
+  links: [
+    {f:2, t:0, alo:-1.0, ahi:-0.4, why:"a low doorway: long first stroke"},
+    {f:1, t:0, alo: 0.3, ahi: 1.0, why:"a high doorway: short first stroke"},
+    {f:0, t:0, alo:-1.0, ahi:-0.6, why:"low exit: usually no forced turning"},
+    {f:3, t:0, alo: 0.5, ahi: 1.0, why:"high exit: forces turning to reach"},
+    {f:1, t:1, alo: 0.2, ahi: 0.8, why:"the only doorway of T1"}
+  ],
+  adj: [[2,1],[1,0],[0,3]]
+};
+MAP.trans.forEach(t=>t.L = +(t.whi - t.wlo).toFixed(3));
+const LMAX = Math.max(...MAP.trans.map(t=>t.L));
+let Q = {ainit:-1, agoal:3, start:2, goal:0};
+
+const F = id => MAP.free.find(f=>f.id===id);
+const T = id => MAP.trans.find(t=>t.id===id);
+const linksOf = (f,t) => MAP.links.filter(l=>(f===null||l.f===f)&&(t===null||l.t===t));
+const adjOf = i => MAP.adj.filter(e=>e.includes(i)).map(e=>e[0]===i?e[1]:e[0]);
+const r2 = v => (Math.round(v*1000)/1000);
+const fmt = v => (Math.abs(v)<1e-9?0:r2(v)).toFixed(2).replace("-","−");
+const iv = n => `[${fmt(n.lo)}, ${fmt(n.hi)}]`;
+
+/* ============================================================ SEMANTICS */
+function mkF(set,lo,hi){ return {kind:"F", set, lo, hi, phase:null, alo:null, ahi:null}; }
+function mkT(set,lo,hi,phase,alo,ahi){ return {kind:"T", set, lo, hi, phase, alo, ahi}; }
+const nodeName = n => n.kind==="F" ? F(n.set).name : T(n.set).name;
+
+function hVal(n){
+  const rem = Q.agoal - n.hi;
+  const strokes = rem <= 1e-9 ? 0 : Math.ceil((rem-1e-9)/LMAX);
+  return 2*strokes + (n.kind==="T" && n.phase==="holding" ? 1 : 0);
+}
+function keyOf(n){
+  return n.kind==="F" ? `F${n.set}` : `T${n.set}|${r2(n.alo)}|${r2(n.ahi)}|${n.phase}`;
+}
+function isGoal(n){
+  return n.kind==="F" && n.set===Q.goal && n.lo <= Q.agoal+1e-9 && Q.agoal <= n.hi+1e-9;
+}
+
+/* Algorithm 2, exactly as printed in the paper. */
+function expand(n){
+  const out = [];
+  if(n.kind==="F"){
+    adjOf(n.set).forEach(j=>out.push({
+      child: mkF(j, n.lo, n.hi), cost: MU, rule:"transit", line:4,
+      why:`Transit to ${F(j).name}. The cap never moves, so the interval is copied unchanged.`
+    }));
+    linksOf(n.set,null).forEach(l=>out.push({
+      child: mkT(l.t, n.lo, n.hi, "entered", l.alo, l.ahi), cost: MU, rule:"enter", line:6,
+      why:`Enter ${T(l.t).name} through ${F(n.set).name}∩${T(l.t).name}. The interval is copied, `+
+          `the phase becomes <b>entered</b>, and the entry range is set to the wrist window of that `+
+          `doorway, [${fmt(l.alo)}, ${fmt(l.ahi)}]. Nothing about the cap has happened yet.`
+    }));
+  } else {
+    const t = T(n.set);
+    if(n.phase==="entered" || n.phase==="released"){
+      const c = n.phase==="entered" ? t.whi - n.alo : t.L;
+      const beta = Math.min(n.hi + c, Q.agoal, AMAX);
+      out.push({
+        child: mkT(n.set, n.lo, beta, "holding", n.alo, n.ahi), cost: 1, rule:"stroke", line:11,
+        why: n.phase==="entered"
+          ? `Stroke. You came in at a<sup>−</sup>=${fmt(n.alo)}, so the wrist can still travel `+
+            `c = w<sup>+</sup> − a<sup>−</sup> = ${fmt(t.whi)} − ${fmt(n.alo)} = <b>${fmt(c)}</b>. `+
+            `&alpha;<sup>−</sup> rises by that, clipped at &alpha;<sub>goal</sub> and &alpha;<sub>max</sub>. `+
+            `&alpha;<sup>+</sup> is untouched: a stroke only ever adds reachable angles above.`
+          : `Stroke after a return. The wrist went back to w<sup>−</sup>, so the whole range is `+
+            `available: c = L<sub>k</sub> = <b>${fmt(t.L)}</b>. The entry range is irrelevant now.`
+      });
+    }
+    if(n.phase==="holding"){
+      out.push({
+        child: mkT(n.set, n.lo, n.hi, "released", n.alo, n.ahi), cost: 1, rule:"return", line:13,
+        why:`Return. The robot lets go and winds the wrist back. Nothing about the cap changes, so `+
+            `the interval is copied. Only the phase moves to <b>released</b>.`
+      });
+    }
+    if(n.phase==="entered" || n.phase==="holding"){
+      linksOf(null,n.set).forEach(l=>{
+        const d = Math.max(0, l.alo - n.ahi);
+        if(!(n.phase==="holding" || d===0)) return;
+        if(n.lo + d > n.hi + 1e-9) return;
+        out.push({
+          child: mkF(l.f, n.lo + d, n.hi), cost: n.phase==="holding" ? 1 : MU,
+          rule: n.phase==="holding" ? "release" : "leave", line:18,
+          why:`${n.phase==="holding"?"Release":"Leave"} into ${F(l.f).name}. That doorway starts at `+
+              `a<sup>−</sup><sub>jk</sub>=${fmt(l.alo)}; you are at a<sup>+</sup>=${fmt(n.ahi)}, so the forced `+
+              `turning is d = max(0, ${fmt(l.alo)} − ${fmt(n.ahi)}) = <b>${fmt(d)}</b>. `+
+              (d>0 ? `&alpha;<sup>+</sup> rises by d. ` : `No turning is forced, so the interval is copied. `)+
+              (n.phase==="holding" ? `Letting go of the cap costs 1.` : `Nothing was grasped, so this is only a hop (&mu;).`)
+        });
+      });
+    }
+  }
+  return out;
+}
+
+/* ============================================================ UI HELPERS */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+
+document.querySelectorAll('nav.tabs button').forEach(b=>{
+  b.onclick = () => {
+    $$('nav.tabs button').forEach(x=>x.setAttribute('aria-selected', x===b));
+    $$('section.tab').forEach(s=>s.classList.toggle('active', s.id==='tab-'+b.dataset.tab));
+  };
+});
+
+/* ============================================================ TAB 1 */
+function drawMap(){
+  const svg = $('#mapsvg'); svg.innerHTML = '';
+  const NS = 'http://www.w3.org/2000/svg';
+  const add = (t,a,txt)=>{ const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); if(txt!=null)e.textContent=txt; svg.appendChild(e); return e; };
+
+  // transit edges
+  MAP.adj.forEach(([i,j])=>{
+    const a=centroid(F(i).pts), b=centroid(F(j).pts);
+    add('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:'var(--line)','stroke-width':3,'stroke-dasharray':'6 5'});
+  });
+  // transition sets
+  MAP.trans.forEach(t=>{
+    add('rect',{x:t.x,y:t.y,width:t.w,height:t.h,rx:7,fill:'var(--transF)',stroke:'var(--trans)','stroke-width':2.5});
+    add('text',{x:t.x+t.w/2,y:t.y+t.h/2+4,fill:'var(--trans)','font-size':13,'font-weight':700,'text-anchor':'middle'}, t.name);
+    add('text',{x:t.x,y:t.y-6,fill:'var(--muted)','font-size':10.5}, `w ∈ [${t.wlo}, ${t.whi}]   L=${t.L}`);
+  });
+  // free sets
+  MAP.free.forEach(f=>{
+    add('polygon',{points:f.pts,fill:'var(--freeF)',stroke:'var(--free)','stroke-width':2.5});
+    const c=centroid(f.pts);
+    add('text',{x:c[0],y:c[1]+5,fill:'var(--free)','font-size':14,'font-weight':700,'text-anchor':'middle'}, f.name);
+  });
+  // switch edges
+  MAP.links.forEach(l=>{
+    const a=centroid(F(l.f).pts), t=T(l.t);
+    const frac = (l.alo - t.wlo)/(t.whi - t.wlo);
+    const bx = t.x + 12 + frac*(t.w-24), by = t.y + t.h/2;
+    add('line',{x1:a[0],y1:a[1],x2:bx,y2:by,stroke:'var(--purple)','stroke-width':2.5});
+    add('circle',{cx:bx,cy:by,r:5,fill:'var(--purple)'});
+    const mx=(a[0]+bx)/2, my=(a[1]+by)/2;
+    add('rect',{x:mx-30,y:my-10,width:60,height:16,rx:4,fill:'var(--panel)',opacity:.88});
+    add('text',{x:mx,y:my+2,fill:'var(--purple)','font-size':10.5,'text-anchor':'middle'},
+        `[${l.alo}, ${l.ahi}]`);
+  });
+}
+function centroid(pts){
+  const p = pts.trim().split(/\s+/).map(s=>s.split(',').map(Number));
+  return [p.reduce((a,b)=>a+b[0],0)/p.length, p.reduce((a,b)=>a+b[1],0)/p.length];
+}
+function fillMapTables(){
+  $('#ttab').innerHTML = MAP.trans.map(t=>
+    `<tr><td><span class="chip trans">${t.name}</span></td><td>${t.wlo}</td><td>${t.whi}</td><td><b>${t.L}</b></td></tr>`).join('');
+  $('#ltab').innerHTML = MAP.links.map(l=>
+    `<tr><td><span class="chip free">${F(l.f).name}</span>&cap;<span class="chip trans">${T(l.t).name}</span></td>
+     <td>${l.alo}</td><td>${l.ahi}</td><td class="small muted">${l.why}</td></tr>`).join('');
+  $('#adjlist').innerHTML = MAP.adj.map(([i,j])=>
+    `<span class="chip free">${F(i).name}</span>&harr;<span class="chip free">${F(j).name}</span>`).join(' &nbsp; ');
+  $('#whytab').innerHTML = linksOf(null,0).map(l=>{
+    const c = T(0).whi - l.alo;
+    return `<tr><td><span class="chip free">${F(l.f).name}</span></td><td>${l.alo}</td>
+            <td><b>${fmt(c)}</b> rad</td></tr>`;
+  }).join('');
+  $('#amax').textContent = AMAX.toFixed(2);
+  $('#lmax').textContent = LMAX.toFixed(2);
+  const sopts = MAP.free.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+  $('#startset').innerHTML = sopts; $('#goalset').innerHTML = sopts;
+  $('#startset').value = Q.start; $('#goalset').value = Q.goal;
+}
+['ainit','agoal'].forEach(id=>$('#'+id).oninput = e=>{ Q[id==='ainit'?'ainit':'agoal'] = +e.target.value; resetAll(); });
+$('#startset').onchange = e=>{ Q.start = +e.target.value; resetAll(); };
+$('#goalset').onchange  = e=>{ Q.goal  = +e.target.value; resetAll(); };
+$('#resetq').onclick = ()=>{ Q={ainit:-1,agoal:3,start:2,goal:0};
+  $('#ainit').value=-1; $('#agoal').value=3; $('#startset').value=2; $('#goalset').value=0; resetAll(); };
+
+/* ============================================================ TAB 2 : node quiz */
+const NQ = [
+  { prompt:`The robot is in <span class="chip free">F2</span> and has not grasped anything.
+            &alpha;<sub>init</sub> = &minus;1. Fill in its node.`,
+    fields:[["lo","&alpha;&minus;",-1],["hi","&alpha;+",-1],["phase","phase","&mdash;"],["entry","entry range","&mdash;"]],
+    note:`A free node has no phase and no entry range: those only exist inside a transition set.
+          Both ends of the interval are &alpha;<sub>init</sub>, because exactly one cap angle is reachable so far.` },
+  { prompt:`It now enters <span class="chip trans">T0</span> through the doorway from
+            <span class="chip free">F2</span>, whose wrist window is [&minus;1.0, &minus;0.4]. Fill in the new node.`,
+    fields:[["lo","&alpha;&minus;",-1],["hi","&alpha;+",-1],["phase","phase","entered"],["entry","entry range","-1,-0.4"]],
+    note:`Entering changes nothing about the cap. The interval is copied. The phase becomes
+          <b>entered</b> and the entry range records <b>which doorway</b> was used.` },
+  { prompt:`From that node it performs a <b>stroke</b>. T0 has w<sup>+</sup> = 1.0.
+            What does the child look like?`,
+    fields:[["lo","&alpha;&minus;",-1],["hi","&alpha;+",1],["phase","phase","holding"],["entry","entry range","-1,-0.4"]],
+    note:`c = w<sup>+</sup> &minus; a<sup>&minus;</sup> = 1.0 &minus; (&minus;1.0) = 2.0, so &alpha;<sup>+</sup>
+          goes from &minus;1 up to 1. &alpha;<sup>&minus;</sup> never moves on a stroke, and the entry range is carried along unchanged.` },
+  { prompt:`Now a <b>return</b>. What changes?`,
+    fields:[["lo","&alpha;&minus;",-1],["hi","&alpha;+",1],["phase","phase","released"],["entry","entry range","-1,-0.4"]],
+    note:`Only the phase. A return winds the wrist back without the cap, so the interval is identical.
+          From <b>released</b> the next stroke gets the full range L<sub>k</sub>, not w<sup>+</sup>&minus;a<sup>&minus;</sup>.` },
+  { prompt:`A second <b>stroke</b> from <i>released</i>, with L<sub>0</sub> = 2.0 and
+            &alpha;<sub>goal</sub> = 3. What is the child?`,
+    fields:[["lo","&alpha;&minus;",-1],["hi","&alpha;+",3],["phase","phase","holding"],["entry","entry range","-1,-0.4"]],
+    note:`1 + 2 = 3, which is exactly &alpha;<sub>goal</sub>, so the clip does not bite.
+          The interval [&minus;1, 3] now contains the goal angle.` },
+  { prompt:`Finally it <b>releases</b> into <span class="chip free">F3</span>. Two doorways matter here.
+            It came <b>in</b> through F2&cap;T0, wrist [&minus;1.0, &minus;0.4], stored in the node as its
+            entry range [a<sup>&minus;</sup>, a<sup>+</sup>]. It goes <b>out</b> through F3&cap;T0, wrist
+            [a<sup>&minus;</sup><sub>jk</sub>, a<sup>+</sup><sub>jk</sub>] = [0.5, 1.0]. What is the child?`,
+    fields:[["lo","&alpha;&minus;",-0.1],["hi","&alpha;+",3],["phase","phase","&mdash;"],["entry","entry range","&mdash;"]],
+    note:`The exit doorway lies entirely past the entry doorway, so the wrist must cross the gap:
+          d = max(0, a<sup>&minus;</sup><sub>jk</sub> &minus; a<sup>+</sup>) = max(0, 0.5 &minus; (&minus;0.4)) = 0.9.
+          That turning pushes the cap <b>towards</b> the goal, so it can only remove the
+          <b>least-turned</b> end. &alpha;=3 survives: it was reached by entering at &minus;1 and stroking fully,
+          which leaves the wrist at 1, already inside [0.5, 1.0]. &alpha;=&minus;1 does not: from the entry
+          doorway the wrist must advance at least 0.9 to reach 0.5, so the least the cap can be is
+          &minus;1 + 0.9 = &minus;0.1. Hence [&minus;0.1, 3]. The child is a free node, so it has no phase
+          and no entry range.` }
+];
+let nqi = 0;
+function renderNQ(){
+  const q = NQ[nqi];
+  $('#nq-prompt').innerHTML = q.prompt;
+  $('#nq-fields').innerHTML = q.fields.map(([k,lab])=>
+    `<label data-k="${k}"><span>${lab}</span><input type="text" id="nqf-${k}" placeholder="?" autocomplete="off"></label>`).join('');
+  $('#nq-fb').textContent = ''; $('#nq-next').disabled = true;
+  $('#nq-count').textContent = `Question ${nqi+1} of ${NQ.length}`;
+  $('#nq-bar').style.width = (nqi/NQ.length*100)+'%';
+}
+function normAns(s){ return String(s).replace(/[\s−]/g,m=>m==='−'?'-':'').replace(/[\[\]]/g,'').toLowerCase(); }
+$('#nq-check').onclick = ()=>{
+  const q = NQ[nqi]; let all = true;
+  q.fields.forEach(([k,lab,want])=>{
+    const lab2 = $(`#nq-fields label[data-k="${k}"]`);
+    const got = normAns($('#nqf-'+k).value);
+    const exp = normAns(String(want).replace('&mdash;','-'));
+    const ok = got===exp || (exp==='-' && (got===''||got==='none'||got==='null'||got==='n/a'));
+    lab2.className = ok ? 'right' : 'wrong'; if(!ok) all = false;
+  });
+  $('#nq-fb').innerHTML = all
+    ? `<span class="ok">Right.</span> ${q.note}`
+    : `<span class="bad">Not yet.</span> ${q.note}`;
+  $('#nq-next').disabled = false;
+};
+$('#nq-next').onclick = ()=>{ nqi = (nqi+1)%NQ.length; renderNQ(); };
+
+/* ============================================================ TAB 3 : expandNode */
+const A2 = [
+ [1,"nodeList = []"],
+ [2,"if S = Fᵢ is a free set then"],
+ [3,"    for all Fⱼ with Fᵢ ∩ Fⱼ ≠ ∅ do            ▷ transit"],
+ [4,"        nodeList.add(Fⱼ, [α⁻, α⁺])"],
+ [5,"    for all Tₖ with Fᵢ ∩ Tₖ ≠ ∅ do            ▷ enter"],
+ [6,"        nodeList.add(Tₖ, [α⁻, α⁺], entered, [a⁻ᵢₖ, a⁺ᵢₖ])"],
+ [7,"else                                      ▷ S = Tₖ"],
+ [8,"    if φ ∈ {entered, released} then           ▷ stroke"],
+ [9,"        c ← w⁺ₖ − a⁻ if φ = entered, else c ← Lₖ"],
+ [10,"        β ← min(α⁺ + c, α_goal, α_max)"],
+ [11,"        nodeList.add(Tₖ, [α⁻, β], holding)"],
+ [12,"    if φ = holding then                       ▷ return"],
+ [13,"        nodeList.add(Tₖ, [α⁻, α⁺], released)"],
+ [14,"    if φ ∈ {entered, holding} then       ▷ release or leave"],
+ [15,"        for all Fⱼ with Fⱼ ∩ Tₖ ≠ ∅ do"],
+ [16,"            d ← max(0, a⁻ⱼₖ − a⁺)             ▷ forced turning"],
+ [17,"            if φ = holding or d = 0 then"],
+ [18,"                nodeList.add(Fⱼ, [α⁻ + d, α⁺])"],
+ [19,"return nodeList"]
+];
+const PARENTS = [
+  {lab:"F2, interval {\u22121}  (the start)",        n:()=>mkF(2,Q.ainit,Q.ainit)},
+  {lab:"T0 entered from F2  (low doorway)",        n:()=>mkT(0,Q.ainit,Q.ainit,"entered",-1.0,-0.4)},
+  {lab:"T0 entered from F1  (high doorway)",       n:()=>mkT(0,Q.ainit,Q.ainit,"entered",0.3,1.0)},
+  {lab:"T0 holding, after one stroke",             n:()=>mkT(0,Q.ainit,1,"holding",-1.0,-0.4)},
+  {lab:"T0 released, after a return",              n:()=>mkT(0,Q.ainit,1,"released",-1.0,-0.4)},
+  {lab:"T0 holding, interval already at the goal", n:()=>mkT(0,Q.ainit,Q.agoal,"holding",-1.0,-0.4)}
+];
+let expState = null;
+function renderA2(active, dim){
+  $('#a2').innerHTML = A2.map(([n,txt])=>{
+    const on = active===n ? ' on' : '';
+    const dm = dim && dim.includes(n) ? ' dim' : '';
+    return `<li class="${on}${dm}"><span class="n">${n}</span><code>${txt}</code></li>`;
+  }).join('');
+}
+function nodeCard(n){
+  const rows = [
+    ["set", `<span class="chip ${n.kind==='F'?'free':'trans'}">${nodeName(n)}</span>`],
+    ["interval [&alpha;&minus;, &alpha;+]", iv(n)],
+    ["phase", n.phase ? `<span class="chip phase">${n.phase}</span>` : '<span class="muted">&mdash;</span>'],
+    ["entry range [a&minus;, a+]", n.alo!=null ? `[${fmt(n.alo)}, ${fmt(n.ahi)}]` : '<span class="muted">&mdash;</span>'],
+    ["h", fmt(hVal(n))], ["key", `<code class="kbd">${keyOf(n)}</code>`]
+  ];
+  return rows.map(([k,v])=>`<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+}
+function alphaBar(n){
+  const LO=-3.2, HI=3.4, W=100;
+  const pct = v => ((v-LO)/(HI-LO))*W;
+  return `<div class="fill" style="left:${pct(n.lo)}%;width:${Math.max(0.8,pct(n.hi)-pct(n.lo))}%"></div>
+          <div class="goal" style="left:${pct(Q.agoal)}%"></div>
+          <div class="lab" style="left:2px">&alpha;=${LO}</div>
+          <div class="lab" style="right:2px">${HI}</div>`;
+}
+function startExpand(){
+  const p = PARENTS[+$('#parentsel').value].n();
+  expState = {parent:p, kids:expand(p), i:0, done:[]};
+  $('#parentcard').innerHTML = nodeCard(p);
+  $('#parentbar').innerHTML = alphaBar(p);
+  $('#exp-list').innerHTML = '';
+  renderExpStep();
+}
+function renderExpStep(){
+  const st = expState; const n = st.parent;
+  const dim = n.kind==="F" ? [7,8,9,10,11,12,13,14,15,16,17,18] :
+    [2,3,4,5,6].concat(
+      (n.phase==="entered"||n.phase==="released")?[]:[8,9,10,11],
+      (n.phase==="holding")?[]:[12,13],
+      (n.phase==="entered"||n.phase==="holding")?[]:[14,15,16,17,18]);
+  if(st.i >= st.kids.length){
+    renderA2(19, dim);
+    $('#exp-idx').textContent = '';
+    $('#exp-prompt').innerHTML = `<span class="ok">That is the whole nodeList.</span> ` +
+      (st.kids.length===0 ? `This node has no successors at all.` :
+       `${st.kids.length} child${st.kids.length>1?'ren':''} from this parent.`);
+    $('#exp-fields').innerHTML = ''; $('#exp-check').disabled = true; $('#exp-next').disabled = true;
+    $('#exp-bar').style.width = '100%';
+    return;
+  }
+  const k = st.kids[st.i];
+  renderA2(k.line, dim);
+  $('#exp-check').disabled = false;
+  $('#exp-idx').textContent = `${st.i+1} of ${st.kids.length}`;
+  $('#exp-prompt').innerHTML = `Line ${k.line} fires. Fill in the child it adds.`;
+  const isF = k.child.kind==="F";
+  $('#exp-fields').innerHTML = `
+    <label data-k="set"><span>set</span><select id="ef-set">
+      ${MAP.free.map(f=>`<option value="F${f.id}">${f.name}</option>`).join('')}
+      ${MAP.trans.map(t=>`<option value="T${t.id}">${t.name}</option>`).join('')}
+    </select></label>
+    <label data-k="lo"><span>&alpha;&minus;</span><input type="number" step="0.1" id="ef-lo"></label>
+    <label data-k="hi"><span>&alpha;+</span><input type="number" step="0.1" id="ef-hi"></label>
+    <label data-k="phase"><span>phase</span><select id="ef-phase">
+      <option value="">&mdash;</option><option>entered</option><option>holding</option><option>released</option>
+    </select></label>
+    <label data-k="alo"><span>a&minus;</span><input type="number" step="0.1" id="ef-alo"></label>
+    <label data-k="ahi"><span>a+</span><input type="number" step="0.1" id="ef-ahi"></label>
+    <label data-k="cost"><span>cost</span><select id="ef-cost">
+      <option value="mu">&mu; (a hop)</option><option value="1">1 (a grasp action)</option>
+    </select></label>`;
+  $('#exp-fb').textContent=''; $('#exp-hinttext').hidden = true; $('#exp-next').disabled = true;
+  $('#exp-bar').style.width = (st.i/st.kids.length*100)+'%';
+}
+$('#exp-check').onclick = ()=>{
+  const st = expState, k = st.kids[st.i], c = k.child;
+  const want = {
+    set: (c.kind==="F"?"F":"T")+c.set, lo: r2(c.lo), hi: r2(c.hi),
+    phase: c.phase||"", alo: c.alo, ahi: c.ahi, cost: k.cost===1?"1":"mu"
+  };
+  const got = {
+    set: $('#ef-set').value, lo: r2(+$('#ef-lo').value), hi: r2(+$('#ef-hi').value),
+    phase: $('#ef-phase').value,
+    alo: $('#ef-alo').value===''?null:r2(+$('#ef-alo').value),
+    ahi: $('#ef-ahi').value===''?null:r2(+$('#ef-ahi').value),
+    cost: $('#ef-cost').value
+  };
+  let all = true;
+  for(const f of ["set","lo","hi","phase","alo","ahi","cost"]){
+    const lab = $(`#exp-fields label[data-k="${f}"]`);
+    let ok;
+    if(f==="alo"||f==="ahi") ok = (want[f]===null) ? (got[f]===null) : (got[f]!==null && Math.abs(got[f]-want[f])<1e-6);
+    else if(f==="lo"||f==="hi") ok = Math.abs(got[f]-want[f])<1e-6;
+    else ok = got[f]===want[f];
+    lab.className = ok?'right':'wrong'; if(!ok) all=false;
+  }
+  $('#exp-fb').innerHTML = (all?`<span class="ok">Right.</span> `:`<span class="bad">Not quite.</span> `) + k.why;
+  $('#exp-next').disabled = false;
+  st.done[st.i] = true;
+  const row = el('tr'); row.innerHTML =
+    `<td>${st.i+1}</td><td><span class="chip ${c.kind==='F'?'free':'trans'}">${nodeName(c)}</span></td>
+     <td>${iv(c)}</td><td>${c.phase?`<span class="chip phase">${c.phase}</span>`:'&mdash;'}</td>
+     <td>${c.alo!=null?`[${fmt(c.alo)}, ${fmt(c.ahi)}]`:'&mdash;'}</td>
+     <td>${k.cost===1?'1':'μ'}</td><td class="small muted">${k.rule}</td>`;
+  if(!$('#exp-list').querySelector(`tr[data-i="${st.i}"]`)){ row.dataset.i = st.i; $('#exp-list').appendChild(row); }
+};
+$('#exp-hint').onclick = ()=>{ const h=$('#exp-hinttext'); h.hidden=!h.hidden;
+  h.innerHTML = expState.kids[expState.i].why; };
+$('#exp-next').onclick = ()=>{ expState.i++; renderExpStep(); };
+$('#exp-restart').onclick = startExpand;
+$('#parentsel').onchange = startExpand;
+
+/* ============================================================ TAB 4 : the loop */
+const A1 = [
+ [1,"addStartNodesToQueue()"],
+ [2,"while hasNodesToCheck() do"],
+ [3,"    nodeToExpand = getCheapestNode()"],
+ [4,"    if nodeAlreadyExpanded() then"],
+ [5,"        skipToNextNodeInQueue()"],
+ [6,"    if hasReachedTheGoal() or hasTimedOut() then"],
+ [7,"        stopSearch()"],
+ [8,"    childNodesToCheck = expandNode()"],
+ [9,"    for childNode ∈ childNodesToCheck do"],
+ [10,"        if nodeAlreadyExpanded(childNode) then continue"],
+ [11,"        costOfEdge = getCostOfEdge()"],
+ [12,"        addEdgeToGraph(childNode, costOfEdge)"],
+ [13,"        costToGoal = estimateCostToGoal()"],
+ [14,"        nodeCost = costOfPath(childNode) + costToGoal"],
+ [15,"        addNodeToQueue(childNode, nodeCost)"],
+ [16,"plan = getBestPathToEndNode()"]
+];
+let L = null;
+function renderA1(active){
+  $('#a1').innerHTML = A1.map(([n,txt])=>
+    `<li class="${active===n?'on':''}"><span class="n">${n}</span><code>${txt}</code></li>`).join('');
+}
+function loopReset(){
+  const s = mkF(Q.start, Q.ainit, Q.ainit);
+  L = { open:[{n:s, g:0, h:hVal(s)}], expanded:{}, step:0, stage:"pop", pick:null, kids:null, ki:0 };
+  renderLoop();
+}
+function renderOpen(sel){
+  $('#openbody').innerHTML = L.open.map((o,i)=>{
+    const f = o.g + o.h;
+    return `<tr class="clickable ${sel===i?'pick':''}" data-i="${i}">
+      <td>${i}</td><td><span class="chip ${o.n.kind==='F'?'free':'trans'}">${nodeName(o.n)}</span></td>
+      <td>${iv(o.n)}</td><td>${o.n.phase?o.n.phase:'&mdash;'}</td>
+      <td>${o.n.alo!=null?`[${fmt(o.n.alo)}, ${fmt(o.n.ahi)}]`:'&mdash;'}</td>
+      <td>${fmt(o.g)}</td><td>${fmt(o.h)}</td><td><b>${fmt(f)}</b></td></tr>`;
+  }).join('');
+  $$('#openbody tr').forEach(tr=>tr.onclick = ()=>{
+    if(L.stage!=="pop") return;
+    L.pick = +tr.dataset.i; renderOpen(L.pick);
+  });
+  $('#expbody').innerHTML = Object.entries(L.expanded).flatMap(([k,arr])=>
+    arr.map(e=>`<tr><td><code class="kbd">${k}</code></td><td>[${fmt(e.lo)}, ${fmt(e.hi)}]</td><td>${fmt(e.g)}</td></tr>`)).join('')
+    || `<tr><td colspan="3" class="muted small">nothing expanded yet</td></tr>`;
+}
+function bestIndex(){
+  let bi=0, bf=Infinity;
+  L.open.forEach((o,i)=>{ const f=o.g+o.h; if(f<bf-1e-12){bf=f;bi=i;} });
+  return bi;
+}
+function dominated(n,g){
+  const arr = L.expanded[keyOf(n)]||[];
+  return arr.some(e=> e.lo<=n.lo+1e-9 && e.hi>=n.hi-1e-9 && e.g<=g+1e-9);
+}
+function renderLoop(){
+  $('#loop-step').textContent = `(${L.step})`;
+  $('#loop-fb').textContent=''; $('#loop-next').disabled = true;
+  renderOpen(L.pick);
+  if(L.stage==="pop"){
+    renderA1(3);
+    $('#loop-prompt').innerHTML = `<b>Line 3.</b> Which node does the queue pop? Click its row, then Check.`;
+    $('#loop-fields').innerHTML = '';
+  } else if(L.stage==="dom"){
+    renderA1(4);
+    $('#loop-prompt').innerHTML = `<b>Line 4.</b> Has an equivalent or better node already been expanded?`;
+    $('#loop-fields').innerHTML = `<label data-k="d"><span>dominated?</span><select id="lf-d">
+      <option value="">?</option><option value="no">no</option><option value="yes">yes, skip it</option></select></label>`;
+  } else if(L.stage==="goal"){
+    renderA1(6);
+    $('#loop-prompt').innerHTML = `<b>Line 6.</b> Is this a goal node? It must be a free node in
+      <span class="chip free">${F(Q.goal).name}</span> whose interval contains &alpha;<sub>goal</sub> = ${fmt(Q.agoal)}.`;
+    $('#loop-fields').innerHTML = `<label data-k="g"><span>goal?</span><select id="lf-g">
+      <option value="">?</option><option value="no">no</option><option value="yes">yes, stop</option></select></label>`;
+  } else if(L.stage==="child"){
+    const k = L.kids[L.ki];
+    renderA1(14);
+    $('#loop-prompt').innerHTML = `<b>Lines 11&ndash;15.</b> Child ${L.ki+1} of ${L.kids.length}:
+      <span class="chip ${k.child.kind==='F'?'free':'trans'}">${nodeName(k.child)}</span> ${iv(k.child)}
+      ${k.child.phase?`<span class="chip phase">${k.child.phase}</span>`:''} by <b>${k.rule}</b>.
+      Give its g, h and f.`;
+    $('#loop-fields').innerHTML = `
+      <label data-k="g"><span>g = g(parent) + cost</span><input type="number" step="0.001" id="lf-cg"></label>
+      <label data-k="h"><span>h</span><input type="number" step="1" id="lf-ch"></label>
+      <label data-k="f"><span>f = g + h</span><input type="number" step="0.001" id="lf-cf"></label>`;
+  } else if(L.stage==="done"){
+    renderA1(16);
+    $('#loop-prompt').innerHTML = `<span class="ok">Goal reached.</span> The plan is read by following
+      parents back to the start. Press Restart to run it again.`;
+    $('#loop-fields').innerHTML = '';
+  }
+}
+$('#loop-check').onclick = ()=>{
+  if(L.stage==="pop"){
+    const want = bestIndex();
+    if(L.pick===null){ $('#loop-fb').innerHTML = `<span class="bad">Pick a row first.</span>`; return; }
+    const ok = Math.abs((L.open[L.pick].g+L.open[L.pick].h)-(L.open[want].g+L.open[want].h))<1e-9;
+    $('#loop-fb').innerHTML = ok
+      ? `<span class="ok">Yes.</span> Lowest f = g + h. Ties are broken arbitrarily.`
+      : `<span class="bad">No.</span> Row ${want} has the lowest f = ${fmt(L.open[want].g+L.open[want].h)}.`;
+    if(ok){ L.cur = L.open.splice(want,1)[0]; L.pick=null; L.stage="dom"; $('#loop-next').disabled=false; }
+  } else if(L.stage==="dom"){
+    const want = dominated(L.cur.n, L.cur.g) ? "yes" : "no";
+    const got = $('#lf-d').value;
+    const lab = $('#loop-fields label[data-k="d"]'); lab.className = got===want?'right':'wrong';
+    $('#loop-fb').innerHTML = (got===want?`<span class="ok">Right.</span> `:`<span class="bad">No.</span> `) +
+      (want==="yes"
+        ? `A node with key <code class="kbd">${keyOf(L.cur.n)}</code> was already expanded with an interval
+           containing this one at no higher cost, so this one can reach nothing new.`
+        : `Nothing with key <code class="kbd">${keyOf(L.cur.n)}</code> dominates it, so it gets expanded.`);
+    if(got===want){
+      if(want==="yes"){ L.stage="pop"; L.step++; }
+      else { (L.expanded[keyOf(L.cur.n)] ||= []).push({lo:L.cur.n.lo, hi:L.cur.n.hi, g:L.cur.g}); L.stage="goal"; }
+      $('#loop-next').disabled=false;
+    }
+  } else if(L.stage==="goal"){
+    const want = isGoal(L.cur.n) ? "yes":"no";
+    const got = $('#lf-g').value;
+    const lab = $('#loop-fields label[data-k="g"]'); lab.className = got===want?'right':'wrong';
+    $('#loop-fb').innerHTML = (got===want?`<span class="ok">Right.</span> `:`<span class="bad">No.</span> `) +
+      (want==="yes" ? `Free node in the goal set, and ${fmt(Q.agoal)} lies in ${iv(L.cur.n)}.`
+                    : `Either it is not in the goal set, or ${fmt(Q.agoal)} is outside ${iv(L.cur.n)}.`);
+    if(got===want){
+      if(want==="yes"){ L.stage="done"; }
+      else { L.kids = expand(L.cur.n); L.ki = 0; L.stage = L.kids.length? "child":"pop"; if(!L.kids.length) L.step++; }
+      $('#loop-next').disabled=false;
+    }
+  } else if(L.stage==="child"){
+    const k = L.kids[L.ki];
+    const g = L.cur.g + k.cost, h = hVal(k.child), f = g+h;
+    const got = {g:+$('#lf-cg').value, h:+$('#lf-ch').value, f:+$('#lf-cf').value};
+    let all=true;
+    [["g",g],["h",h],["f",f]].forEach(([key,w])=>{
+      const lab = $(`#loop-fields label[data-k="${key}"]`);
+      const ok = Math.abs(got[key]-w)<1e-6; lab.className = ok?'right':'wrong'; if(!ok) all=false;
+    });
+    $('#loop-fb').innerHTML = (all?`<span class="ok">Right.</span> `:`<span class="bad">Check again.</span> `)+
+      `g = ${fmt(L.cur.g)} + ${k.cost===1?'1':'μ'} = <b>${fmt(g)}</b>. ` +
+      `h = 2&middot;&lceil;(${fmt(Q.agoal)} &minus; ${fmt(k.child.hi)}) / ${fmt(LMAX)}&rceil;` +
+      (k.child.phase==="holding"?` + 1 (still holding)`:``) + ` = <b>${fmt(h)}</b>.`;
+    if(all){
+      if(!dominated(k.child,g)) L.open.push({n:k.child, g, h});
+      L.ki++;
+      if(L.ki>=L.kids.length){ L.stage="pop"; L.step++; }
+      $('#loop-next').disabled=false;
+    }
+  }
+};
+$('#loop-next').onclick = ()=>renderLoop();
+$('#loop-restart').onclick = loopReset;
+
+/* ============================================================ TAB 5 : full trace */
+$('#run').onclick = ()=>{
+  const s = mkF(Q.start, Q.ainit, Q.ainit);
+  let open = [{n:s, g:0, h:hVal(s), parent:null, act:"start"}];
+  const expanded = {}; const rows = []; let found = null, guard = 0;
+  while(open.length && guard++ < 4000){
+    let bi=0,bf=Infinity; open.forEach((o,i)=>{const f=o.g+o.h; if(f<bf-1e-12){bf=f;bi=i;}});
+    const cur = open.splice(bi,1)[0];
+    const arr = expanded[keyOf(cur.n)]||[];
+    if(arr.some(e=>e.lo<=cur.n.lo+1e-9 && e.hi>=cur.n.hi-1e-9 && e.g<=cur.g+1e-9)) continue;
+    (expanded[keyOf(cur.n)] ||= []).push({lo:cur.n.lo,hi:cur.n.hi,g:cur.g});
+    rows.push(cur);
+    if(isGoal(cur.n)){ found = cur; break; }
+    expand(cur.n).forEach(k=>{
+      const g = cur.g + k.cost;
+      const a2 = expanded[keyOf(k.child)]||[];
+      if(a2.some(e=>e.lo<=k.child.lo+1e-9 && e.hi>=k.child.hi-1e-9 && e.g<=g+1e-9)) return;
+      open.push({n:k.child, g, h:hVal(k.child), parent:cur, act:k.rule});
+    });
+  }
+  $('#tracebody').innerHTML = rows.map((o,i)=>
+    `<tr class="${found&&o===found?'pick':''}"><td>${i}</td><td>${o.act}</td>
+     <td><span class="chip ${o.n.kind==='F'?'free':'trans'}">${nodeName(o.n)}</span></td>
+     <td>${iv(o.n)}</td><td>${o.n.phase||'&mdash;'}</td>
+     <td>${o.n.alo!=null?`[${fmt(o.n.alo)}, ${fmt(o.n.ahi)}]`:'&mdash;'}</td>
+     <td>${fmt(o.g)}</td><td>${fmt(o.h)}</td><td><b>${fmt(o.g+o.h)}</b></td></tr>`).join('');
+  if(found){
+    const path=[]; let p=found; while(p){path.unshift(p); p=p.parent;}
+    const grasps = path.filter(x=>x.act==="stroke").length;
+    const rets   = path.filter(x=>x.act==="return").length;
+    const rels   = path.filter(x=>x.act==="release").length;
+    $('#runstats').innerHTML =
+      `<span>expanded <b>${rows.length}</b></span><span>grasps <b>${grasps}</b></span>
+       <span>returns <b>${rets}</b></span><span>releases <b>${rels}</b></span>
+       <span>cost <b>${fmt(found.g)}</b></span>`;
+    const note = $('#tracenote'); note.hidden=false;
+    note.innerHTML = `<b>Plan:</b> ` + path.map(x=>
+      `<span class="chip ${x.n.kind==='F'?'free':'trans'}">${x.act==='start'?'start':x.act}</span>`).join(' → ') +
+      `<br><span class="small muted">Cost ${fmt(found.g)} = 2&times;${grasps} grasps + &mu;&times;hops. ` +
+      `With L<sub>max</sub> = ${fmt(LMAX)} and a turn of ${fmt(Q.agoal-Q.ainit)} rad, ` +
+      `${Math.ceil((Q.agoal-Q.ainit)/LMAX)} strokes is the least these sets allow.</span>`;
+  } else {
+    $('#runstats').innerHTML = `<span class="bad">No plan within these sets.</span>`;
+    $('#tracenote').hidden = false;
+    $('#tracenote').innerHTML = `The queue emptied without reaching the goal. That is the search
+      <i>establishing</i> that no plan exists in this model, not failing to find one.`;
+  }
+};
+
+/* ============================================================ BOOT */
+function resetAll(){
+  drawMap(); fillMapTables();
+  $('#parentsel').innerHTML = PARENTS.map((p,i)=>`<option value="${i}">${p.lab}</option>`).join('');
+  renderNQ(); startExpand(); loopReset();
+}
+resetAll();
+</script>
+</body>
+</html>

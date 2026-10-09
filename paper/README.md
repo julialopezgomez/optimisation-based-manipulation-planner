@@ -42,20 +42,23 @@ To check the length without the notes, set `\showtodosfalse` in `main.tex`.
   - linear programs only: no integer variables.
 - **Main contribution:** the reachability A\* over transition sets. The MIQP appears as a short paragraph and a baseline.
 
-## Intro and abstract (rewritten 2026-10-05)
+## The point of the paper (settled 2026-10-05)
 
-Both were cut and rewritten for a shorter, more direct voice. The whole introduction now fits on page 1, and the paper is **8 pages even with the placeholder notes shown** (it was 9).
+Abstract and introduction rewritten from scratch, taking CASSR's *logic* as inspiration (one move per paragraph) while deliberately avoiding its wording:
 
-The introduction is six short paragraphs, following the arc of the IPAB talk and the Year-1 report, so a reader finishes knowing the problem, why it is hard, why others cannot solve it, and what we propose:
+1. **The problem.** A manipulation plan is a sequence of contacts. Choosing it is combinatorial, its length is unknown before planning, and the usual attack is a graph searched by sampling, by a mixed-integer programme, or by fixing the modes first.
+2. **What they all need.** A model of reachability between contacts. It is nonlinear and its solution sets are thin, so it gets approximated by enumeration or sampling. Convex decompositions are the continuous alternative.
+3. **Why that is not enough.** Those convex models have been consumed by mixed-integer programmes, which need the number of grasps and lose meaning on thin sets; searches that leave the number open discretise instead. A* already has the properties we want; what is missing is a reachability model it can expand without discretising.
+4. **Precedent and delta.** CASSR supplies one for footsteps. Manipulation does not inherit it: the contact sets must be constructed from the grasp constraints, and contact displaces the object.
+5. **What we do**, then contributions, each stating what is new rather than where it lives.
 
-1. the task and the coupled decisions it forces (IPAB slide 4);
-2. why it is hard: the grasping set is thin and near contact, and the task accumulates;
-3. convex decompositions + GCS solved this for a robot moving alone, but decide nothing about grasping; what regrasp planners give up instead; and, as the last sentence, the gap;
-4. footstep planning got past the same obstacle by searching over sets, and what regrasping adds;
-5. what we build, and why each guarantee holds;
-6. contributions.
+**Phrasing to keep away from.** CASSR's own sentences, for similarity-check safety: "a discrete problem of exponential complexity", "deterministic and encodes optimality by design", "motivate the search for a continuous formulation of reachability constraints compatible with A*", "act by making and breaking contact with their environment". The current text expresses the same ideas differently; keep it that way if you edit.
 
-The background on C-free and the per-method critiques are not repeated at length here: Related Work carries them. The abstract follows the same arc and ends on the 4 ms result.
+**Style:** no em dashes; one idea per paragraph; the cap task belongs to the experiments, not the framing.
+
+**The MInf self-citation is gone**, on the grounds that a project report does not belong in a paper. The mixed-integer formulation is now introduced as the standard way convex decompositions are used in contact planning, cited to [deits2014footstep], and implemented as a baseline. Nothing in the paper now claims it as prior work of ours.
+
+**Still open:** the algorithm has no name. CASSR gains from one; worth choosing before submission.
 
 ## Decisions made with Julia
 
@@ -100,6 +103,39 @@ The introduction and method were pinned to the Franka cap task; they are now sta
 - **§IV-G (mixed-integer)** is now a principled account: a binary certified integral only to tolerance `tau` relaxes its set by `M*tau`, so membership is meaningful only for sets much thicker than that; and the continuous relaxation weakens as `M` grows. Tight per-row constants and convex-hull (extended) formulations are cited as the standard remedies [vielma2015mixed], neither of which removes the outer loop over the number of grasps. The concrete numbers (`M=1e6`, `tau=1e-5`, a 2e-3-thick grasp set) now appear in the MIQP comparison in §VI.
 - **New §VI-B, "The trust region on the grasp set"**, carries the evidence that was in the method: without `rho`, extreme points lay 2.27 rad from the seed with `|h|=0.95` and the hand 0.80 m from the cap.
 - The running-example figure is now tied to task T2 rather than standing alone as "the 10-DOF cap task".
+
+## Sign convention (changed 2026-10-05)
+
+The paper now has **the wrist and the cap increasing together, and both increasing towards the goal**, so Δα = Δw and α_init ≤ α_goal. Previously the cap decreased, which matched the frames in the notebook but read backwards.
+
+The flip touches only the cap side; every wrist quantity is unchanged:
+
+| | before | now |
+| --- | --- | --- |
+| w.l.o.g. | α_goal ≤ α_init | α_init ≤ α_goal |
+| stroke | β = max(α⁻ − c, α_goal, α_min), child [β, α⁺] | β = min(α⁺ + c, α_goal, α_max), child [α⁻, β] |
+| forced turning | α⁺ ← α⁺ − d | α⁻ ← α⁻ + d |
+| heuristic | 2⌈(α⁻ − α_goal)/L_max⌉ | 2⌈(α_goal − α⁺)/L_max⌉ |
+| c, d | | unchanged |
+| Q0 | 3 → −1 rad | −1 → 3 rad |
+
+Verified as a pure reflection: the playground returns the same plan, the same costs and the same 14 expanded nodes under both conventions.
+
+**Remark 1** in §III now states that reversing the task (screwing instead of unscrewing) is the map (α, w) → (−α, −w), which exchanges w⁻ with w⁺ and a⁻ with a⁺. A planner that handles one direction handles both. The notebook currently refuses α_goal > α_init outright; the reimplementation should apply that reflection per query instead.
+
+## Before reimplementing: the d question (corrected)
+
+An earlier version of this note said `d` could claim reachability that does not exist. **That was wrong.** `d` acts only on the least-turned end of the interval, and measuring it from a⁺ is exact there: the least-turned configuration that can leave through a doorway is the one that entered as far forward as possible (at a⁺) and turned just enough to reach a⁻_jk. The most-turned end is untouched. Each end is realised by its own path (α⁻ + d by "enter at a⁺, short stroke"; α⁺ by "enter at a⁻, full strokes"), which is exactly what a reachable *set* means: every α in it is reached by some path, not all by the same one.
+
+The real open question is **physical**: between letting go and crossing the doorway, can the wrist move freely?
+
+- A **return** winds the wrist back inside T_k without turning the object. That only works if letting go frees the wrist.
+- Under that same reading, no exit ever forces turning: let go, slide the wrist to the exit window, cross. Then **d is always 0**, the release child is just [α⁻, α⁺], and the rule forbidding a *leave* from *entered* when d > 0 is too strict.
+- The current d rule only makes sense if the object must be **carried** to the doorway. But then a return is impossible inside T_k, and nothing handles a wrist that finishes *past* the exit window (a full stroke ends at w⁺ = 1; exiting to F0, window [−1, −0.6], would need the object turned backwards).
+
+So the rules are sound but conservative under the first reading, and inconsistent under the second. **Decide the model before writing the code.** If it is the first, the rewrite gets simpler: forced turning disappears from Algorithm 2 (lines 16–17 collapse to one unconditional add), and the last bar of Fig. 1 becomes [−1, 3] rather than [0.35, 3].
+
+There is also a geometric question underneath: the grasp set holds the fingers within 1 mm of the cap width, so a return that keeps the configuration inside G (as the notebook's `point_at_wrist` does) never opens the fingers. Whether that is a slide or a grip is not something the geometry can tell you.
 
 ## Open items
 

@@ -23,8 +23,10 @@ knobs, valves and cranks.
 (i) The object has one coordinate $\alpha\in[\alpha_{\min},\alpha_{\max}]$
 and is always stably placed, so $\CP=\CS$.
 (ii) Holding the object couples $\alpha$ to one robot joint $w$, the
-\emph{wrist}: during a transfer, $\dot\alpha=-\dot w$. The sign follows from
-the orientation of the axes.
+\emph{wrist}: during a transfer, $\dot\alpha=\dot w$. The two axes may be
+physically opposed, as they are in our experiments, in which case $\alpha$ is
+measured in the opposite sense; this is a choice of sign, not an assumption,
+and we return to it in Remark~\ref{rem:direction}.
 (iii) Neither the grasp constraints nor collisions depend on $\alpha$:
 $\CG=G\times[\alpha_{\min},\alpha_{\max}]$ and
 $\CSfree=\Xfree\times[\alpha_{\min},\alpha_{\max}]$ for some
@@ -39,15 +41,27 @@ two kinds of motion, but also where it carries the object, so one set can host
 a grasp, a whole turn and the release that follows.
 
 The wrist has a limited range $[w_{\min},w_{\max}]$, so turning the object by
-more than this range requires several grasps. Without loss of generality, let
-$\agoal\le\ainit$. Since $\alpha$ affects neither collisions nor grasps, a plan
-never gains from turning the object backwards, and the task works like a
-ratchet. A \emph{stroke} grasps the object and drives the wrist forward, turning the
-object by the wrist travel; one stroke is one grasp, and counting strokes
-counts grasps. The robot then either lets go and rotates the wrist back, with
-$\alpha$ fixed, to begin another stroke in the same set --- a \emph{return} ---
-or lets go and leaves the set --- a \emph{release}. Everything else is transit
-in $\Xfree$ at fixed $\alpha$.
+more than that range requires several grasps. We fix the positive sense of
+$\alpha$ and of $w$ so that both increase towards the goal, which costs no
+generality (Remark~\ref{rem:direction}) and lets us write $\ainit\le\agoal$.
+Since $\alpha$ affects neither collisions nor grasps, a plan never gains from
+turning the object backwards, and the task works like a ratchet. A
+\emph{stroke} grasps the object and drives the wrist forward, raising $\alpha$
+by the wrist travel; one stroke is one grasp, so counting strokes counts
+grasps. The robot then lets go in one of two ways. In a \emph{return} it winds
+the wrist back with $\alpha$ fixed, ready to begin another stroke in the same
+set; in a \emph{release} it leaves the set. Everything else is transit in
+$\Xfree$ at fixed $\alpha$.
+
+\begin{remark}
+\label{rem:direction}
+Reversing the direction of the task, screwing instead of unscrewing, reverses
+both coordinates at once: to turn the object the other way the wrist must also
+advance the other way. The map $(\alpha,w)\mapsto(-\alpha,-w)$ therefore sends
+one direction of the problem to the other, exchanging $w^-_k$ with $w^+_k$ and
+$a^-_{ik}$ with $a^+_{ik}$. A planner that handles one direction handles both,
+by applying that reflection when the goal lies below the start.
+\end{remark}
 
 \subsection{Problem statement}
 \label{sec:problem:statement}

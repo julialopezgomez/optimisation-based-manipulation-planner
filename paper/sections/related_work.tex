@@ -45,26 +45,22 @@ In the coupled tasks we consider it is an interval, which lets us keep an
 admissible heuristic and exact pruning, with nothing discretised.
 
 Graphs of Convex Sets (GCS)~\cite{marcucci2024shortest,marcucci2023motion}
-compute shortest paths over convex decompositions through a convex
-relaxation, and are globally optimal relative to the decomposition when the
-relaxation is tight. They plan the motion of a robot in one mode, with no
-switches of grasp and no object state carried from one switch to the next.
-They have been extended to contact-rich planar
-pushing~\cite{graesdal2024tight}. Heuristic searches handle graphs too large to
-solve at once~\cite{chia2024gcsstar}. GCS* is complete
-and optimal when it can decide exactly whether one partial path dominates
-another, i.e., whether its reachable set contains the other's at lower cost.
-In general this check must be approximated~\cite{chia2024gcsstar}. With
-interval reachable sets, it is exact.
+compute shortest paths over convex decompositions through a convex relaxation,
+and have been extended to contact-rich planar
+pushing~\cite{graesdal2024tight}. They plan the motion of a robot in one mode,
+with no switches of grasp and no object state carried from one switch to the
+next. GCS*~\cite{chia2024gcsstar} searches such graphs heuristically, and is
+complete and optimal when it can decide exactly whether one partial path
+dominates another; in general that check must be approximated. With interval
+reachable sets, it is exact.
 
 \subsection{Convex decompositions of free space}
 Convex decompositions inner-approximate free space with convex sets. IRIS
-grows them by alternating separating
-hyperplanes and inscribed ellipsoids~\cite{deits2015computing}. C-IRIS
-certifies regions as collision-free with sums-of-squares
-programs~\cite{dai2024certified}. IRIS-NP, IRIS-NP2 and
-IRIS-ZO scale to more dimensions, with a probabilistic guarantee: the fraction
-of a region's volume in collision is below a threshold, with a given
+grows them by alternating separating hyperplanes and inscribed
+ellipsoids~\cite{deits2015computing}, and C-IRIS certifies them collision-free
+with sums-of-squares programs~\cite{dai2024certified}. IRIS-NP, IRIS-NP2 and
+IRIS-ZO scale further under a probabilistic guarantee: the fraction of a
+region's volume in collision is below a threshold, with a given
 confidence~\cite{petersen2023growing,werner2024faster}. Clique covers automate
 the seeding~\cite{werner2024approximating}, and GPU implementations approach
 online rates~\cite{werner2025superfast}. A volume guarantee says nothing

@@ -14,24 +14,24 @@
   x tick label style={font=\scriptsize},
   ytick={-1,0,1,2,3}, font=\scriptsize,
   grid=major, grid style={gray!15}, clip=false]
-  \addplot[dashed, red!70!black, domain=-0.55:5.55, samples=2] {-1};
-  \node[font=\scriptsize, red!70!black, anchor=south west] at (axis cs:-0.5,-1.0) {$\agoal$};
-  \foreach \i/\lo/\hi in {0/3/3, 1/3/3, 2/1/3, 3/1/3, 4/-1/3, 5/-1/1.65} {
+  \addplot[dashed, red!70!black, domain=-0.55:5.55, samples=2] {3};
+  \node[font=\scriptsize, red!70!black, anchor=north west] at (axis cs:-0.5,3.0) {$\agoal$};
+  \foreach \i/\lo/\hi in {0/-1/-1, 1/-1/-1, 2/-1/1, 3/-1/1, 4/-1/3, 5/0.35/3} {
     \edef\temp{\noexpand\fill[blue!18, draw=blue!55, rounded corners=1pt]
       (axis cs:\i-0.24,\lo-0.07) rectangle (axis cs:\i+0.24,\hi+0.07);}
     \temp
   }
-  \addplot[thick, black!70, densely dotted] coordinates {(0,3) (1,3)};
-  \addplot[very thick, green!45!black] coordinates {(1,3) (2,1)};
+  \addplot[thick, black!70, densely dotted] coordinates {(0,-1) (1,-1)};
+  \addplot[very thick, green!45!black] coordinates {(1,-1) (2,1)};
   \addplot[thick, orange!85!black, dashed] coordinates {(2,1) (3,1)};
-  \addplot[very thick, green!45!black] coordinates {(3,1) (4,-1)};
-  \addplot[thick, black!70, densely dotted] coordinates {(4,-1) (5,-1)};
-  \addplot[only marks, mark=*, mark size=1.3pt, black] coordinates {(0,3) (1,3) (2,1) (3,1) (4,-1) (5,-1)};
-  \node[font=\scriptsize, green!35!black] at (axis cs:3,3.48)
+  \addplot[very thick, green!45!black] coordinates {(3,1) (4,3)};
+  \addplot[thick, black!70, densely dotted] coordinates {(4,3) (5,3)};
+  \addplot[only marks, mark=*, mark size=1.3pt, black] coordinates {(0,-1) (1,-1) (2,1) (3,1) (4,3) (5,3)};
+  \node[font=\scriptsize, green!35!black] at (axis cs:3,-1.5)
     {each stroke widens the reachable interval};
-  \draw[-{Stealth[length=1.6mm]}, blue!60!black] (axis cs:4.75,2.55) -- (axis cs:4.3,2.2);
-  \node[font=\scriptsize, blue!60!black, anchor=west, align=left] at (axis cs:4.7,2.75) {reachable\\[-2pt]cap angles};
-  \node[font=\scriptsize, black!70, anchor=north west] at (axis cs:4.55,-1.05) {goal \checkmark};
+  \draw[-{Stealth[length=1.6mm]}, blue!60!black] (axis cs:4.75,-0.55) -- (axis cs:4.3,-0.2);
+  \node[font=\scriptsize, blue!60!black, anchor=west, align=left] at (axis cs:4.6,-0.9) {reachable\\[-2pt]cap angles};
+  \node[font=\scriptsize, black!70, anchor=south west] at (axis cs:4.55,3.05) {goal \checkmark};
   \fill[blue!12, draw=blue!50] (axis cs:-0.3,-2.95) rectangle (axis cs:0.3,-2.55);
   \node[font=\scriptsize] at (axis cs:0,-2.75) {$F_2$};
   \fill[green!15, draw=green!45!black] (axis cs:0.7,-2.95) rectangle (axis cs:4.3,-2.55);
@@ -52,31 +52,31 @@
   ylabel style={yshift=-4pt}, xlabel style={yshift=3pt},
   ytick={-1,0,1,2,3}, xtick={-1,0,1}, font=\scriptsize,
   grid=major, grid style={gray!15}]
-  \addplot[thick, black!70, densely dotted, -{Stealth[length=1.6mm]}] coordinates {(0.04,3) (-0.98,3)};
-  \addplot[very thick, green!45!black, -{Stealth[length=1.8mm]}] coordinates {(-1,3) (1,1)};
+  \addplot[thick, black!70, densely dotted, -{Stealth[length=1.6mm]}] coordinates {(0.04,-1) (-0.98,-1)};
+  \addplot[very thick, green!45!black, -{Stealth[length=1.8mm]}] coordinates {(-1,-1) (1,1)};
   \addplot[thick, orange!85!black, dashed, -{Stealth[length=1.6mm]}] coordinates {(1,1) (-0.98,1)};
-  \addplot[very thick, green!45!black, -{Stealth[length=1.8mm]}] coordinates {(-1,1) (1,-1)};
-  \addplot[thick, black!70, densely dotted, -{Stealth[length=1.6mm]}] coordinates {(1,-1) (0.06,-1)};
-  \addplot[only marks, mark=*, mark size=1.4pt] coordinates {(0.04,3) (0.04,-1)};
-  \node[font=\scriptsize, anchor=south] at (axis cs:0.04,3.05) {start};
-  \node[font=\scriptsize, anchor=north] at (axis cs:0.04,-1.08) {goal};
-  \node[font=\scriptsize, green!35!black, rotate=-36] at (axis cs:0.12,2.35) {stroke 1};
-  \node[font=\scriptsize, green!35!black, rotate=-36] at (axis cs:0.12,0.35) {stroke 2};
+  \addplot[very thick, green!45!black, -{Stealth[length=1.8mm]}] coordinates {(-1,1) (1,3)};
+  \addplot[thick, black!70, densely dotted, -{Stealth[length=1.6mm]}] coordinates {(1,3) (0.06,3)};
+  \addplot[only marks, mark=*, mark size=1.4pt] coordinates {(0.04,-1) (0.04,3)};
+  \node[font=\scriptsize, anchor=north] at (axis cs:0.04,-1.08) {start};
+  \node[font=\scriptsize, anchor=south] at (axis cs:0.04,3.05) {goal};
+  \node[font=\scriptsize, green!35!black, rotate=36] at (axis cs:0.12,-0.35) {stroke 1};
+  \node[font=\scriptsize, green!35!black, rotate=36] at (axis cs:0.12,1.65) {stroke 2};
   \node[font=\scriptsize, orange!80!black, anchor=south] at (axis cs:-0.45,1.02) {return};
-  \node[font=\scriptsize, anchor=west, align=left] at (axis cs:-1.1,-0.55) {$\Delta\alpha=-\Delta w$\\[-2pt]while grasping};
+  \node[font=\scriptsize, anchor=west, align=left] at (axis cs:-1.1,2.3) {$\Delta\alpha=\Delta w$\\[-2pt]while grasping};
 \end{axis}
 \end{tikzpicture}\\[-2pt]
 {\footnotesize (b) The same plan in the wrist--cap plane}
 \end{minipage}
 \caption{The reachability A* on the running example, task T2 of
-Section~\ref{sec:experiments}, query Q0: turn the cap from $\alpha=3$ to
-$-1$\,rad and bring the arm back to its start.
+Section~\ref{sec:experiments}, query Q0: turn the cap from $\alpha=-1$ to
+$3$\,rad and bring the arm back to its start.
 (a)~Each column is one node on the returned path: the set the robot is in
 (strip) and the interval of cap angles reachable there (bar). The black line
 is the cap angle along the final plan. Entering the transition set $T_6$
 changes nothing; each stroke widens the interval by up to the wrist range of
 $T_6$ (2\,rad); returns and transit keep it. Leaving $T_6$ towards $F_0$ needs
-some further wrist motion, which lowers the top of the last bar. The search
+some further wrist motion, which raises the foot of the last bar. The search
 stops at the first node whose set contains the goal arm configuration and
 whose interval contains $\agoal$. (b)~While grasping, the cap turns as the
 wrist moves forward; returns move the wrist back with the cap fixed. Two
@@ -262,7 +262,7 @@ which $T_k$ was entered, and a phase: \emph{entered} (not yet grasping),
 \emph{holding} (after a stroke) or \emph{released} (after a return, with the
 wrist at $w_k^-$). The interval carries all the information about the path so
 far: reaching $F_3$ before any grasp and after a stroke of 2\,rad gives the
-intervals $\{3\}$ and $[1,3]$, two different nodes.
+intervals $\{-1\}$ and $[-1,1]$, two different nodes.
 
 \begin{algorithm}[t]
 \caption{expandNode, for a node in set $S$ with interval $[\alo,\ahi]$, phase
@@ -280,8 +280,8 @@ $\phi$ and entry range $[a^-,a^+]$}
 \Else \Comment{$S=T_k$ is a transition set}
   \If{$\phi\in\{$entered, released$\}$} \Comment{stroke}
     \State $c\gets w_k^+-a^-$ if $\phi=$ entered, else $c\gets L_k$
-    \State $\beta\gets\max(\alo-c,\,\agoal,\,\alpha_{\min})$
-    \State nodeList.add($T_k$, $[\beta,\ahi]$, holding)
+    \State $\beta\gets\min(\ahi+c,\,\agoal,\,\alpha_{\max})$
+    \State nodeList.add($T_k$, $[\alo,\beta]$, holding)
   \EndIf
   \If{$\phi=$ holding} \Comment{return}
     \State nodeList.add($T_k$, $[\alo,\ahi]$, released)
@@ -290,7 +290,7 @@ $\phi$ and entry range $[a^-,a^+]$}
     \For{all $F_j$ with $F_j\cap T_k\neq\emptyset$}
       \State $d\gets\max(0,a_{jk}^- - a^+)$ \Comment{forced turning}
       \If{$\phi=$ holding or $d=0$}
-        \State nodeList.add($F_j$, $[\alo,\ahi-d]$)
+        \State nodeList.add($F_j$, $[\alo+d,\ahi]$)
       \EndIf
     \EndFor
   \EndIf
@@ -303,15 +303,23 @@ $\phi$ and entry range $[a^-,a^+]$}
 \label{sec:astar:expand}
 Algorithm~\ref{alg:expand} lists the children of a node. A stroke turns the
 object by any amount up to $c$, the wrist travel left in $T_k$ ($w_k^+-a^-$
-after entering, $L_k$ after a return), so it lowers $\alo$ and keeps $\ahi$.
+after entering, $L_k$ after a return), so it raises $\ahi$ and keeps $\alo$.
 Since the object can only be grasped inside transition sets, strokes are the
 only moves that widen the interval. Leaving $T_k$ towards $F_j$ while holding
-the object is a release, and it can force some turning: the wrist only moves
-forward while grasping, so reaching the exit range $[a_{jk}^-,a_{jk}^+]$ from
-the entry range turns the object by at least $d$, which lowers $\ahi$. Without
-holding, the robot may only leave if $d=0$. Children with an empty interval
-are discarded, and children in the same $T_k$ keep the entry range of their
-parent.
+the object is a release, and it can force some turning: the wrist only advances
+while grasping, so reaching the exit range $[a_{jk}^-,a_{jk}^+]$ from the entry
+range turns the object by at least $d$, which raises $\alo$. Without holding,
+the robot may only leave if $d=0$. Children with an empty interval are
+discarded, and children in the same $T_k$ keep the entry range of their parent.
+\tocheck{$d$ trims only the least-turned end of the interval, and
+measuring it from $a^+$ is exact there: the least-turned configuration that can
+leave is the one that entered as far forward as possible and turned just
+enough. The open question is physical. A return winds the wrist back without
+the object, which assumes that letting go frees the wrist; under that same
+assumption no exit forces any turning, $d$ is always $0$, and leaving from
+\emph{entered} needs no condition. The rule as written only makes sense if the
+object has to be carried to the doorway, which contradicts the return. Decide
+which model holds before reimplementing.}
 
 \subsubsection{nodeAlreadyExpanded()}
 \label{sec:astar:dominance}
@@ -346,7 +354,7 @@ re-entering a transition set would be a cheaper substitute for a return. \tochec
 $\mu$ for the cost to be exactly twice the number of grasps.}
 estimateCostToGoal() returns, with $\Lmax=\max_k L_k$,
 \begin{equation}
-  h(\nu)=2\Big\lceil\frac{\alo-\agoal}{\Lmax}\Big\rceil+\mathbf{1}[\phi=\text{holding}].
+  h(\nu)=2\Big\lceil\frac{\agoal-\ahi}{\Lmax}\Big\rceil+\mathbf{1}[\phi=\text{holding}].
   \label{eq:heuristic}
 \end{equation}
 It is admissible: each remaining stroke turns the object by at most $\Lmax$
@@ -392,23 +400,22 @@ wrist values the LPs of Section~\ref{sec:method:graph} return, clipped at
 $\agoal$, so only finitely many nodes exist per key and the search
 terminates. With a
 consistent heuristic and exact dominance, A* expands a goal node of minimum
-cost first~\cite{hart1968astar}. Entering at the highest wrist value and
-leaving at the lowest wrist value of each switch edge minimises forced
-turning, so restricting entries and exits to these points loses no plan.
+cost first~\cite{hart1968astar}. Entering at the lowest and leaving at the highest wrist value of a switch edge
+maximises the travel available, so restricting entries and exits to these
+points loses no plan. \tocheck{the two choices are made by different paths, one realising each
+end of the interval, which is what a reachable set allows; say so explicitly.}
 (iii) The backward pass mirrors the interval updates of
 Algorithm~\ref{alg:expand}. \tocheck{write the full proof; (iii) is asserted in our
 implementation but not yet proven. Overlapping transition sets would need
 chain-aware placement, so each set is its own segment for now.}
 \hfill$\square$
 
-These guarantees are relative: a plan reported as optimal uses the fewest
-grasps \emph{that the sets allow}. This is why the transition sets must be
-validated (Section~\ref{sec:results:fidelity}).
 
 \subsection{Relation to a mixed-integer formulation}
 \label{sec:method:miqp}
-The same problem can be posed as a mixed-integer program, as in our earlier
-planner~\cite{lopezgomez2025minf}: for a fixed number of grasps $\ell$, choose
+The same problem can be posed as a mixed-integer program, in the way convex
+decompositions are normally used for contact
+planning~\cite{deits2014footstep}: for a fixed number of grasps $\ell$, choose
 keyframes $\qinit,x_1,\dots,x_{2\ell},\qgoal$, let a binary $z_{ij}$ indicate
 that keyframe $i$ lies in set $j$, and increase $\ell$ until the program is
 feasible. Membership is an indicator constraint, usually in big-M form,
