@@ -17,7 +17,10 @@ The root of the repo holds the "main" notebooks, in roughly pedagogical/executio
 5. **`full_arm_blocked_joints_4dof.ipynb`** - same pattern, 4 active positions - the analogue of (2). Reads+writes `data/cfree/cfree_4dof.yaml` and writes `data/cfree/connected_components_4dof.yaml`.
 6. **`full_arm_nhr.ipynb`** - work in progress, the eventual master notebook: integrates the NHR/mRRT sampling library (`algorithms/nlp_sampling/nlp_sampling.py`) with the full (unblocked) Panda arm + Drake IRIS/GCS machinery to sample grasp poses and plan in the full configuration space. Reads `data/cfree/cfree_full_98coverage.yaml`, produced by `data/generation/full_arm_c_free.ipynb` (see below) - **this is a real pipeline dependency**, even though the generation notebook itself isn't at root.
 
-Root also holds the two shared helper modules imported by nearly everything above (`ciris_plant_visualizer.py`, `visualization_utils.py`) and `my_sdfs/` (shared SDF/URDF scene assets).
+7. **`full_arm_planner_multicap.ipynb`** - copy of `full_arm_planner.ipynb` extended to several caps (two, no obstacles): one grasp polytope and one cap angle αₖ per cap; the reachability A* tracks one α interval per cap. Reads `data/cfree/cfree_11dof_2caps_0obs_irisnp2_98_capsafe.yaml`.
+8. **`full_arm_planner_8caps.ipynb`** - the same with 8 caps, 3 walls and a floor (`multicap_scene.py`). C-free is 9-D (caps welded) and comes, with the grasps it was built around, from `experiments/cap_scaling/generate_cfree.py`; reads `data/cfree/cfree_9dof_8caps_3obs_capsafe*.{yaml,npz}`. Its A* is weighted by default (`HEURISTIC_WEIGHT`).
+
+Root also holds the two shared helper modules imported by nearly everything above (`ciris_plant_visualizer.py`, `visualization_utils.py`) and `my_sdfs/` (shared SDF/URDF scene assets). `multicap_scene.py` defines the 8-cap scene (cap poses, wall and floor boxes) for notebook (8) and `experiments/cap_scaling/`.
 
 ## 3. `algorithms/` - shared, importable code
 
@@ -59,6 +62,7 @@ No proper Python package (`pyproject.toml` + editable install) yet - deliberatel
 - **`grasping_space.ipynb`** - full 10-DOF unblocked Panda arm scene, similar scope to `data/generation/full_arm_c_free.ipynb` but ~2 weeks older; likely an earlier draft. **This is the closest existing precedent for the upcoming IRIS-ZO/clique-cover work** - it has a markdown header literally titled "Generate C-free for full franka arm with IRIS-ZO." Cross-referenced from `algorithms/iris_zo_cliquecover/README.md`.
 - **`grasping_space_3d.ipynb`** - oldest file in this group, toy WSG-gripper (not the Panda arm) IRIS-ZO/clique-cover exploration. Superseded prototype.
 - **`hit_and_run_grasping.ipynb`** - a 4-cell, no-markdown sanity check of `nlp_sampling.py`'s Hit-and-Run sampler on a toy 2D unit-circle constraint, no robot/Drake involved. Predates `algorithms/nlp_sampling/nlp_sampling_standalone_test.py`.
+- **`cap_scaling/`** - scripts (not a notebook): `generate_cfree.py` builds the 8-cap scene's C-free standalone; `cap_scaling.py` times the reachability A* (weighted and exact) for 1 to 8 caps by running `full_arm_planner_8caps.ipynb`'s own cells headlessly, and writes the page in `artifacts/cap_scaling/`. See its README.
 - **`gcs_comparison/`** - scripts (not a notebook) that regenerate the paper's reachability-A*-vs-GCS comparison (Table III, Run A) and the side-by-side pages in `artifacts/plan_comparison/`, by running `full_arm_planner_gcs.ipynb`'s own cells headlessly. See its README.
 - **`legacy_testing/`** - formerly the top-level `testing/` directory (see §7); merged in here as a frozen historical archive, separated from the notebooks above since it's older and untouched since April 2025.
 

@@ -1,0 +1,38 @@
+\begin{table}[t]
+\centering
+\caption{Reachability A* on the 8-cap scene (9-DOF C-free, 3 walls, floor) as the number of caps to
+turn grows. 20 random queries per $K$; each turns $K$ random caps by random amounts in
+$[0.5,\pi]$\,rad summing to $2.5K$\,rad. Actions: grasps + ungrasps. Median (25th--75th
+percentile) over solved queries. Exact A* stops after 60\,s. Every plan is certified.}
+\label{tab:cap_scaling}
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}r l r r r r@{}}
+\toprule
+$K$ & Method & Solved & Actions & Nodes expanded & Time [ms]\\
+\midrule
+\multirow{2}{*}{1} & Weighted A* ($w=1.5$) & 20/20 & 4 & 400 (381--451) & 136.1 (111.6--165.4)\\
+ & Exact A* & 20/20 & 4 & 696 (448--794) & 219.0 (128.8--251.6)\\
+\midrule
+\multirow{2}{*}{2} & Weighted A* ($w=1.5$) & 20/20 & 8 & 752 (736--766) & 254.0 (244.7--283.3)\\
+ & Exact A* & 20/20 & 8 & 2364 (1974--2897) & 1202.2 (965.7--1483.9)\\
+\midrule
+\multirow{2}{*}{3} & Weighted A* ($w=1.5$) & 20/20 & 12 & 1090 (1072--1116) & 437.8 (425.6--457.1)\\
+ & Exact A* & 20/20 & 12 & 7406 (5750--9708) & 5949.5 (4481.2--9390.4)\\
+\midrule
+\multirow{2}{*}{4} & Weighted A* ($w=1.5$) & 20/20 & 14 & 1442 (1360--1497) & 606.7 (583.1--644.7)\\
+ & Exact A* & 11/20 & 14 & 18397 (17501--21720) & 25645.1 (23756.9--37522.9)\\
+\midrule
+\multirow{2}{*}{5} & Weighted A* ($w=1.5$) & 20/20 & 18 & 1786 (1692--1848) & 804.8 (753.3--854.4)\\
+ & Exact A* & 0/20 & -- & -- & $>$60000\\
+\midrule
+\multirow{2}{*}{6} & Weighted A* ($w=1.5$) & 20/20 & 22 & 2133 (2032--2209) & 1042.3 (1006.6--1100.9)\\
+ & Exact A* & \multicolumn{4}{l}{not run (none solved at $K=5$)}\\
+\midrule
+\multirow{2}{*}{7} & Weighted A* ($w=1.5$) & 20/20 & 26 & 2460 (2378--2537) & 1298.1 (1232.2--1340.4)\\
+ & Exact A* & \multicolumn{4}{l}{not run (none solved at $K=5$)}\\
+\midrule
+\multirow{2}{*}{8} & Weighted A* ($w=1.5$) & 20/20 & 30 & 2816 (2721--2864) & 1536.8 (1476.7--1582.4)\\
+ & Exact A* & \multicolumn{4}{l}{not run (none solved at $K=5$)}\\
+\bottomrule
+\end{tabular}
+\end{table}
