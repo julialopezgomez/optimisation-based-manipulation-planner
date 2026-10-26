@@ -1,0 +1,16 @@
+states: ['free', 'panda/gripper > cap0/handle | f_pregrasp', 'panda/gripper grasps cap0/handle']
+q_init valid: True
+pre-grasp and grasp: found after 4 tries
+approach pre-grasp -> grasp valid: True 
+d(cap) = -1 * d(wrist): stays in the grasp = True
+d(cap) = +1 * d(wrist): stays in the grasp = False
+D0p5 seed 0: solved in 0.0 s, 13 nodes
+D0p5 seed 1: solved in 0.1 s, 19 nodes
+D0p5 seed 2: solved in 0.1 s, 17 nodes
+D0p5 seed 3: solved in 0.1 s, 23 nodes
+D0p5 seed 4: solved in 0.0 s, 7 nodes
+D0p5 seed 5: solved in 0.1 s, 24 nodes
+D0p5 seed 6: failed, 42161 nodes
+D0p5 seed 7: failed, 28961 nodes
+D0p5 seed 8: solved in 0.0 s, 10 nodes
+D0p5 seed 9: solved in 0.0 s, 12 nodes

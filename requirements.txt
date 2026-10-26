@@ -17,3 +17,4 @@ pymcubes==0.1.4
 cvxpy
 mosek
 quadprog
+pin

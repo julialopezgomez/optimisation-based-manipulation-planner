@@ -1,16 +1,17 @@
-"""Generate C-free for the 8-cap scene (multicap_scene.py), safe around the caps and the obstacles.
+"""Generate C-free for a planning scene (multicap_scene.SCENES), safe around the caps and the obstacles.
 
 C-free is computed in the 9-D arm + finger space, with the caps welded: a cap is a cylinder about its own
 joint axis, so no collision depends on a cap angle and the true free set is (9-D free set) x (cap angles).
-full_arm_planner_8caps.ipynb loads the regions directly as its 9-D free sets.
+Every planner notebook loads these regions directly as its 9-D free sets: this is the one C-free method.
 
 Steps:
   1. Grasps: for each cap, the first GRASPS_PER_CAP random seeds (find_grasp_seed) that an NLP refines onto
      the grasp (|h| <= 1e-6, g <= 0) and that are collision-free. Saved next to the regions (*_grasps.npz);
-     the notebook uses grasp 0 of each cap, so C-free and the A* are built around the same grasps.
+     the notebooks use grasp 0 of each cap, so C-free and the A* are built around the same grasps.
   2. IRIS-NP2 regions grown along each grasp's collision-free wrist runs, from a starting ellipsoid that
      is long along the wrist and thin across it (in IRIS-NP2's metric, collisions beside the grasp line are
      then far, so its planes run parallel to the line). A round sphere left regions only ~0.2 rad long.
+     These are direct IrisNp2 calls, before the clique cover (--seeding none skips them).
   3. Clique cover (IRIS-NP2, relaxed settings) with those regions as the initial sets.
   4. False positives (points inside a region that collide) cut off with separating planes, never cutting
      the collision-free part of a grasp's wrist sweep that the region contains:
@@ -19,15 +20,20 @@ Steps:
        - uniformly over the joint box (arm against the obstacles).
      Plane: through the closest collision-free configuration q_f to the colliding q_c (an NLP), normal
      q_c - q_f. Around the caps the wrist is fixed in that NLP, so the plane is parallel to the wrist axis.
-  5. Validation on fresh samples; regions, grasps and a JSON report are saved.
+  5. Validation on fresh samples; regions, grasps and a JSON report (with the time and the solvers) are saved.
+
+Solvers: one MOSEK licence is held for the whole run (IRIS's ellipsoids and LPs); IRIS-NP2's closest-collision
+search uses --nlp-solver, and a failed solve still adds a plane at the particle.
 
 Run from anywhere with the obmp env (takes ~30-60 min on 32 threads):
-    python experiments/cap_scaling/generate_cfree.py
-    python experiments/cap_scaling/generate_cfree.py --out data/cfree/my_name.yaml --coverage 0.95
+    python experiments/cap_scaling/generate_cfree.py --scene 8caps_3obs     # -> data/cfree/cfree_9dof_8caps_3obs.yaml
+    python experiments/cap_scaling/generate_cfree.py --scene 1cap_2obs
+    python experiments/cap_scaling/generate_cfree.py --scene 2caps_0obs --out data/cfree/my_name.yaml --coverage 0.95
 """
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -40,8 +46,9 @@ for p in (REPO_ROOT, REPO_ROOT / "algorithms", REPO_ROOT / "algorithms" / "nlp_s
 
 from pydrake.all import (CommonSampledIrisOptions, Hyperellipsoid, IrisFromCliqueCoverOptions,  # noqa: E402
                          IrisInConfigurationSpaceFromCliqueCover, IrisNp2Options, MathematicalProgram,
-                         Parallelism, Parser, RandomGenerator, RigidTransform, RobotDiagramBuilder, RollPitchYaw,
-                         SceneGraphCollisionChecker, Solve)
+                         Parallelism, Parser, RandomGenerator, RobotDiagramBuilder, SceneGraphCollisionChecker,
+                         Solve)
+from pydrake.solvers import IpoptSolver, MosekSolver, SnoptSolver  # noqa: E402
 from pydrake.geometry.optimization import HPolyhedron, SaveIrisRegionsYamlFile  # noqa: E402
 from pydrake.multibody.inverse_kinematics import InverseKinematics  # noqa: E402
 from pydrake.planning import IrisNp2  # noqa: E402
@@ -51,18 +58,32 @@ from nlp_sampling_standalone_test import build_autodiff_companion, make_grasp_co
 from wrist_axis_grasp_polytope import find_grasp_seed  # noqa: E402
 
 ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-ap.add_argument("--out", default=str(REPO_ROOT / "data" / "cfree" / "cfree_9dof_8caps_3obs_capsafe.yaml"))
+ap.add_argument("--scene", choices=sorted(scene.SCENES), default="8caps_3obs")
+ap.add_argument("--out", help="default: data/cfree/cfree_9dof_<scene>.yaml")
 ap.add_argument("--coverage", type=float, default=0.98, help="clique cover coverage threshold")
 ap.add_argument("--grasps-per-cap", type=int, default=2)
 ap.add_argument("--cut-rounds", type=int, default=6)
+ap.add_argument("--seeding", choices=("wrist", "none"), default="wrist",
+                help="wrist: step 2's regions along the grasps' wrist runs; none: the clique cover alone")
+ap.add_argument("--nlp-solver", choices=("snopt", "ipopt"), default="snopt",
+                help="IRIS-NP2's closest-collision search (a failed solve still adds a plane, at the particle)")
 ap.add_argument("--threads", type=int, default=32)
 ARGS = ap.parse_args()
-OUT = Path(ARGS.out).resolve()
+OUT = Path(ARGS.out).resolve() if ARGS.out else REPO_ROOT / "data" / "cfree" / f"cfree_9dof_{ARGS.scene}.yaml"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", handlers=[logging.StreamHandler(sys.stdout)])
 logging.getLogger("drake").setLevel(logging.WARNING)
 log = logging.getLogger("generate_cfree").info
 PAR = Parallelism(ARGS.threads)
+
+# One MOSEK licence for the whole run, shared by IRIS's threads (its ellipsoids and LPs): otherwise every solve
+# checks one out (~12 ms each). MOSEK reads its licence path from MOSEKLM_LICENSE_FILE, which only the conda
+# env's activate script sets.
+os.environ.setdefault("MOSEKLM_LICENSE_FILE", str(REPO_ROOT / "mosek.lic"))
+mosek_licence = MosekSolver.AcquireLicense() if MosekSolver().enabled() else None
+NLP_SOLVER = {"snopt": SnoptSolver, "ipopt": IpoptSolver}[ARGS.nlp_solver]()
+SOLVERS = dict(iris_closest_collision=ARGS.nlp_solver, iris_add_plane_if_solve_fails=True,
+               ellipsoids_and_lps="MOSEK" if MosekSolver().enabled() else "Clarabel/Clp", cut_planes="SNOPT")
 
 # Plant ordering (same as the notebook's arm + hand): 7 arm joints, then the two fingers.
 IDX_WRIST, IDX_F1, IDX_F2 = 6, 7, 8
@@ -82,14 +103,8 @@ def build_plant():
     plant = builder.plant()
     parser = Parser(plant, builder.scene_graph())
     parser.SetAutoRenaming(True)
-    arm = parser.AddModels(url=f"file://{REPO_ROOT}/my_sdfs/panda_arm.urdf")[0]
-    hand = parser.AddModels(url="package://drake_models/franka_description/urdf/panda_hand.urdf")[0]
-    plant.WeldFrames(plant.world_frame(), plant.GetFrameByName("panda_link0", arm), RigidTransform())
-    plant.WeldFrames(plant.GetFrameByName("panda_link8", arm), plant.GetFrameByName("panda_hand", hand),
-                     RigidTransform(RollPitchYaw(0.0, 0.0, -np.deg2rad(45.0)), [0.0, 0.0, 0.0]))
-    plant.GetJointByName("panda_finger_joint1", hand).set_default_translation(-0.024)
-    caps = scene.add_caps(parser, plant, welded=True)
-    scene.add_obstacles(plant)
+    arm, hand = scene.add_panda(parser, plant)
+    caps, _ = scene.add_scene(parser, plant, ARGS.scene, welded=True)
     plant.Finalize()
     return builder.Build(), plant, arm, hand, caps
 
@@ -101,6 +116,7 @@ checker = SceneGraphCollisionChecker(model=diagram, robot_model_instances=[arm, 
 nq = plant.num_positions()
 assert nq == 9, f"expected the 9-D arm + finger space, got {nq}"
 lo, hi = plant.GetPositionLowerLimits(), plant.GetPositionUpperLimits()
+log(f"scene {ARGS.scene}: {len(caps)} caps; seeding {ARGS.seeding}; solvers {SOLVERS}")
 t_start = time.time()
 
 
@@ -119,6 +135,8 @@ def iris_options(**overrides):
     s.parallelism = PAR
     o = IrisNp2Options()
     o.sampled_iris_options = s
+    o.solver = NLP_SOLVER
+    o.add_hyperplane_if_solve_fails = True   # a failed closest-collision solve still cuts, at the particle
     return o
 
 
@@ -195,7 +213,7 @@ def free_runs(mask):
     return runs
 
 
-for g, (S, f) in enumerate(sweeps):
+for g, (S, f) in enumerate(sweeps if ARGS.seeding == "wrist" else []):
     for _ in range(3):                                   # re-seed what is still uncovered, at most twice more
         todo = f & ~np.array([inside_any(q, seeded) for q in S])
         runs = [(a, b) for a, b in free_runs(todo) if S[b, IDX_WRIST] - S[a, IDX_WRIST] >= MIN_RUN]
@@ -365,8 +383,8 @@ def validate(regions):
 report = validate(regions)
 report.update(regions=len(regions), faces_mean=float(np.mean([R.A().shape[0] for R in regions])),
               minutes=round((time.time() - t_start) / 60, 1), coverage_threshold=ARGS.coverage,
-              grasp_seeds=grasp_seeds, iris_settings=IRIS, cap_poses=scene.CAP_POSES, obstacles=scene.OBSTACLES,
-              floor=scene.FLOOR)
+              grasp_seeds=grasp_seeds, iris_settings=IRIS, scene=ARGS.scene, scene_definition=scene.SCENES[ARGS.scene],
+              seeding=ARGS.seeding, seeded_regions=len(seeded), solvers=SOLVERS, threads=ARGS.threads)
 log("step 5: validation " + json.dumps({k: report[k] for k in ("near_caps", "uniform")}))
 for s in report["grasp_sweeps"]:
     log(f"  cap {s['cap']} grasp {s['grasp']}: wrist sweep covered {s['covered']}/{s['free']} free, false positives {s['false_positives']}")

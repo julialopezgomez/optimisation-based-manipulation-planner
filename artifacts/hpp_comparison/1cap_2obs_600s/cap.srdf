@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot name="cap">
+  <disable_collisions link1="base_link" link2="cap_link" reason="Drake filter"/>
+  <handle name="handle" clearance="0.05" approaching_direction="0 0 1">
+    <position xyz="0 0 0.1075" wxyz="0 0 1 0"/>
+    <link name="cap_link"/>
+  </handle>
+</robot>

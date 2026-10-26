@@ -1,6 +1,6 @@
 """Run time of the reachability A* as the number of caps to turn grows (1 to 8), on the 8-cap scene.
 
-One scene (full_arm_planner_8caps.ipynb: 8 caps, 3 walls, 9-D C-free) and, for each K in --ks, --queries
+One scene (full_arm_planner_8caps_3obs.ipynb: 8 caps, 3 walls, 9-D C-free) and, for each K in --ks, --queries
 random queries. A query:
   - picks K of the 8 caps at random (the "active" caps); the A* may grasp only those (the other caps'
     grasp components are left out of the graph), and every cap's angle stays in the A*'s state;
@@ -44,6 +44,9 @@ parser.add_argument("--no-exact", action="store_true", help="weighted A* only")
 parser.add_argument("--render-k", type=int, default=8, help="K whose first solved query is rendered on the page")
 parser.add_argument("--no-render", action="store_true")
 parser.add_argument("--verbose", action="store_true", help="print the notebook cells' output")
+parser.add_argument("--save-queries", action="store_true", help="also write queries.npz (for experiments/hpp_comparison)")
+parser.add_argument("--replay-queries", help="a queries.npz from --save-queries: run exactly those queries (its K values "
+                                             "and number per K) instead of drawing new ones, which depend on the sets")
 ARGS = parser.parse_args()
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -55,6 +58,7 @@ KS = [int(x) for x in ARGS.ks.split(",")]
 FPS, IMG_W, IMG_H, MAX_VIDEO_S = 10, 480, 360, 45
 
 # ---------------------------------------------------------------- the notebook, up to its Step 7
+# Its LP_SOLVER cell picks the LP solver ("mosek" with one licence held, or "clp") for the whole run.
 print("running the notebook cells (scene, grasp polytopes, C-free, A*)...", flush=True)
 run_until_step7(verbose=ARGS.verbose, ns=globals())
 
@@ -97,7 +101,8 @@ all_comps_near = {i: list(cs) for i, cs in comps_near.items()}
 graph = dict(free_sets=len(free_sets), components=len(components), transit_edges=len(ff_door) // 2,
              switch_edges=len(fc_links), components_per_cap=[sum(c["cap"] == k for c in components) for k in range(K)],
              L_max_per_cap=[float(x) for x in L_MAX])
-print(f"shared preprocessing: {t_prep:.2f}s; graph {graph}", flush=True)
+print(f"shared preprocessing: {t_prep:.2f}s; LP solver: {LP_SOLVER} (MOSEK enabled: {MosekSolver().enabled()}); "   # noqa: F821
+      f"graph {graph}", flush=True)
 
 
 # ---------------------------------------------------------------- one query
@@ -132,26 +137,46 @@ def random_free(rng):
 
 
 rng = np.random.default_rng(ARGS.seed)
+REPLAY = np.load(ARGS.replay_queries) if ARGS.replay_queries else None
+if REPLAY is not None:
+    KS = sorted(set(int(k) for k in REPLAY["k"]))
+    ARGS.queries = int(max(REPLAY["query"])) + 1
 W_NOTEBOOK = HEURISTIC_WEIGHT
 METHODS = [("weighted", W_NOTEBOOK, None)] + ([] if ARGS.no_exact else [("exact", 1.0, ARGS.exact_time_limit)])
 LABELS = {"weighted": f"Weighted A* (w = {W_NOTEBOOK:g})", "exact": "Exact A* (w = 1)"}
 runs, keep_plans, exact_given_up = [], {}, None
+saved_queries = []   # --save-queries: the same queries for experiments/hpp_comparison
 for k_active in KS:
     for qi in range(ARGS.queries):
-        active = sorted(int(c) for c in rng.choice(K, k_active, replace=False))
-        turns = sample_turns(k_active, rng)
-        alpha_init = np.full(K, 3.0)
-        alpha_goal = alpha_init.copy()
-        alpha_goal[active] -= turns
-        q_init, q_goal = random_free(rng), random_free(rng)
-        q_init[idx_caps], q_goal[idx_caps] = alpha_init, alpha_goal
+        if REPLAY is None:
+            active = sorted(int(c) for c in rng.choice(K, k_active, replace=False))
+            turns = sample_turns(k_active, rng)
+            alpha_init = np.full(K, 3.0)
+            alpha_goal = alpha_init.copy()
+            alpha_goal[active] -= turns
+            q_init, q_goal = random_free(rng), random_free(rng)
+            q_init[idx_caps], q_goal[idx_caps] = alpha_init, alpha_goal
+        else:                                       # the saved query (k_active, qi)
+            j = int(np.flatnonzero((REPLAY["k"] == k_active) & (REPLAY["query"] == qi))[0])
+            active = [int(c) for c in np.flatnonzero(REPLAY["active_mask"][j])]
+            turns = REPLAY["turns"][j][active]
+            q_init, q_goal = REPLAY["q_init"][j].copy(), REPLAY["q_goal"][j].copy()
+            alpha_init, alpha_goal = q_init[idx_caps], q_goal[idx_caps]
+        saved_queries.append((k_active, qi, np.isin(np.arange(K), active), alpha_init - alpha_goal,
+                              q_init.copy(), q_goal.copy()))
         # the A* may grasp the active caps only: the other caps' components leave the graph
         comps_near = {i: [c for c in cs if components[c]["cap"] in active] for i, cs in all_comps_near.items()}
         base = dict(k=k_active, query=qi, active_caps=[c + 1 for c in active], turns=[float(t) for t in turns],
                     total_turn=float(turns.sum()))
+        # a replayed query (drawn from other sets) can start or end outside these sets: no plan, and no search
+        outside = not all(any(F.PointInSet(to_arm(q)) for F in free_sets) for q in (q_init, q_goal))
         for method, weight, limit in METHODS:
             if method == "exact" and exact_given_up is not None:
                 runs.append(dict(base, method=method, solved=False, skipped=True))
+                continue
+            if outside:
+                runs.append(dict(base, method=method, weight=weight, solved=False, skipped=False, outside_cfree=True))
+                print(f"K={k_active} q{qi:02d} {method:<8}: NO PLAN (start or goal outside C-free)", flush=True)
                 continue
             HEURISTIC_WEIGHT = weight
             (path, info), t_search, m_search = measured(
@@ -180,6 +205,9 @@ for k_active in KS:
     if ex and exact_given_up is None and not any(r["solved"] for r in ex):
         exact_given_up = k_active
         print(f"exact A*: no query with K = {k_active} solved within {ARGS.exact_time_limit:g} s; skipped for larger K", flush=True)
+if ARGS.save_queries:
+    k_, n_, m_, t_, qi_, qg_ = map(np.array, zip(*saved_queries))
+    np.savez(OUT / "queries.npz", k=k_, query=n_, active_mask=m_, turns=t_, q_init=qi_, q_goal=qg_)
 comps_near = all_comps_near
 
 
@@ -195,7 +223,8 @@ def stats(xs):
 def method_stats(rows):
     ok = [r for r in rows if r["solved"]]
     return dict(queries=len(rows), solved=len(ok), skipped=sum(r.get("skipped", False) for r in rows),
-                timed_out=sum(r.get("timed_out", False) for r in rows), certified=sum(r["certified"] for r in ok),
+                timed_out=sum(r.get("timed_out", False) for r in rows),
+                outside_cfree=sum(r.get("outside_cfree", False) for r in rows), certified=sum(r["certified"] for r in ok),
                 reaches_goal=sum(r["reaches_goal"] for r in ok), total_turn=rows[0]["total_turn"] if rows else None,
                 actions=stats([r["actions"] for r in ok]), grasps=stats([r["grasps"] for r in ok]),
                 expanded=stats([r["expanded"] for r in ok]), search_s=stats([r["search_s"] for r in ok]),
@@ -220,7 +249,8 @@ def machine():
 
 
 MACHINE = machine()
-summary = dict(machine=MACHINE, shared_preprocessing_s=t_prep, graph=graph, cfree_file=str(CFREE_FILE.relative_to(REPO_ROOT)),
+summary = dict(machine=MACHINE, shared_preprocessing_s=t_prep, lp_solver=LP_SOLVER, graph=graph,   # noqa: F821
+               cfree_file=str(CFREE_FILE.relative_to(REPO_ROOT)),
                queries_per_k=ARGS.queries, seed=ARGS.seed, turn_rule=dict(mean_per_cap=TURN_MEAN, min=TURN_MIN, max=TURN_MAX),
                methods={m: dict(weight=w, time_limit_s=t) for m, w, t in METHODS}, exact_skipped_from_k=exact_given_up,
                per_k=per_k, runs=runs)
@@ -316,7 +346,7 @@ if not ARGS.no_render and ARGS.render_k in keep_plans:
     rp.WeldFrames(rp.GetFrameByName("panda_link8", arm_r), rp.GetFrameByName("panda_hand", hand_r),
                   RigidTransform(RollPitchYaw(0.0, 0.0, -np.deg2rad(45.0)), [0.0, 0.0, 0.0]))
     scene.add_caps(pr, rp)
-    scene.add_obstacles(rp)
+    scene.add_walls(rp)
     world, n_geom = rp.world_body(), [0]
 
     def add(body, X, shape, rgba):

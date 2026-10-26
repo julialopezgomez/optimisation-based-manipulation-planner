@@ -1,0 +1,47 @@
+{
+ "scene": "1cap_2obs",
+ "queries_file": null,
+ "hpp_joint_names": [
+  "panda/panda_joint1",
+  "panda/panda_joint2",
+  "panda/panda_joint3",
+  "panda/panda_joint4",
+  "panda/panda_joint5",
+  "panda/panda_joint6",
+  "panda/panda_joint7",
+  "panda/panda_finger_joint1",
+  "panda/panda_finger_joint2",
+  "cap0/cap_to_base"
+ ],
+ "caps": [
+  {
+   "prefix": "cap0",
+   "position": [
+    0.5,
+    0.0,
+    0.0
+   ],
+   "rotation": [
+    [
+     1.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     1.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ]
+  }
+ ],
+ "idx_caps": [
+  9
+ ],
+ "idx_wrist": 6
+}

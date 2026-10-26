@@ -1,0 +1,1178 @@
+{
+ "scene": "8caps_3obs",
+ "invalid_queries": [
+  "K8_q08"
+ ],
+ "per_group": {
+  "1": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  },
+  "2": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  },
+  "3": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  },
+  "4": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  },
+  "5": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  },
+  "6": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  },
+  "7": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  },
+  "8": {
+   "runs": 15,
+   "solved": 0,
+   "certified": 0,
+   "time_s": null,
+   "time_s_q1": null,
+   "time_s_q3": null,
+   "grasps": null,
+   "length": null,
+   "mem_gb": null
+  }
+ },
+ "runs": [
+  {
+   "query": "K1_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.0014629419893,
+   "roadmap_nodes": 3327,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.006s",
+   "time_s": 60.00627979822457,
+   "roadmap_nodes": 5127,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00135841220617,
+   "roadmap_nodes": 5375,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.001692516729236,
+   "roadmap_nodes": 4496,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.0011574011296,
+   "roadmap_nodes": 5906,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.001221207901835,
+   "roadmap_nodes": 4650,
+   "mem_gb": 0.011892000000000014
+  },
+  {
+   "query": "K1_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00123423151672,
+   "roadmap_nodes": 4413,
+   "mem_gb": 0.01206800000000019
+  },
+  {
+   "query": "K1_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.01s",
+   "time_s": 60.010832354426384,
+   "roadmap_nodes": 4624,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00183990597725,
+   "roadmap_nodes": 5114,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.002086855471134,
+   "roadmap_nodes": 4609,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.007s",
+   "time_s": 60.00716713629663,
+   "roadmap_nodes": 3600,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.006s",
+   "time_s": 60.00644516758621,
+   "roadmap_nodes": 5893,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.01s",
+   "time_s": 60.010504787787795,
+   "roadmap_nodes": 4244,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K1_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00244462490082,
+   "roadmap_nodes": 5434,
+   "mem_gb": 0.01261200000000029
+  },
+  {
+   "query": "K1_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00139765441418,
+   "roadmap_nodes": 5641,
+   "mem_gb": 0.011940000000000062
+  },
+  {
+   "query": "K2_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.0027091037482,
+   "roadmap_nodes": 6192,
+   "mem_gb": 0.012055999999999845
+  },
+  {
+   "query": "K2_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00219701230526,
+   "roadmap_nodes": 5845,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.001196179538965,
+   "roadmap_nodes": 5128,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.002781577408314,
+   "roadmap_nodes": 4417,
+   "mem_gb": 0.012056000000000289
+  },
+  {
+   "query": "K2_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00263946130872,
+   "roadmap_nodes": 4746,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00247709825635,
+   "roadmap_nodes": 4622,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00145424157381,
+   "roadmap_nodes": 5178,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.006s",
+   "time_s": 60.006887121126056,
+   "roadmap_nodes": 4658,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.0010984223336,
+   "roadmap_nodes": 4998,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00130952894688,
+   "roadmap_nodes": 5539,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.0016900151968,
+   "roadmap_nodes": 6227,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00193605199456,
+   "roadmap_nodes": 3254,
+   "mem_gb": 0.012083999999999762
+  },
+  {
+   "query": "K2_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.008s",
+   "time_s": 60.0090447999537,
+   "roadmap_nodes": 5077,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00401635468006,
+   "roadmap_nodes": 4848,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K2_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.001885395497084,
+   "roadmap_nodes": 5634,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00357678718865,
+   "roadmap_nodes": 4907,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00267029181123,
+   "roadmap_nodes": 5179,
+   "mem_gb": 0.012103999999999893
+  },
+  {
+   "query": "K3_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00213700532913,
+   "roadmap_nodes": 4853,
+   "mem_gb": 0.0120559999999994
+  },
+  {
+   "query": "K3_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00228903256357,
+   "roadmap_nodes": 5343,
+   "mem_gb": 0.011955999999999634
+  },
+  {
+   "query": "K3_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.011s",
+   "time_s": 60.0118577927351,
+   "roadmap_nodes": 3725,
+   "mem_gb": 0.012524000000000868
+  },
+  {
+   "query": "K3_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.002752650529146,
+   "roadmap_nodes": 4695,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00406078994274,
+   "roadmap_nodes": 5195,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.0033606570214,
+   "roadmap_nodes": 5247,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.002971267327666,
+   "roadmap_nodes": 5736,
+   "mem_gb": 0.012507999999998631
+  },
+  {
+   "query": "K3_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.004828767850995,
+   "roadmap_nodes": 4939,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00194847024977,
+   "roadmap_nodes": 4835,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.004376428201795,
+   "roadmap_nodes": 5325,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.009s",
+   "time_s": 60.00910399667919,
+   "roadmap_nodes": 5302,
+   "mem_gb": 0.012520000000000309
+  },
+  {
+   "query": "K3_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00255906023085,
+   "roadmap_nodes": 5384,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K3_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00326939485967,
+   "roadmap_nodes": 5022,
+   "mem_gb": 0.01253200000000021
+  },
+  {
+   "query": "K4_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.00419181026518,
+   "roadmap_nodes": 4876,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00182641670108,
+   "roadmap_nodes": 5357,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K4_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.005s",
+   "time_s": 60.00569400191307,
+   "roadmap_nodes": 4684,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.006s",
+   "time_s": 60.00637695938349,
+   "roadmap_nodes": 4174,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00312240794301,
+   "roadmap_nodes": 4161,
+   "mem_gb": 0.012904000000000693
+  },
+  {
+   "query": "K4_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.011s",
+   "time_s": 60.01129603199661,
+   "roadmap_nodes": 4673,
+   "mem_gb": 0.17975999999999992
+  },
+  {
+   "query": "K4_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00250191986561,
+   "roadmap_nodes": 4629,
+   "mem_gb": 0.01252799999999965
+  },
+  {
+   "query": "K4_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.006s",
+   "time_s": 60.006981026381254,
+   "roadmap_nodes": 4439,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00316317938268,
+   "roadmap_nodes": 4918,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K4_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00342533364892,
+   "roadmap_nodes": 5207,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.001753622666,
+   "roadmap_nodes": 4739,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.008s",
+   "time_s": 60.00862632319331,
+   "roadmap_nodes": 4744,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.008s",
+   "time_s": 60.00831491500139,
+   "roadmap_nodes": 5764,
+   "mem_gb": 0.012540000000001328
+  },
+  {
+   "query": "K4_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00393227301538,
+   "roadmap_nodes": 5410,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K4_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.003096928820014,
+   "roadmap_nodes": 5310,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00259273312986,
+   "roadmap_nodes": 4793,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00180109590292,
+   "roadmap_nodes": 5180,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00320375524461,
+   "roadmap_nodes": 4723,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00134460255504,
+   "roadmap_nodes": 4470,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.021s",
+   "time_s": 60.02142496034503,
+   "roadmap_nodes": 3801,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K5_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00280915759504,
+   "roadmap_nodes": 5368,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00390426814556,
+   "roadmap_nodes": 4184,
+   "mem_gb": 0.01253200000000021
+  },
+  {
+   "query": "K5_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00335909985006,
+   "roadmap_nodes": 5501,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.001135954633355,
+   "roadmap_nodes": 5280,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.00473478063941,
+   "roadmap_nodes": 4935,
+   "mem_gb": 0.012516000000001526
+  },
+  {
+   "query": "K5_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.00505482405424,
+   "roadmap_nodes": 4568,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00331462547183,
+   "roadmap_nodes": 5268,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00357097201049,
+   "roadmap_nodes": 4624,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.011s",
+   "time_s": 60.01161368004978,
+   "roadmap_nodes": 5062,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K5_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.002447532489896,
+   "roadmap_nodes": 4545,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K6_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.0045024510473,
+   "roadmap_nodes": 4100,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K6_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00166733562946,
+   "roadmap_nodes": 4702,
+   "mem_gb": 0.34206800000000115
+  },
+  {
+   "query": "K6_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00271959602833,
+   "roadmap_nodes": 4410,
+   "mem_gb": 0.012536000000000769
+  },
+  {
+   "query": "K6_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.011s",
+   "time_s": 60.01178979687393,
+   "roadmap_nodes": 5150,
+   "mem_gb": 0.0127120000000005
+  },
+  {
+   "query": "K6_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.002962516620755,
+   "roadmap_nodes": 4921,
+   "mem_gb": 0.012100000000000222
+  },
+  {
+   "query": "K6_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.001461300998926,
+   "roadmap_nodes": 4855,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K6_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.002813555300236,
+   "roadmap_nodes": 4461,
+   "mem_gb": 0.012556000000003564
+  },
+  {
+   "query": "K6_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.008s",
+   "time_s": 60.00871839188039,
+   "roadmap_nodes": 5172,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K6_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00120494887233,
+   "roadmap_nodes": 4861,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K6_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00238372385502,
+   "roadmap_nodes": 3777,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K6_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00314421020448,
+   "roadmap_nodes": 3327,
+   "mem_gb": 0.013151999999998054
+  },
+  {
+   "query": "K6_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.00473407283425,
+   "roadmap_nodes": 5235,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K6_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.0017022844404,
+   "roadmap_nodes": 4827,
+   "mem_gb": 0.012611999999997181
+  },
+  {
+   "query": "K6_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.007s",
+   "time_s": 60.007137816399336,
+   "roadmap_nodes": 3265,
+   "mem_gb": 0.012551999999999452
+  },
+  {
+   "query": "K6_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00261328369379,
+   "roadmap_nodes": 4156,
+   "mem_gb": 0.01313999999999993
+  },
+  {
+   "query": "K7_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.007s",
+   "time_s": 60.00741184130311,
+   "roadmap_nodes": 5046,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K7_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00375718809664,
+   "roadmap_nodes": 4796,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K7_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.011s",
+   "time_s": 60.01125096715987,
+   "roadmap_nodes": 5376,
+   "mem_gb": 0.012552000000006558
+  },
+  {
+   "query": "K7_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00142475217581,
+   "roadmap_nodes": 4527,
+   "mem_gb": 0.01253200000000021
+  },
+  {
+   "query": "K7_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.005s",
+   "time_s": 60.00589216686785,
+   "roadmap_nodes": 3874,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K7_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00355423800647,
+   "roadmap_nodes": 4532,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K7_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00307703204453,
+   "roadmap_nodes": 4481,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K7_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00341575965285,
+   "roadmap_nodes": 3916,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K7_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.01s",
+   "time_s": 60.010577600449324,
+   "roadmap_nodes": 5233,
+   "mem_gb": 0.4737519999999975
+  },
+  {
+   "query": "K7_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.01s",
+   "time_s": 60.01103388518095,
+   "roadmap_nodes": 5229,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K7_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.00247410684824,
+   "roadmap_nodes": 4528,
+   "mem_gb": 0.012012000000005685
+  },
+  {
+   "query": "K7_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.016s",
+   "time_s": 60.01641702838242,
+   "roadmap_nodes": 4591,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K7_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.004182336851954,
+   "roadmap_nodes": 4876,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K7_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.018s",
+   "time_s": 60.01905438117683,
+   "roadmap_nodes": 4199,
+   "mem_gb": 0.012695999999998264
+  },
+  {
+   "query": "K7_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.002s",
+   "time_s": 60.002600502222776,
+   "roadmap_nodes": 4495,
+   "mem_gb": 0.012907999999995923
+  },
+  {
+   "query": "K8_q00",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.009s",
+   "time_s": 60.012650860473514,
+   "roadmap_nodes": 5051,
+   "mem_gb": 0.01266000000000389
+  },
+  {
+   "query": "K8_q00",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00363243743777,
+   "roadmap_nodes": 4538,
+   "mem_gb": 0.012503999999999849
+  },
+  {
+   "query": "K8_q00",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.016044767573476,
+   "roadmap_nodes": 4875,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K8_q01",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.003s",
+   "time_s": 60.00349089317024,
+   "roadmap_nodes": 4166,
+   "mem_gb": 0.394444
+  },
+  {
+   "query": "K8_q01",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.014s",
+   "time_s": 60.01482246629894,
+   "roadmap_nodes": 4223,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K8_q01",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.005s",
+   "time_s": 60.00555480644107,
+   "roadmap_nodes": 4488,
+   "mem_gb": 0.012627999999999417
+  },
+  {
+   "query": "K8_q02",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00162850320339,
+   "roadmap_nodes": 4274,
+   "mem_gb": 0.012667999999997903
+  },
+  {
+   "query": "K8_q02",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.001s",
+   "time_s": 60.00185640901327,
+   "roadmap_nodes": 4164,
+   "mem_gb": 0.010280000000001621
+  },
+  {
+   "query": "K8_q02",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.00710262544453,
+   "roadmap_nodes": 4568,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K8_q03",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.011s",
+   "time_s": 60.01717613078654,
+   "roadmap_nodes": 4582,
+   "mem_gb": 0.013999999999995794
+  },
+  {
+   "query": "K8_q03",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.111s",
+   "time_s": 60.12559116631746,
+   "roadmap_nodes": 1402,
+   "mem_gb": 0.01689200000000568
+  },
+  {
+   "query": "K8_q03",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.004s",
+   "time_s": 60.00619290396571,
+   "roadmap_nodes": 4391,
+   "mem_gb": 0.027171999999999974
+  },
+  {
+   "query": "K8_q04",
+   "seed": 0,
+   "success": false,
+   "error": "time out (60s) reached after 60.012s",
+   "time_s": 60.012465320527554,
+   "roadmap_nodes": 4036,
+   "mem_gb": 0.0
+  },
+  {
+   "query": "K8_q04",
+   "seed": 1,
+   "success": false,
+   "error": "time out (60s) reached after 60.007s",
+   "time_s": 60.00754037871957,
+   "roadmap_nodes": 4435,
+   "mem_gb": 0.012655999999999779
+  },
+  {
+   "query": "K8_q04",
+   "seed": 2,
+   "success": false,
+   "error": "time out (60s) reached after 60.01s",
+   "time_s": 60.010351872071624,
+   "roadmap_nodes": 4862,
+   "mem_gb": 0.0
+  }
+ ]
+}

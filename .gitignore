@@ -2,3 +2,9 @@ mosek.lic
 __pycache__/
 *.pyc
 **/joint_samples_plots/
+# HPP: the tutorial checkout is a local reference; the baseline's HPP build is not tracked
+experiments/hpp_tutorials/
+experiments/hpp_comparison/env/install/
+experiments/hpp_comparison/env/src/*
+!experiments/hpp_comparison/env/src/Makefile
+artifacts/hpp_comparison/*/meshes/

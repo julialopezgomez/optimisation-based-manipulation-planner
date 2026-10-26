@@ -1,7 +1,7 @@
-"""Run the code cells of full_arm_planner_gcs.ipynb headlessly, in one namespace.
+"""Run the code cells of full_arm_planner_1cap_2obs.ipynb headlessly, in one namespace.
 
-Runs every code cell before the "## GCS baseline" section: the scene, the free-set fixing, the brute force
-and the reachability A* (Steps 1-7). The GCS definitions are left to the caller, which takes them from the
+Runs every code cell before the "## GCS baseline" section: the scene, loading C-free, the brute force and
+the reachability A* (Steps 1-7). The GCS definitions are left to the caller, which takes them from the
 notebook as well (see compare_plans.py), so the experiments always use the notebook's own code.
 
 Widgets are stubbed and, while the cells run, time.sleep is a no-op, so the Meshcat playback cells run
@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-NOTEBOOK = REPO_ROOT / "full_arm_planner_gcs.ipynb"
+NOTEBOOK = REPO_ROOT / "full_arm_planner_1cap_2obs.ipynb"
 GCS_SECTION = "## GCS baseline"
 
 

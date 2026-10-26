@@ -1,4 +1,4 @@
-"""Run the code cells of full_arm_planner_8caps.ipynb headlessly, in one namespace.
+"""Run the code cells of full_arm_planner_8caps_3obs.ipynb headlessly, in one namespace.
 
 Runs every code cell before the "### Step 7" section (the Meshcat playback): the scene, the grasp
 polytopes, loading C-free, and the reachability A* with its waypoint placement and checks (Steps 1-6).
@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-NOTEBOOK = REPO_ROOT / "full_arm_planner_8caps.ipynb"
+NOTEBOOK = REPO_ROOT / "full_arm_planner_8caps_3obs.ipynb"
 STOP_SECTION = "### Step 7"
 
 

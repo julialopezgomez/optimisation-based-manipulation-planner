@@ -1,0 +1,11 @@
+hpp-constraints 77324f5 2026-10-12
+hpp-core 372535b9 2026-10-20
+hpp-doc 6ccc5c6 2026-10-12
+hpp-gepetto-viewer b925df3 2026-10-08
+hpp-manipulation-urdf 75606c3 2026-10-08
+hpp-manipulation 1cc7070 2026-10-20
+hpp-plot 486c134 2026-10-13
+hpp-python 858cec2 2026-10-13
+hpp-toppra bb201cf 2026-10-19
+hpp_tutorial 1f97cdc 2026-10-19
+toppra 2dfb972 2026-04-14

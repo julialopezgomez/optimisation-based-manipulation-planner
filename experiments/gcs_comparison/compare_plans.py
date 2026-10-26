@@ -9,7 +9,7 @@ From ONE start and goal, for each turn D:
   - for --page-turns, a self-contained side-by-side comparison page (compare_D*.html).
 Writes summary.json, the scenario (scenario.npz, cfree_fixed.yaml) and the pages to --out.
 
-All planning code is the notebook's own (full_arm_planner_gcs.ipynb, via run_notebook.py). Not timed for any
+All planning code is the notebook's own (full_arm_planner_1cap_2obs.ipynb, via run_notebook.py). Not timed for any
 method: the shared preprocessing that builds the A*'s graph (transition sets, extreme points, transit and
 switch edges), which the GCS graph reuses; it is timed once and reported separately.
 
@@ -32,6 +32,8 @@ from pathlib import Path
 parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
 parser.add_argument("--out", required=True, help="output folder (created)")
 parser.add_argument("--scenario", help="folder with scenario.npz and cfree_fixed.yaml to reproduce exactly")
+parser.add_argument("--cfree", help="with --scenario: use these sets (a YAML of regions) instead of its cfree_fixed.yaml, "
+                    "e.g. the notebook's CFREE_FILE to keep the start and goal of an earlier run with new sets")
 parser.add_argument("--turns", default="0.5,1.5,6", help="cap turns D in rad (A* and GCS on the A* sequence)")
 parser.add_argument("--full-turns", default="0.5,1.5", help="turns that also get the full GCS (6 does not fit in 60 GB)")
 parser.add_argument("--page-turns", default="0.5,1.5", help="turns that get a comparison page")
@@ -104,7 +106,8 @@ def measured(fn):
 # ---------------------------------------------------------------- scenario and shared preprocessing
 if SCENARIO:   # reuse a saved start, goal and sets: the A* steps below rebuild everything from them
     sc = np.load(SCENARIO / "scenario.npz")
-    planner.cs_free = list(LoadIrisRegionsYamlFile(str(SCENARIO / "cfree_fixed.yaml")).values())
+    cfree = Path(ARGS.cfree).resolve() if ARGS.cfree else SCENARIO / "cfree_fixed.yaml"
+    planner.cs_free = list(LoadIrisRegionsYamlFile(str(cfree)).values())
     q_init_astar, q_goal_astar = sc["q_init"].copy(), sc["q_goal_base"].copy()
 alpha_init = float(q_init_astar[idx_cap])
 

@@ -1,0 +1,102 @@
+{
+ "near_caps": {
+  "samples": 2400,
+  "false_positives": 57,
+  "covered_of_free": 0.5008960573476703
+ },
+ "uniform": {
+  "samples": 20000,
+  "inside": 14148,
+  "false_positives": 8,
+  "covered_of_free": 0.8582180140810877,
+  "free_fraction": 0.8238
+ },
+ "grasp_sweeps": [
+  {
+   "cap": 1,
+   "grasp": 0,
+   "free": 201,
+   "covered": 201,
+   "false_positives": 0
+  },
+  {
+   "cap": 1,
+   "grasp": 1,
+   "free": 201,
+   "covered": 201,
+   "false_positives": 0
+  },
+  {
+   "cap": 2,
+   "grasp": 0,
+   "free": 201,
+   "covered": 201,
+   "false_positives": 0
+  },
+  {
+   "cap": 2,
+   "grasp": 1,
+   "free": 201,
+   "covered": 201,
+   "false_positives": 0
+  }
+ ],
+ "regions": 24,
+ "faces_mean": 51.0,
+ "minutes": 1.2,
+ "coverage_threshold": 0.98,
+ "grasp_seeds": [
+  [
+   0,
+   1
+  ],
+  [
+   1,
+   2
+  ]
+ ],
+ "iris_settings": {
+  "delta": 0.01,
+  "epsilon": 0.001,
+  "max_iterations": 3,
+  "max_iterations_separating_planes": 20,
+  "num_particles": 1000,
+  "termination_threshold": -1,
+  "relative_termination_threshold": 0.001,
+  "remove_all_collisions_possible": false,
+  "configuration_space_margin": 0.0001,
+  "sample_particles_in_parallel": true
+ },
+ "scene": "2caps_0obs",
+ "scene_definition": {
+  "caps": [
+   [
+    0.5,
+    0.0,
+    0.0
+   ],
+   [
+    0.5,
+    0.25,
+    0.0
+   ]
+  ],
+  "obstacles": [],
+  "walls": [],
+  "floor": {
+   "name": "floor",
+   "top_z": -0.01,
+   "size_xy": 3.0,
+   "thickness": 0.1
+  }
+ },
+ "seeding": "wrist",
+ "seeded_regions": 4,
+ "solvers": {
+  "iris_closest_collision": "snopt",
+  "iris_add_plane_if_solve_fails": true,
+  "ellipsoids_and_lps": "MOSEK",
+  "cut_planes": "SNOPT"
+ },
+ "threads": 32
+}
