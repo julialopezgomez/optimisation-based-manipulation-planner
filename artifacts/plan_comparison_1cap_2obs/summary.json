@@ -1,11 +1,11 @@
 {
- "shared_preprocessing_s": 0.08812093999949866,
+ "shared_preprocessing_s": 0.08859921000112081,
  "D0.5_astar": {
   "grasps": 1.0,
   "polytope_changes": 5,
-  "path_length": 18.457801466860886,
+  "path_length": 14.100203298137837,
   "valid": true,
-  "time": 0.00711371999932453,
+  "time": 0.01020059999791556,
   "mem": 0.0
  },
  "D0.5_gcs_on_astar": {
@@ -13,11 +13,11 @@
   "polytope_changes": 6,
   "path_length": 14.10020335454101,
   "valid": true,
-  "time": 0.019570736003515776,
+  "time": 0.01860481699986849,
   "time_parts": {
-   "astar": 0.00711371999932453,
-   "build": 0.007853661001718137,
-   "restriction": 0.0046033550024731085
+   "astar": 0.01020059999791556,
+   "build": 0.0050242340003023855,
+   "restriction": 0.003379983001650544
   },
   "mem": 0.0,
   "sets": 7
@@ -27,25 +27,25 @@
   "polytope_changes": 5,
   "path_length": 11.358602518228444,
   "valid": true,
-  "time": 0.5718917780031916,
+  "time": 0.5568487620002998,
   "time_parts": {
-   "build": 0.005180053001822671,
-   "solve": 0.5667117250013689
+   "build": 0.005296297000313643,
+   "solve": 0.5515524649999861
   },
-  "mem": 0.8805399999999999,
-  "peak_process": 1.211212,
+  "mem": 0.806156,
+  "peak_process": 1.21566,
   "cost": 21.36260251635121,
   "vertices": 29,
   "edges": 130,
   "layers": 2,
-  "build_time": 0.005180053001822671
+  "build_time": 0.005296297000313643
  },
  "D1.5_astar": {
   "grasps": 2.0,
   "polytope_changes": 5,
-  "path_length": 20.594885530898615,
+  "path_length": 16.033437523280938,
   "valid": true,
-  "time": 0.012743899002089165,
+  "time": 0.016873505999683402,
   "mem": 0.0
  },
  "D1.5_gcs_on_astar": {
@@ -53,11 +53,11 @@
   "polytope_changes": 8,
   "path_length": 16.033437569836597,
   "valid": true,
-  "time": 0.02416820000144071,
+  "time": 0.02777225500176428,
   "time_parts": {
-   "astar": 0.012743899002089165,
-   "build": 0.006092956002248684,
-   "restriction": 0.00533134499710286
+   "astar": 0.016873505999683402,
+   "build": 0.0057942640014516655,
+   "restriction": 0.005104485000629211
   },
   "mem": 0.0,
   "sets": 9
@@ -67,25 +67,105 @@
   "polytope_changes": 10,
   "path_length": 13.986318136182282,
   "valid": true,
-  "time": 0.7335196309977619,
+  "time": 0.7279367860028287,
   "time_parts": {
-   "build": 0.00592783299725852,
-   "solve": 0.7275917980005033
+   "build": 0.005927856000198517,
+   "solve": 0.7220089300026302
   },
-  "mem": 0.98932,
-  "peak_process": 1.320368,
+  "mem": 0.9234199999999999,
+  "peak_process": 1.327696,
   "cost": 43.99331813468531,
   "vertices": 37,
   "edges": 166,
   "layers": 3,
-  "build_time": 0.00592783299725852
+  "build_time": 0.005927856000198517
+ },
+ "D2.4_astar": {
+  "grasps": 3.0,
+  "polytope_changes": 5,
+  "path_length": 18.206228129184833,
+  "valid": true,
+  "time": 0.022070801998779643,
+  "mem": 0.0
+ },
+ "D2.4_gcs_on_astar": {
+  "grasps": 3.0,
+  "polytope_changes": 10,
+  "path_length": 18.206228201498412,
+  "valid": true,
+  "time": 0.03463107199786464,
+  "time_parts": {
+   "astar": 0.022070801998779643,
+   "build": 0.0066710249993775506,
+   "restriction": 0.005889244999707444
+  },
+  "mem": 0.0,
+  "sets": 11
+ },
+ "D2.4_gcs_full": {
+  "grasps": 4.0,
+  "polytope_changes": 11,
+  "path_length": 15.524939375555428,
+  "valid": true,
+  "time": 0.9275880429995595,
+  "time_parts": {
+   "build": 0.006600873999559553,
+   "solve": 0.920987169
+  },
+  "mem": 0.7823439999999999,
+  "peak_process": 1.123,
+  "cost": 55.53193936946202,
+  "vertices": 45,
+  "edges": 202,
+  "layers": 4,
+  "build_time": 0.006600873999559553
+ },
+ "D3.2_astar": {
+  "grasps": 4.0,
+  "polytope_changes": 5,
+  "path_length": 20.13759836154872,
+  "valid": true,
+  "time": 0.01886875999844051,
+  "mem": 0.0
+ },
+ "D3.2_gcs_on_astar": {
+  "grasps": 4.0,
+  "polytope_changes": 12,
+  "path_length": 20.137598503215326,
+  "valid": true,
+  "time": 0.033344123999995645,
+  "time_parts": {
+   "astar": 0.01886875999844051,
+   "build": 0.0074721749988384545,
+   "restriction": 0.007003189002716681
+  },
+  "mem": 0.0,
+  "sets": 13
+ },
+ "D3.2_gcs_full": {
+  "grasps": 4.0,
+  "polytope_changes": 16,
+  "path_length": 18.167315825552766,
+  "valid": true,
+  "time": 1.0414622859971132,
+  "time_parts": {
+   "build": 0.007282742997631431,
+   "solve": 1.0341795429994818
+  },
+  "mem": 1.090548,
+  "peak_process": 1.495308,
+  "cost": 58.179315813372114,
+  "vertices": 53,
+  "edges": 238,
+  "layers": 5,
+  "build_time": 0.007282742997631431
  },
  "D6.0_astar": {
   "grasps": 7.0,
   "polytope_changes": 5,
-  "path_length": 31.346877002339028,
+  "path_length": 26.89739557858586,
   "valid": true,
-  "time": 0.027159622000908712,
+  "time": 0.037110594003024744,
   "mem": 0.0
  },
  "D6.0_gcs_on_astar": {
@@ -93,13 +173,31 @@
   "polytope_changes": 18,
   "path_length": 26.89739570844865,
   "valid": true,
-  "time": 0.05115053000554326,
+  "time": 0.05910387400217587,
   "time_parts": {
-   "astar": 0.027159622000908712,
-   "build": 0.009647226001106901,
-   "restriction": 0.014343682003527647
+   "astar": 0.037110594003024744,
+   "build": 0.009445359999517677,
+   "restriction": 0.01254791999963345
   },
   "mem": 0.0,
   "sets": 19
+ },
+ "D6.0_gcs_full": {
+  "grasps": 8.0,
+  "polytope_changes": 22,
+  "path_length": 24.216127983074248,
+  "valid": true,
+  "time": 1.8163309630035656,
+  "time_parts": {
+   "build": 0.009413420000782935,
+   "solve": 1.8069175430027826
+  },
+  "mem": 1.352104,
+  "peak_process": 1.759828,
+  "cost": 104.23012797403665,
+  "vertices": 77,
+  "edges": 346,
+  "layers": 8,
+  "build_time": 0.009413420000782935
  }
 }

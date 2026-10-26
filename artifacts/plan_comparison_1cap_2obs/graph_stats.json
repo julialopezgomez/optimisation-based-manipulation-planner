@@ -1,0 +1,80 @@
+{
+ "free_sets": 61,
+ "pieces": 4,
+ "piece_L": [
+  0.19,
+  0.269,
+  0.95,
+  0.95
+ ],
+ "components": 4,
+ "component_L": [
+  0.19,
+  0.269,
+  0.95,
+  0.95
+ ],
+ "L_max": 0.9500000029802322,
+ "transit_edges": 1714,
+ "switch_edges": 10,
+ "free_pairs": 1830,
+ "lp_solver": "quadprog",
+ "start_alpha": 3.0,
+ "queries": {
+  "0.5": {
+   "expanded": 112,
+   "search_s": 0.006846587999461917,
+   "actions": {
+    "grasps": 1,
+    "returns": 0,
+    "releases": 1,
+    "hops": 4
+   },
+   "lower_bound": 1
+  },
+  "1.5": {
+   "expanded": 180,
+   "search_s": 0.011716299002728192,
+   "actions": {
+    "grasps": 2,
+    "returns": 1,
+    "releases": 1,
+    "hops": 4
+   },
+   "lower_bound": 2
+  },
+  "2.4": {
+   "expanded": 248,
+   "search_s": 0.015956774001097074,
+   "actions": {
+    "grasps": 3,
+    "returns": 2,
+    "releases": 1,
+    "hops": 4
+   },
+   "lower_bound": 3
+  },
+  "3.2": {
+   "expanded": 194,
+   "search_s": 0.011942681998334592,
+   "actions": {
+    "grasps": 4,
+    "returns": 3,
+    "releases": 1,
+    "hops": 4
+   },
+   "lower_bound": 4
+  },
+  "6.0": {
+   "expanded": 398,
+   "search_s": 0.026764391997858183,
+   "actions": {
+    "grasps": 7,
+    "returns": 6,
+    "releases": 1,
+    "hops": 4
+   },
+   "lower_bound": 7
+  }
+ }
+}
