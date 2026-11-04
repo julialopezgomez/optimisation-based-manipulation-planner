@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!-- Hand conversion of my_sdfs/bottle_cap.sdf. The base link is the model's root: its position in the
+     world is the pose passed to loadModel, so this one file is loaded once per cap. -->
+<robot name="bottle_cap">
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 -0.01" rpy="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="0.0002" ixy="0" ixz="0" iyy="0.0002" iyz="0" izz="0.00015"/>
+    </inertial>
+    <visual>
+      <geometry><cylinder radius="0.025" length="0.005"/></geometry>
+      <material name="cap_base_grey"><color rgba="0.5 0.5 0.5 0"/></material>
+    </visual>
+    <collision>
+      <geometry><cylinder radius="0.024" length="0.005"/></geometry>
+    </collision>
+  </link>
+
+  <link name="cap_link">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.00008"/>
+    </inertial>
+    <visual>
+      <geometry><cylinder radius="0.025" length="0.015"/></geometry>
+      <material name="cap_blue"><color rgba="0 0 1 1"/></material>
+    </visual>
+    <!-- Red line on the top, which makes the cap's angle visible. -->
+    <visual>
+      <origin xyz="0.013 0 0.0075" rpy="0 1.574 0"/>
+      <geometry><cylinder radius="0.001" length="0.024"/></geometry>
+      <material name="cap_line_red"><color rgba="1 0 0 1"/></material>
+    </visual>
+    <collision>
+      <geometry><cylinder radius="0.024" length="0.015"/></geometry>
+    </collision>
+  </link>
+
+  <joint name="cap_to_base" type="revolute">
+    <parent link="base_link"/>
+    <child link="cap_link"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14" upper="3.14" effort="10" velocity="1"/>
+  </joint>
+</robot>

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!-- Goes with my_sdfs/panda_hand.urdf. -->
+<robot name="panda_hand">
+  <disable_collisions link1="panda_hand" link2="panda_leftfinger" reason="adjacent"/>
+  <disable_collisions link1="panda_hand" link2="panda_rightfinger" reason="adjacent"/>
+
+  <!-- The frame that gets aligned with a handle: panda_hand's own frame. -->
+  <gripper name="gripper" clearance="0">
+    <position xyz="0 0 0" wxyz="1 0 0 0"/>
+    <link name="panda_hand"/>
+  </gripper>
+</robot>

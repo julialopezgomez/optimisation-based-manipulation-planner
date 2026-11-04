@@ -1,0 +1,3 @@
+<?xml version="1.0"?>
+<!-- loadModel always takes an SRDF. Models with nothing to declare (obstacle, floor, walls) use this one. -->
+<robot name="empty"/>

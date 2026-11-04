@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!-- Goes with my_sdfs/panda_arm.urdf. HPP checks every pair of links unless told otherwise, and it ignores
+     the URDF's drake: filter tags, so each pair Drake skips has to be listed here. -->
+<robot name="panda_arm">
+  <!-- Links joined by a joint: Drake skips these automatically. -->
+  <disable_collisions link1="panda_link0" link2="panda_link1" reason="adjacent"/>
+  <disable_collisions link1="panda_link1" link2="panda_link2" reason="adjacent"/>
+  <disable_collisions link1="panda_link2" link2="panda_link3" reason="adjacent"/>
+  <disable_collisions link1="panda_link3" link2="panda_link4" reason="adjacent"/>
+  <disable_collisions link1="panda_link4" link2="panda_link5" reason="adjacent"/>
+  <disable_collisions link1="panda_link5" link2="panda_link6" reason="adjacent"/>
+  <disable_collisions link1="panda_link6" link2="panda_link7" reason="adjacent"/>
+  <disable_collisions link1="panda_link7" link2="panda_link8" reason="adjacent"/>
+
+  <!-- The URDF's drake:collision_filter_group entries. -->
+  <disable_collisions link1="panda_link5" link2="panda_link7" reason="drake filter group"/>
+  <disable_collisions link1="panda_link6" link2="panda_link8" reason="drake filter group"/>
+</robot>

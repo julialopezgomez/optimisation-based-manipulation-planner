@@ -8,3 +8,4 @@ experiments/hpp_comparison/env/install/
 experiments/hpp_comparison/env/src/*
 !experiments/hpp_comparison/env/src/Makefile
 artifacts/hpp_comparison/*/meshes/
+.vibe-wise/

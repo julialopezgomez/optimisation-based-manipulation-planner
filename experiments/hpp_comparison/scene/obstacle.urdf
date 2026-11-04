@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!-- Hand conversion of my_sdfs/obstacle.sdf. Its position in the world is the pose passed to loadModel,
+     taken from SCENES in multicap_scene.py. -->
+<robot name="obstacle">
+  <link name="obstacle_link">
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.00008"/>
+    </inertial>
+    <visual>
+      <geometry><cylinder radius="0.005" length="0.015"/></geometry>
+      <material name="obstacle_red"><color rgba="1 0 0 1"/></material>
+    </visual>
+    <collision>
+      <geometry><cylinder radius="0.005" length="0.015"/></geometry>
+    </collision>
+  </link>
+</robot>

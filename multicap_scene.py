@@ -1,9 +1,10 @@
 """The planning scenes: where the caps and the obstacles are, and how to add them (and the Panda) to a plant.
 
-Every scene is built from here, by the planner notebooks (caps jointed: each cap angle is a DOF), by
+Every scene is built from here, by the planner notebooks (caps jointed: each cap angle is a DOF) and by
 experiments/cap_scaling/generate_cfree.py (caps welded: C-free is computed in the 9-D arm + finger space,
-which is exact because a cap's collision geometry is a cylinder about its own joint axis) and by
-experiments/hpp_comparison/export_scene.py, so they all see the same geometry.
+which is exact because a cap's collision geometry is a cylinder about its own joint axis), so they all see
+the same geometry. experiments/hpp_comparison/scene/ holds hand-written copies of WALLS, FLOOR and the two
+SDF models for HPP: a change to these needs the same change there.
 
 The scenes (SCENES, add_scene), each with a floor just under the caps and the robot base:
   1cap_2obs:  one cap at (0.5, 0, 0) and two obstacles (obstacle.sdf: small cylinders) beside it.

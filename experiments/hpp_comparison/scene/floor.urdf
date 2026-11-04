@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- Copy of FLOOR in multicap_scene.py: update both together.
+     3 x 3 x 0.1 m slab with its top at z = -0.01, so its centre is at z = -0.06. Load at the identity pose. -->
+<robot name="floor">
+  <link name="floor_link">
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="1" ixy="0" ixz="0" iyy="1" iyz="0" izz="1"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.06"/>
+      <geometry><box size="3 3 0.1"/></geometry>
+      <material name="floor_colour"><color rgba="0.85 0.85 0.82 0.35"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.06"/>
+      <geometry><box size="3 3 0.1"/></geometry>
+    </collision>
+  </link>
+</robot>

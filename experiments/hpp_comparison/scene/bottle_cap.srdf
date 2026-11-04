@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!-- Goes with bottle_cap.urdf: link names here refer to links in that file. -->
+<robot name="bottle_cap">
+  <!-- The two cylinders overlap by design. Drake skips them because a joint connects them. -->
+  <disable_collisions link1="base_link" link2="cap_link" reason="adjacent"/>
+
+  <!-- Where the hand grasps the cap, in cap_link's frame.
+       z: 0.1075 above the cap's origin, the middle of the notebooks' grasp band [0.105, 0.110].
+       wxyz: half a turn about y, so the handle's z axis points down at the cap.
+       mask: x y z roll pitch yaw. Yaw is 0, so the hand can grasp at any angle around the cap.
+       clearance: the pregrasp stops this far back (m) along approaching_direction. -->
+  <handle name="handle" clearance="0.05" approaching_direction="0 0 1">
+    <position xyz="0 0 0.1075" wxyz="0 0 1 0"/>
+    <link name="cap_link"/>
+    <mask>1 1 1 1 1 0</mask>
+  </handle>
+</robot>
