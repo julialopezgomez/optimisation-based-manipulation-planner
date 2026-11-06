@@ -4,9 +4,11 @@
 \paragraph{Validating where it matters}
 The weakest link is not the search but the sets it searches over
 (Section~\ref{sec:results:fidelity}), and a dense check is not a certificate.
-Certifying the thin transition sets with C-IRIS~\cite{dai2024certified}, or
-seeding the decomposition on the grasp set, would strengthen the guarantees
-without changing the search.
+Seeding the decomposition along the grasps' wrist runs and cutting the false
+positives found there removed every error we measured, but only at the
+sampled points. Certifying the thin transition sets with
+C-IRIS~\cite{dai2024certified} would strengthen the guarantees without
+changing the search.
 
 \paragraph{Constructing grasp sets}
 We take two ideas from NLP sampling~\cite{toussaint2024nlp}, its
@@ -36,9 +38,15 @@ cost of exact dominance.
 
 \paragraph{Optimality and offline cost}
 The search minimises the number of grasps, then the number of set changes,
-which is only a weak proxy for distance travelled. As in CASSR, the sets are
-fixed before the configurations, so path length is not optimal. A new obstacle layout requires a new decomposition, which dominates the
-offline cost: in a separate run, IRIS-NP2 took 120\,s for 25 regions at a 0.98
-coverage target \tocheck{different settings}. GPU
+which is only a weak proxy for distance travelled. The second stage minimises
+length, but over the sets the search fixed, as in CASSR, so path length is not
+optimal: at equal grasps, full GCS found paths 10--19\% shorter
+(Section~\ref{sec:results:gcs}). Adding length to the cost while keeping the
+search exact needs a position per node, e.g.\ the door point a node was
+entered through, with $\lambda\|p-p_{\mathrm{goal}}\|$ added to the heuristic
+and $\lambda$ small enough that length never outweighs a grasp; the price is
+more nodes. A new obstacle layout requires a new decomposition, which
+dominates the offline cost: 2.8 and 18.6\,min on 32 threads for our two
+scenes, against 0.09 and 2.0\,s for the graph. GPU
 implementations~\cite{werner2025superfast} reduce it, and new start and goal
 queries reuse the graph unchanged.

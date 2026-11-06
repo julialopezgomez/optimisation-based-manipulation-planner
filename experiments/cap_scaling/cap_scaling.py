@@ -175,7 +175,8 @@ for k_active in KS:
                 runs.append(dict(base, method=method, solved=False, skipped=True))
                 continue
             if outside:
-                runs.append(dict(base, method=method, weight=weight, solved=False, skipped=False, outside_cfree=True))
+                runs.append(dict(base, method=method, weight=weight, solved=False, skipped=False, timed_out=False,
+                                 outside_cfree=True))
                 print(f"K={k_active} q{qi:02d} {method:<8}: NO PLAN (start or goal outside C-free)", flush=True)
                 continue
             HEURISTIC_WEIGHT = weight
@@ -463,7 +464,7 @@ def dot_chart(title, key, unit_fmt, scale=1.0, limit_value=None):
     g.append(f'<text x="{(L + W - R) / 2:.1f}" y="{H - 4}" class="axis" text-anchor="middle">caps to turn, K</text>')
     jit = np.random.default_rng(1)
     for k_active, m, v, r in pts:
-        what = (f"{unit_fmt(v)}, {r['actions']} actions" if r["solved"] else f"no plan ({'time limit' if r['timed_out'] else 'search exhausted'})")
+        what = (f"{unit_fmt(v)}, {r['actions']} actions" if r["solved"] else f"no plan ({'outside C-free' if r.get('outside_cfree') else 'time limit' if r['timed_out'] else 'search exhausted'})")
         tip = f"{LABELS[m]}, K = {k_active}, query {r['query']}: {what}, caps {r['active_caps']}"
         cls = f"dot {SERIES_CLASS[m]}" + ("" if r["solved"] else " hollow")
         g.append(f'<circle cx="{x(k_active, m) + jit.uniform(-4, 4):.1f}" cy="{y(v):.1f}" r="4" class="{cls}" data-tip="{tip}"/>')

@@ -7,8 +7,14 @@ convex sets and searching over reachability: a node pairs a convex set with
 the interval of object configurations reachable inside it. For objects with
 one coordinate coupled to the wrist, the search is complete and returns the
 fewest grasps the sets allow, without fixing that number in advance and
-without integer variables, and a solver-free stage recovers the motions. This
+without integer variables, and a second stage places the motions without a
+solver and shortens them with one convex program. This
 carries over to regrasping an idea matured in footstep planning, and extends
 it to contact sets that must be constructed and to contacts that move the
 object. The guarantees are only as good as the transition sets are faithful
-near contact, which is why we validate them. \todo{one sentence on E1--E5 once run.}
+near contact, which is why we validate them. On a 10-DOF scene the search
+returned the fewest grasps in at most 0.04\,s, where GCS on the same sets took
+40--55 times longer and sometimes an extra grasp, and a sampling-based planner
+solved only single-grasp queries. With eight caps, a weighted search planned
+up to 15 grasps in under 1.7\,s; proving the minimum exactly remains limited to a
+few caps.

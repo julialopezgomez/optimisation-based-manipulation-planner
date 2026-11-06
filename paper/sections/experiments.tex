@@ -2,33 +2,50 @@
 \label{sec:experiments}
 
 Our experiments ask four questions. Does the search return plans with the
-minimum number of grasps for new goals, start configurations and obstacle
-layouts, from a single offline stage? How does it compare with a mixed-integer
-formulation and with a sampling-based manipulation planner as the number of
-required grasps grows? Why must the transition sets be validated? And does validation
-change the plans?
+minimum number of grasps its sets allow, for any goal, from a single offline
+stage? How does it compare with GCS on the same sets and with a sampling-based
+manipulation planner, counting both offline and online cost? How does it scale
+with the number of objects? And why must the decomposition be checked where
+the transition sets lie?
 
-\subsection{Tasks and implementation}
-Both tasks turn a cap about a fixed vertical axis with a Franka
-Panda~\cite{haddadin2022franka}, whose wrist is restricted to $[-1,1]$\,rad,
-so any turn larger than 2\,rad needs several grasps.
+\subsection{Scenes and implementation}
+A Franka Panda~\cite{haddadin2022franka} turns caps about fixed vertical axes.
+Its wrist is restricted to $[-1,1]$\,rad, so any turn larger than the wrist
+range left free by the scene needs several grasps. Each scene has a floor just
+under the caps and the robot base.
 \begin{itemize}
-  \item \textbf{T1 (3-DOF).} All arm joints but the wrist are locked:
-    $q=(w,x_{\mathrm{finger}},\alpha)$, with
-    $x_{\mathrm{finger}}\in[-0.045,0]$\,m and $\alpha\in[-\pi,\pi]$. The
-    decomposition has 15 regions, and the task turns the cap by $2\pi$.
-    \tocheck{T1 from the MInf report (WSG gripper) or the locked Franka?}
-  \item \textbf{T2 (10-DOF).} Seven arm joints, two fingers and the cap. The
-    cap is 0.5\,m in front of the robot base, with two cylindrical obstacles
-    (radius 5\,mm) next to it. The free sets come from an IRIS-NP2 clique
-    cover with 42 regions \tocheck{coverage target 0.98; $(\varepsilon,\delta)$;
-    generation time}. The reference query Q0 turns the cap from $-1$ to 3\,rad
-    and returns the arm to its start configuration.
+  \item \textbf{\textsf{1cap\_2obs}} (10-DOF): seven arm joints, two fingers
+    and one cap, 0.5\,m in front of the base, with two cylindrical obstacles
+    (radius 5\,mm) beside it. The obstacles block part of the wrist range at
+    the grasp.
+  \item \textbf{\textsf{8caps\_3obs}} (17-DOF): eight caps on an arc of radius
+    0.5\,m around the base, from $-120^\circ$ to $120^\circ$, and three radial
+    walls (0.35 and 0.5\,m high) between groups of caps, so that moving between
+    groups means going over or around a wall.
 \end{itemize}
+The comparison with the MIQP also uses a 3-DOF task (wrist, finger and cap of
+a locked arm, 15 regions, a $2\pi$ turn). \tocheck{3-DOF task from the MInf
+report (WSG gripper) or the locked Franka?}
 
-The grasp constraints~\eqref{eq:grasp_hg} ask the hand to be centred over the
-cap, within a height band, with its approach axis $z_E={}^{C}R^{E}(x)e_z$
-pointing down:
+\paragraph{Decomposition} Every scene is decomposed by one procedure. A cap's
+collision geometry is a cylinder about its own joint axis, so no collision
+depends on a cap angle: we compute $\CSfree$ in the 9-D space of arm and
+fingers with the caps welded, which is exactly the slice of
+Section~\ref{sec:method:free}. The procedure has four steps.
+(1)~For each cap, a seed grasp is refined onto~\eqref{eq:grasp_hg} by an NLP.
+(2)~IRIS-NP2~\cite{werner2024faster} grows regions along each grasp's
+collision-free wrist runs, from an ellipsoid that is long along the wrist and
+thin across it; a round initial ellipsoid gave regions only about 0.2\,rad
+long in the wrist. (3)~A clique cover~\cite{werner2024approximating} with these
+regions as initial sets runs to a 0.98 coverage target. (4)~Points that a
+region calls free but the collision checker rejects are cut off by separating
+planes, never cutting the free part of a grasp's wrist sweep: on dense wrist
+sweeps at each grasp, around the caps and uniformly over the joint box.
+Table~\ref{tab:offline} reports the result.
+
+\paragraph{Grasp constraints} The constraints~\eqref{eq:grasp_hg} ask the
+hand to be centred over the cap, within a height band, with its approach axis
+$z_E={}^{C}R^{E}(x)e_z$ pointing down:
 \begin{align}
   h(x) &= [\,p_x,\; p_y,\; z_{E,x},\; z_{E,y}\,]^\top, \label{eq:grasp_h}\\
   g(x) &= [\,p_z - z_{\max},\; z_{\min} - p_z,\; z_{E,z} + c\,]^\top, \label{eq:grasp_g}
@@ -39,34 +56,32 @@ $J_h$ has rank 4, leaving a six-dimensional null space. The grasp set
 of~\eqref{eq:graspPoly} uses $\epsilon=10^{-3}$, $\rho=0.05$\,rad and
 $\Lmin=0.05$\,rad. The wrist of the Panda satisfies the invariance of
 Section~\ref{sec:method:grasp} exactly: sweeping it over its whole range at a
-grasp leaves $h$ and $g$ unchanged to machine precision.
-The planner is implemented in Python with Drake~\cite{tedrake2019drake}
-(v1.48). The LPs use Drake's \texttt{MathematicalProgram}, and the MIQP uses
-MOSEK~\cite{mosek}. \todo{hardware; code release.}
+grasp leaves $h$ and $g$ unchanged to machine precision. With several caps,
+each cap has its own grasp set, and a node carries one interval of $\alpha$ per
+cap; a move inside a transition set of cap $k$ changes only the interval of
+$\alpha_k$, and the heuristic~\eqref{eq:heuristic} becomes a sum over caps.
+
+\paragraph{Implementation} The planner is in Python, with
+Drake~\cite{tedrake2019drake} (v1.48). The graph needs tens of thousands of
+small LPs (emptiness checks, Chebyshev centres, extreme points). We solve each
+as the regularised QP $\min c^\top x+\tfrac{\varepsilon}{2}\|x\|^2$ subject to
+$Ax\le b$, with $\varepsilon=10^{-8}$, using the dual active-set method of
+Goldfarb and Idnani~\cite{goldfarb1983dual}, which reports infeasibility, and
+hence emptiness, directly. With MOSEK, every one of these solves checked a
+licence out, which made the graph of \textsf{8caps\_3obs} take 15\,min.
+MOSEK~\cite{mosek} solves the decomposition's programs, GCS and the second
+stage, with one licence held throughout. All times are on one AMD Ryzen 9
+9950X (16 cores, 32 threads, 60\,GB).
 
 \subsection{Baselines and protocol}
 \label{sec:experiments:protocol}
-We compare against three baselines:
-\begin{itemize}
-  \item GCS~\cite{marcucci2023motion} on the same sets and the same graph as
-    the search (below);
-  \item the mixed-integer formulation of Section~\ref{sec:method:miqp}, with
-    GCS connecting its keyframes;
-  \item a sampling-based planner on the manipulation
-    graph~\cite{simeon2004manipulation}, with probabilistic roadmaps for transit
-    and transfer. \todo{implement the sampling-based baseline (own
-    implementation or HPP~\cite{mirabel2016hpp}); time limit.}
-\end{itemize}
-For all methods, every returned motion is checked densely with Drake's
-collision checker.
 
-\paragraph{GCS on the same sets}
-The free sets $F_j$ and the transition sets $T_k$, with $\alpha$ free within its
-limits, are the vertices, and the transit and switch edges of
-Section~\ref{sec:method:graph} are the edges. Each visited vertex holds one
-straight segment $r_0\to r_1$, with both ends in its set. The coupling
-becomes linear constraints on these two points: $r_1^{\alpha}=r_0^{\alpha}$ in
-every $F_j$, and in every $T_k$
+\paragraph{GCS on the same sets} The free sets $F_j$ and the transition sets
+$T_k$, with $\alpha$ free within its limits, are the vertices, and the transit
+and switch edges of Section~\ref{sec:method:graph} are the edges. Each visited
+vertex holds one straight segment $r_0\to r_1$, with both ends in its set. The
+coupling becomes linear constraints on these two points: $r_1^{\alpha}=r_0^{\alpha}$
+in every $F_j$, and in every $T_k$
 \[
 r_1^{\alpha}-r_1^{w}=r_0^{\alpha}-r_0^{w}, \qquad r_1^{w}\ge r_0^{w},
 \]
@@ -78,94 +93,248 @@ the graph is copied once per grasp:
 \]
 with $N=\lceil D/\Lmax\rceil+1$ for a turn $D$. Every $\text{grasp}_n$ also
 connects to the depart layer, and the approach layer also connects directly to
-the goal.
+the goal. The cost is the path length, plus 10 per grasp, plus $\mu$ per other
+change of set; ten exceeds any path length here, so the fewest grasps come
+first, as in the search. The between layers hold the free sets that meet a
+transition set; the approach and depart layers hold those, the free sets
+containing $\xinit$ or $\xgoal$, and the free sets of the A*'s plan. We solve
+it with Drake's \texttt{SolvePath}: a convex relaxation, rounded to at most 10
+candidate paths, each finished by a convex restriction.
 
-The cost is the path length, plus 10 per grasp (each free-to-transition edge),
-plus $\mu$ per other change of set. Ten exceeds any path length on T2, so, as in
-the search, the fewest grasps come first. The between layers hold only the free
-sets that meet a transition set. The approach and depart layers hold those,
-the free sets containing $\xinit$ or $\xgoal$, and the free sets used by the A*
-plan. The reason for this pruning is memory (Section~\ref{sec:results:gcs}).
+\paragraph{Manipulation RRT} As the sampling-based baseline we use the
+Manipulation RRT of HPP~\cite{mirabel2016hpp}, which plans on the manipulation
+graph~\cite{simeon2004manipulation}, built by HPP's constraint-graph factory on
+the same robot and scene (exported from Drake, with Drake's collision
+geometry and filters). The hand grasps the cap's handle 0.1075\,m above it,
+pointing down, at any yaw; outside a grasp the cap joint is locked at its
+current angle; and the fingers are locked at the grasp width. Motions are
+validated continuously (HPP's \texttt{Dichotomy}, with a progressive projector
+in constrained states): HPP's default discretised check returned plans that
+Drake rejects. Paths are not shortcut.
 
-We solve this graph with Drake's \texttt{SolvePath}: a convex relaxation,
-rounded to at most 10 candidate paths, each finished by a convex restriction,
-with MOSEK. We also solve only the convex restriction on the sequence of sets
-that the A* returns (\emph{GCS on the A* sequence}). It keeps the A*'s discrete
-plan and optimises its configurations, so it isolates the second stage
-(Section~\ref{sec:method:recovery}).
-
-Five experiments follow. \textbf{E1} sweeps $\agoal$ over the cap range at a
-fixed arm configuration, and reports the number of grasps against the lower
-bound $\lceil D/\Lmax\rceil$ for a turn $D=\agoal-\ainit$. \textbf{E2} draws random start and
-goal configurations from the free sets. \textbf{E3} varies the obstacle
-layout, each layout with its own offline stage, and separates offline from
-online cost. \textbf{E4} compares the reachability A* with the baselines as a function of
-the number of grasps a query requires, reporting success within the time limit,
-planning time and grasps. \textbf{E5} runs Q0 with and without the validation
-of Section~\ref{sec:method:graph}.
-\todo{run E1--E5; this is the evidence for the main claim.}
+\paragraph{Protocol} Every returned motion is re-checked with Drake: collisions,
+the coupling (the cap moves only with the grasping wrist) and the goal. On
+\textsf{1cap\_2obs}, every method shares one start and one goal, saved with the
+sets, and the cap turns by $D\in\{0.5,1.5,2.4,3.2,6\}$\,rad. HPP runs 10 seeds
+per query with a 60\,s limit. On \textsf{8caps\_3obs}, for each number $K$ of
+caps to turn, we draw 20 random queries: $K$ random caps, each turned by a
+random amount in $[0.5,\pi]$\,rad, summing to $2.5K$\,rad, with random start
+and goal arm configurations in the free sets. The A* runs exactly and weighted
+($w=1.5$), with a 60\,s limit. HPP runs 5 of those queries per $K$, 3 seeds
+each, 60\,s each. Online times count each method's work per query: for the A*
+the search and the second stage; for GCS building its layered graph and
+solving it; for HPP its \texttt{solve()}. The offline stage is reported
+separately (Table~\ref{tab:offline}), and is shared by the A* and GCS. Memory
+is the peak extra resident memory; each full GCS solve runs in a fresh process.
 
 \section{Results}
 \label{sec:results}
 
-\subsection{Reachability A* on the 10-DOF task}
-Table~\ref{tab:franka} and Fig.~\ref{fig:reach} report Q0, before validation.
-Of the 42 free sets, 8 intersect the grasp set. Four of these transition sets
-span the whole wrist range ($L_k=2$\,rad), and the others span between 0.06 and
-0.36\,rad. The search expands 63 nodes in 0.004\,s and returns two strokes, one
-return and one release: it enters $T_6$ from $F_2$, performs stroke, return
-and stroke, and releases into $F_0$. Its cost, $4+\mu$, equals the initial
-heuristic plus one set change, so the heuristic is tight on this query. With
-$D=4$\,rad and $\Lmax=2$\,rad, two grasps is the minimum that the sets allow.
-The second stage turns 2\,rad per stroke and produces 7 waypoints, and all 6
-straight-line motions lie in their recorded set and satisfy the coupling. The online stage performs no
-geometric computation of its own: every intersection and extreme point it
-relies on was computed offline, by linear programs.
+\subsection{Offline stage}
+Table~\ref{tab:offline} reports the offline stage of both scenes. The
+decomposition dominates it: 2.8 and 18.6\,min, against 0.09 and 2.0\,s
+for the graph. Both are done once per scene, and every query reuses
+them. On 20{,}000 uniform samples, the regions wrongly call 7 and 10
+configurations free (0.04 and 0.05\%), and they cover 91 and 81\% of the free
+samples. On the dense wrist sweeps at the grasps, where the transition sets
+lie, they call no colliding configuration free and cover 225 of the 230 and
+3153 of the 3159 free ones. On \textsf{1cap\_2obs} the obstacles leave the
+wrist free over at most $\Lmax=0.95$\,rad, so a turn $D$ needs at least
+$\lceil D/0.95\rceil$ grasps.
 
 \begin{table}[t]
 \centering
-\caption{Reachability A* on T2 (10-DOF), query Q0, before validation}
-\label{tab:franka}
+\caption{Offline stage, done once per scene and shared by the A* and GCS.
+False positives: configurations that a region calls free and the collision
+checker rejects, on 20{,}000 uniform samples and on the dense wrist sweeps at
+the grasps. Coverage: fraction of the free uniform samples inside a region.}
+\label{tab:offline}
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}l l r@{}}
+\begin{tabular}{@{}l r r@{}}
 \toprule
-Stage & Quantity & Value\\
+ & \textsf{1cap\_2obs} & \textsf{8caps\_3obs}\\
 \midrule
-\multirow{5}{*}{Offline} & free sets $J$ (non-empty after slicing) & 42\\
- & transition sets $K$ (with $L_k=2$\,rad) & 8 (4)\\
- & transit / switch edges & 850 / 58\\
- & graph construction time & \tbd\\
- & decomposition time & \tbd\\
+decomposition time (32 threads) & 2.8\,min & 18.6\,min\\
+free sets (seeded along the wrist) & 61 (3) & 352 (22)\\
+false positives: uniform / sweeps & 7 / 0 & 10 / 0\\
+coverage of the free samples & 0.91 & 0.81\\
 \midrule
-\multirow{5}{*}{Online} & nodes expanded & 63\\
- & search time & 0.004\,s\\
- & strokes / returns / releases & 2 / 1 / 1\\
- & set changes & 1\\
- & motions contained in their set & 6 / 6\\
+transition sets & 4 & 11\\
+$\Lmax$ [rad] (per cap) & 0.95 & 1.65--2.0\\
+transit / switch edges & 1714 / 10 & 23{,}729 / 17\\
+graph time (LPs) & 0.09\,s & 2.0\,s\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{The trust region on the grasp set}
-Without the trust region $\rho$, the extreme points that the graph
-construction returns lie far outside the region where the linearisation holds:
-on T2 they lay 2.27\,rad from the seed in one arm joint, with
-$\|h\|_\infty=0.95$ and the hand 0.80\,m away from the cap. With
-$\rho=0.05$\,rad, $\|h\|_\infty$ stays near $2\times10^{-3}$ along the plans we
-report \tocheck{numbers from the q0 run}.
+\subsection{One cap: the A*, GCS and the Manipulation RRT}
+\label{sec:results:gcs}
+Table~\ref{tab:gcs} compares the three methods on \textsf{1cap\_2obs}.
+\begin{itemize}
+  \item \emph{The A* always returns the fewest grasps}, $\lceil D/\Lmax\rceil$,
+    in 0.010--0.037\,s, second stage included. It expands 112--398 nodes, in
+    0.007--0.027\,s.
+  \item \emph{Full GCS returns shorter paths, but not always the fewest
+    grasps.} It is 40--55$\times$ slower (0.56--1.8\,s) and uses 0.8--1.4\,GB.
+    At the two turns where it returns as many grasps as the A*, its path is 10
+    and 19\% shorter. At the other three it returns one grasp more, which its
+    own cost ranks lower: at $D=1.5$ the A*'s plan is a path of the same GCS
+    graph with cost $16.03+2\cdot10=36.0$, against 44.0 for the plan returned.
+    Rounding the relaxation carries no optimality guarantee, and here it missed
+    the plan with the fewest grasps.
+  \item \emph{GCS on the A* sequence} solves only the convex restriction of
+    the same layered GCS graph to the A*'s sets, in 0.019--0.059\,s, A*
+    search included. It returns the A*'s lengths to seven digits: the A*'s
+    second stage (Section~\ref{sec:method:recovery}) is that same convex
+    program, so it is optimal for the sets the A* chose. The length gap to
+    full GCS at equal grasps therefore comes from the choice of sets, which
+    the A* makes by the number of set changes, not by length.
+  \item \emph{The Manipulation RRT solves only the one-grasp query}, in 7 of
+    10 runs, in 0.04\,s (median), with paths 18\% longer than the A*'s. With
+    two or more grasps it found no plan in any run, neither within 60\,s nor,
+    on the scene without the floor, within 600\,s. Each regrasp needs the
+    tree to reach a thin grasp set, turn within it and leave it, and a long
+    chain of such steps is unlikely to be sampled.
+\end{itemize}
+Counting offline and online cost, the A* and GCS share the 2.8\,min
+decomposition and the 0.09\,s graph; GCS then pays 0.6--1.8\,s and about
+1\,GB per query, the A* at most 0.04\,s. The Manipulation RRT has no offline
+stage, but does not solve the multi-grasp queries.
+
+\begin{table}[t]
+\centering
+\caption{Plans on \textsf{1cap\_2obs} from one start and goal, for a turn $D$.
+Lower bound: $\lceil D/\Lmax\rceil$ grasps. Length: Euclidean, in
+$(x,\alpha)$. Time: online, per query; for GCS on the A* sequence it
+includes the A* search and building the layered graph. HPP: solved/runs,
+median over solved runs. Every returned plan passes the checks of the
+protocol.}
+\label{tab:gcs}
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}r l r r r r@{}}
+\toprule
+$D$ [rad] & Method & Grasps & Length & Time [s] & Mem.\ [GB]\\
+\midrule
+\multirow{4}{*}{0.5} & Reach.\ A* (ours) & \textbf{1} & 14.10 & \textbf{0.010} & \textbf{$<$0.01}\\
+ & GCS on A* seq. & \textbf{1} & 14.10 & 0.019 & \textbf{$<$0.01}\\
+ & Full GCS & \textbf{1} & \textbf{11.36} & 0.56 & 0.81\\
+ & Manip.\ RRT, 7/10 & \textbf{1} & 16.67 & 0.040 & $<$0.1\\
+\midrule
+\multirow{4}{*}{1.5} & Reach.\ A* (ours) & \textbf{2} & 16.03 & \textbf{0.017} & \textbf{$<$0.01}\\
+ & GCS on A* seq. & \textbf{2} & 16.03 & 0.028 & \textbf{$<$0.01}\\
+ & Full GCS & 3 & 13.99 & 0.73 & 0.92\\
+ & Manip.\ RRT, 0/10 & \multicolumn{4}{l}{no plan within 60\,s}\\
+\midrule
+\multirow{3}{*}{2.4} & Reach.\ A* (ours) & \textbf{3} & 18.21 & \textbf{0.022} & \textbf{$<$0.01}\\
+ & GCS on A* seq. & \textbf{3} & 18.21 & 0.035 & \textbf{$<$0.01}\\
+ & Full GCS & 4 & 15.52 & 0.93 & 0.78\\
+\midrule
+\multirow{3}{*}{3.2} & Reach.\ A* (ours) & \textbf{4} & 20.14 & \textbf{0.019} & \textbf{$<$0.01}\\
+ & GCS on A* seq. & \textbf{4} & 20.14 & 0.033 & \textbf{$<$0.01}\\
+ & Full GCS & \textbf{4} & \textbf{18.17} & 1.04 & 1.09\\
+\midrule
+\multirow{4}{*}{6} & Reach.\ A* (ours) & \textbf{7} & 26.90 & \textbf{0.037} & \textbf{$<$0.01}\\
+ & GCS on A* seq. & \textbf{7} & 26.90 & 0.059 & \textbf{$<$0.01}\\
+ & Full GCS & 8 & 24.22 & 1.82 & 1.35\\
+ & Manip.\ RRT, 0/10 & \multicolumn{4}{l}{no plan within 60\,s}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Where GCS spends its time} \texttt{SolvePath} does not solve the
+mixed-integer program of GCS~\cite{marcucci2024shortest}: it solves its convex
+relaxation and rounds it. The relaxation is one conic program in which every
+edge carries a copy of the segment variables of both its ends, so its size
+follows the number of edges, which grows with the number of grasps: from
+29 vertices and 130 edges at $D=0.5$ to 77 and 346 at $D=6$, with time and
+memory growing with them. The A* solves no program in its search: it does
+interval arithmetic on extreme points computed offline. On an earlier
+decomposition of the same scene, with 8 transition sets and 543 edges for one
+grasp, the same GCS formulation took 44 and 93\,s for one and two grasps and
+did not fit in 60\,GB at eight (Appendix~\ref{app:gcs}). The cost of GCS thus
+depends on the number of transition sets, which grows with the number of
+objects.
+
+\paragraph{Why GCS needs the graph unrolled} In GCS a path is a sequence of
+distinct vertices, and each vertex holds a single
+segment~\cite{marcucci2024shortest}. A regrasp plan, however, comes back to
+the same transition set once per grasp, and to the free sets where it lets go
+and turns the wrist back. GCS can represent such a plan only after the graph is
+copied by hand, with the coupling written on each copy and the number of
+grasps bounded before solving: on a two-variable toy ($(w,\alpha)$ in a box, a
+4\,rad turn, strokes of at most 2\,rad), a single copy of the grasp vertex is
+infeasible, both relaxed and as the exact mixed-integer program. A node of the
+reachability A* pairs a set with an interval of $\alpha$, so coming back to a
+set with a different $\alpha$ is simply a new node, the number of grasps is an
+output of the search, and the graph is built once for all queries.
+\todo{Full GCS with returns inside copies of the transition sets (the A*'s
+model), and on \textsf{8caps\_3obs}.}
+
+\subsection{Eight caps: scaling with the number of objects}
+\label{sec:results:scaling}
+Table~\ref{tab:cap_scaling} reports \textsf{8caps\_3obs}. Of the 160
+queries, 15 start or end outside the current free sets (they were drawn for
+an earlier decomposition, and are kept so that HPP sees the same queries);
+we leave them out.
+\begin{itemize}
+  \item \emph{Weighted A* solves every query}, 145 of 145, with time growing
+    about linearly in $K$: from 0.13\,s for one cap to 1.6\,s for eight
+    (15 grasps), all plans certified.
+  \item \emph{Exact A* proves the minimum, but only for few caps.} It solves
+    every query up to $K=3$, 15 of 20 at $K=4$ and none at $K=5$ within
+    60\,s. With $K$ caps, a set can be reached with many combinations of cap
+    intervals that do not dominate one another, and the heuristic, a sum of
+    per-cap bounds, ignores the travel between caps.
+  \item \emph{Weighting cost nothing here.} On all 69 queries both solved,
+    the weighted search returned exactly as many actions as the exact one.
+    Its bound guarantees at most $1.5$ times the minimum cost.
+  \item \emph{The Manipulation RRT found no plan} in any of its 120 runs
+    (5 queries and 3 seeds for each $K$), already at $K=1$, where a query
+    turns one cap by 2.5\,rad and needs at least two grasps.
+\end{itemize}
+
+\begin{table}[t]
+\centering
+\caption{Reachability A* on \textsf{8caps\_3obs} as the number $K$ of caps to
+turn grows: solved / queries with start and goal in the free sets, median
+grasps and nodes expanded, and time per query in ms, median (25th--75th
+percentile) over solved queries. Exact A* stops at 60\,s, and is not run past
+the first $K$ where it solves nothing. Every plan passes the checks of the
+protocol.}
+\label{tab:cap_scaling}
+\setlength{\tabcolsep}{2.6pt}
+\begin{tabular}{@{}r r r r r r r@{}}
+\toprule
+ & \multicolumn{4}{c}{Weighted A* ($w=1.5$)} & \multicolumn{2}{c}{Exact A*}\\
+\cmidrule(lr){2-5}\cmidrule(l){6-7}
+$K$ & Solved & Grasps & Nodes & Time [ms] & Solved & Time [ms]\\
+\midrule
+1 & 17/17 & 2 & 396 & 129 (110--168) & 17/17 & 227 (136--301)\\
+2 & 19/19 & 4 & 751 & 295 (283--312) & 19/19 & 1057 (832--1268)\\
+3 & 18/18 & 6 & 1102 & 455 (393--480) & 18/18 & 5080 (4399--6385)\\
+4 & 20/20 & 7 & 1438 & 597 (573--647) & 15/20 & 37954 (20906--43164)\\
+5 & 19/19 & 9 & 1795 & 803 (757--835) & 0/19 & $>$60\,000\\
+6 & 20/20 & 11 & 2133 & 1057 (1007--1100) & -- & --\\
+7 & 17/17 & 13 & 2525 & 1328 (1258--1350) & -- & --\\
+8 & 15/15 & 15 & 2891 & 1575 (1555--1602) & -- & --\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Comparison with the MIQP}
-Table~\ref{tab:miqp} compares the two ways of choosing grasps. On T1, the MIQP
-returns 11 grasps after proving 10 infeasible. Each stroke turns the cap by
-0.604\,rad, the wrist range of the grasp set in that decomposition, and
-$\lceil 2\pi/0.604\rceil=11$. GCS then connects all 23 transit and transfer
-segments. On T2 it does not return a reliable solution. The
-numbers make the argument of Section~\ref{sec:method:miqp} concrete: the grasp
-set is $2\epsilon=2\times10^{-3}$ thick, while $M=10^{6}$ and MOSEK's default
+Table~\ref{tab:miqp} compares the two ways of choosing grasps. On the 3-DOF
+task, the MIQP returns 11 grasps after proving 10 infeasible. Each stroke
+turns the cap by 0.604\,rad, the wrist range of the grasp set in that
+decomposition, and $\lceil 2\pi/0.604\rceil=11$. GCS then connects all 23
+transit and transfer segments. On \textsf{1cap\_2obs} it does not return a
+reliable solution. The numbers make the argument of
+Section~\ref{sec:method:miqp} concrete: the grasp set is
+$2\epsilon=2\times10^{-3}$ thick, while $M=10^{6}$ and MOSEK's default
 integrality tolerance $\tau=10^{-5}$~\cite{mosek} give $M\tau=10$\,rad of
-slack on a set reported as occupied, more than any joint range. The
-reachability A* returns the plan above in 0.004\,s. \tocheck{MIQP outcome and solve time on T2; run the
-reachability A* on T1 and check that it also returns 11.}
+slack on a set reported as occupied, more than any joint range.
+\tocheck{MIQP outcome and solve time on \textsf{1cap\_2obs} with the current
+decomposition; run the reachability A* on the 3-DOF task and check that it
+also returns 11.}
 
 \begin{table}[t]
 \centering
@@ -176,219 +345,40 @@ reachability A* on T1 and check that it also returns 11.}
 \toprule
 Task & Method & Grasps & Time & Outcome\\
 \midrule
-\multirow{2}{*}{T1 (3-DOF)} & MIQP & 11 & \tbd & solved; GCS connected\\
+\multirow{2}{*}{3-DOF} & MIQP & 11 & \tbd & solved; GCS connected\\
  & Reach.\ A* & \tbd & \tbd & \tbd\\
 \midrule
-\multirow{2}{*}{T2 (10-DOF)} & MIQP & -- & \tbd & numerical failure \tocheck{}\\
- & Reach.\ A* & 2 & 0.004\,s & solved (rel.\ sets)\\
+\multirow{2}{*}{\textsf{1cap\_2obs}} & MIQP & -- & \tbd & numerical failure \tocheck{}\\
+ & Reach.\ A* & 2 & 0.017\,s & solved ($D=1.5$)\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Comparison with GCS on the same sets}
-\label{sec:results:gcs}
-
-\paragraph{Setup}
-\begin{itemize}
-  \item All runs use T2 with the 42 free sets. The transition sets are
-    restricted to the wrist intervals that the collision checker accepts, so
-    $\Lmax=0.81$\,rad. This was implemented by cutting the free sets with planes
-    normal to the wrist where the wrist sweep of
-    Section~\ref{sec:results:fidelity} finds collisions.
-    \tocheck{same as the validation of Section~\ref{sec:method:graph}?}
-  \item Every row of Table~\ref{tab:gcs} shares one start and one goal, saved
-    with the sets so that the run reproduces exactly. The cap starts at
-    $\ainit=-3$\,rad and turns by $D=0.5$, 1.5 or 6\,rad, which needs 1, 2 or
-    8 grasps. The code uses the opposite sign.
-  \item Times count each method's online work:
-    \begin{itemize}
-      \item reachability A*: the search and the placement of the waypoints;
-      \item GCS on the A* sequence: the A* search, building the layered GCS
-        graph, and one convex program;
-      \item full GCS: building the layered graph and \texttt{SolvePath}
-        (relaxation, then rounding to at most 10 candidate paths).
-    \end{itemize}
-  \item Not counted for any method: the 1.1\,s that builds the A*'s graph,
-    which GCS reuses instead of repeating its intersection checks; and the
-    decomposition.
-  \item Memory is the peak resident memory of the computation. Each full GCS
-    solve runs in a fresh process, so earlier solves do not hide its memory.
-  \item MOSEK solves all programs, with one licence held throughout. Without
-    it, every small program checks a licence out again, which made the A*'s
-    graph take 50--90\,s instead of 1.1\,s, and inflated earlier GCS timings
-    (Appendix~\ref{app:gcs}).
-  \item Appendix~\ref{app:gcs} lists every run, including those that failed.
-\end{itemize}
-Before these runs we checked the encoding on a two-variable toy, not a scene:
-$(w,\alpha)$ in a box, a 4\,rad turn, strokes of at most 2\,rad. GCS returned
-stroke, return and stroke, as the search does. With a single copy of the grasp
-vertex it is infeasible, as the next paragraph explains.
-
-\begin{table}[t]
-\centering
-\caption{Plans on T2 from one start and goal. Length: Euclidean, in
-$(x,\alpha)$. Every plan is certified: each motion lies in its convex set and
-respects the coupling. All methods find the same number of grasps; for each
-turn, the best length, time and memory are in bold (ties all in bold).}
-\label{tab:gcs}
-\setlength{\tabcolsep}{3.5pt}
-\begin{tabular}{@{}r l r r r r@{}}
-\toprule
-$D$ [rad] & Method & Grasps & Length & Time [s] & Mem. [GB]\\
-\midrule
-\multirow{3}{*}{0.5} & Reach.\ A* (ours) & 1 & 18.06 & \textbf{0.0037} & \textbf{$<$0.001}\\
- & GCS on A* seq. & 1 & \textbf{11.49} & 0.016 & \textbf{$<$0.001}\\
- & Full GCS & 1 & \textbf{11.49} & 44 & 4.0\\
-\midrule
-\multirow{3}{*}{1.5} & Reach.\ A* (ours) & 2 & 20.30 & \textbf{0.0048} & \textbf{$<$0.001}\\
- & GCS on A* seq. & 2 & \textbf{13.62} & 0.022 & \textbf{$<$0.001}\\
- & Full GCS & 2 & \textbf{13.62} & 93 & 5.6\\
-\midrule
-\multirow{3}{*}{6} & Reach.\ A* (ours) & 8 & 31.16 & \textbf{0.014} & \textbf{$<$0.001}\\
- & GCS on A* seq. & 8 & \textbf{24.48} & 0.052 & 0.001\\
- & Full GCS & \multicolumn{4}{l}{did not fit in 60\,GB (Table~\ref{tab:gcs:scaling})}\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[t]
-\centering
-\caption{Cost of each method against the number of grasps. The A*'s graph is
-the same for every query: 50 vertices (42 free and 8 transition sets) and 900
-edges. The GCS graph is copied once per grasp. Memory: GB. The faster time
-per number of grasps is in bold.}
-\label{tab:gcs:scaling}
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}r r r r r r@{}}
-\toprule
- & \multicolumn{2}{c}{Reach.\ A* (ours)} & \multicolumn{3}{c}{Full GCS}\\
-\cmidrule(lr){2-3}\cmidrule(l){4-6}
-Grasps & Nodes & Time [s] & $|V|$\,/\,$|E|$ & Time [s] & Mem.\\
-\midrule
-1 & 83 & \textbf{0.0037} & 48 / 543 & 44 & 4.0\\
-2 & 122 & \textbf{0.0048} & 64 / 749 & 93 & 5.6\\
-3$^{a}$ & -- & \textbf{0.006} & 95 / 1461 & 680 & $\le$18.2\\
-4$^{a}$ & -- & \textbf{0.005} & 111 / 1667 & 200 & $\le$18.2\\
-8 & 369 & \textbf{0.014} & 179 / 2280$^{b}$ & -- & $>$15$^{b}$\\
-\bottomrule
-\end{tabular}
-
-\vspace{2pt}
-\footnotesize
-\begin{minipage}{\columnwidth}
-$^{a}$~From another run (Run~D in Appendix~\ref{app:gcs}), with its own
-start and goal and no licence held, so its times include a licence checkout
-per small program; memory there is an upper bound. $^{b}$~From another run (Run~E), with its own start and goal. The
-relaxation solved in 140\,s at 13.7\,GB; the rounding was stopped at our
-15\,GB limit. Without
-pruning, the 8-grasp graph has about 20k edges and ran out of the machine's
-60\,GB.
-\end{minipage}
-\end{table}
-
-\paragraph{Results}
-\begin{itemize}
-  \item All methods return the same number of grasps, $\lceil D/\Lmax\rceil$.
-  \item GCS on the A* sequence keeps the A*'s sets and grasps, and shortens its
-    path by 21--36\%, in 0.016--0.052\,s; the convex program itself takes
-    0.003--0.008\,s.
-  \item The A*'s paths are longer because its second stage places waypoints
-    without optimising length (Section~\ref{sec:method:recovery}). That convex
-    program is a natural replacement for the second stage.
-  \item The full GCS returns the same path as GCS on the A* sequence, to four
-    digits. Searching over all sets picked the sets the A* had already picked,
-    at 44--93\,s and 4.0--5.6\,GB, against 0.004--0.005\,s for the search.
-  \item Its cost grows with the number of grasps
-    (Table~\ref{tab:gcs:scaling}), and at 8 grasps it did not fit on the
-    machine. The A*'s cost barely changes: 83 to 369 nodes, 0.004 to 0.014\,s.
-\end{itemize}
-
-\paragraph{Where the time goes}
-\begin{itemize}
-  \item \emph{Not branch and bound.} The exact GCS problem is a mixed-integer
-    convex program, with one binary variable per
-    edge~\cite{marcucci2024shortest}. \texttt{SolvePath} does not solve it as
-    one: it solves the convex relaxation of that program and rounds it.
-  \item \emph{The relaxation is almost all of it.} On the 0.5\,rad query it
-    takes 43.9 of the 44.1\,s. The rounding solves, for each candidate path,
-    the convex program with its sets fixed, and takes about 0.3\,s. Drake's
-    preprocessing, one small program per edge that removes edges no path can
-    use, is included and pays for itself: without it the relaxation takes
-    61.9\,s.
-  \item \emph{Its size follows the edges.} The relaxation is one large conic
-    program. Every edge carries a copy of the segment variables of both its
-    ends, constrained to their sets and scaled by the edge's flow, and the path
-    length adds a cone per edge. The number of edges grows with the number of
-    grasps (Table~\ref{tab:gcs:scaling}), and so do time and memory: 44\,s at
-    one grasp, 93\,s at two, out of memory at eight.
-  \item \emph{The A* solves no program online.} Its search does interval
-    arithmetic on extreme points computed once by LPs, and its placement is
-    solver-free. The convex program of GCS on the A* sequence spans the sets of
-    one path only, and takes 0.003--0.008\,s.
-\end{itemize}
-
-\paragraph{Why GCS needs the graph unrolled}
-\begin{itemize}
-  \item \emph{The rule.} In GCS a path is a sequence of distinct vertices, and
-    each vertex holds a single point~\cite{marcucci2024shortest}. A regrasp
-    plan, however, comes back to the same transition set once per grasp, and
-    to the free sets where it lets go and turns the wrist back.
-  \item \emph{The workaround.} GCS can represent such a plan only after the
-    graph is unrolled by hand. We used one copy of the transition sets and of
-    the free sets used between strokes for each grasp, an approach and a
-    depart layer, the coupling written as linear constraints on each copy,
-    and the number of grasps bounded before solving. With a single copy, the
-    two-grasp toy above is infeasible, both relaxed and as the exact
-    mixed-integer program.
-  \item \emph{The cost.} The convex relaxation keeps both endpoints of the
-    segments for every edge, so its size grows with the number of grasps times
-    the edges of a copy. On T2, 850 of the 861 pairs of free sets intersect, so
-    a copy of all of them adds about 1700 edges, and we had to prune the
-    copies to fit.
-  \item \emph{The reachability A* needs none of this.} A node pairs a set with
-    an interval of $\alpha$, so coming back to a set with a different $\alpha$
-    is simply a new node. The number of grasps is an output of the search, not
-    a bound given in advance, and the graph is built once for all queries.
-\end{itemize}
-So the comparison does not show that GCS cannot plan regrasps, but that it
-needs problem-specific engineering to do so, and that its cost then grows
-with the number of grasps that the A* handles natively.
-\todo{Full GCS with returns inside copies of the transition sets instead of
-free sets (the A*'s model), which would roughly halve the graph; rerun the
-8-grasp query with a higher memory limit.}
-
-\subsection{Why transition sets must be validated}
+\subsection{Why the decomposition must be checked at the grasps}
 \label{sec:results:fidelity}
-A planner whose guarantees are relative to its sets inherits their errors. To measure them where they matter, we swept the wrist over $[-1,1]$
-at the seed grasp, at 99 points, and compared membership in the free sets
-with Drake's collision checker. The checker finds the wrist free only on
-$[-1,-0.19]$ and $[0.70,0.92]$\,rad \tocheck{which bodies collide in between:
-fingers vs.\ obstacles?}. All four decompositions we computed for T2
-(IRIS-NP2 with 42 and 46 regions, and two IRIS-ZO covers with 64 regions
-\tocheck{the two IRIS-ZO files may be the same cover}) contain every point of
-the sweep, so all four label as collision-free the 46 configurations that the
-checker rejects, and miss none of the 53 it accepts. The two-grasp plan of Fig.~\ref{fig:reach} is therefore valid
-relative to the sets, but collides in reality. With the longest truly free
-wrist interval of 0.81\,rad, the minimum is $\lceil4/0.81\rceil=5$ grasps: a
-different discrete structure, not just a different geometry.
+A planner whose guarantees are relative to its sets inherits their errors.
+Region generators bound the fraction of a region's volume in collision, and
+transition sets have almost no volume (Section~\ref{sec:method:graph}), so
+that bound says nothing about them. On an earlier decomposition of
+\textsf{1cap\_2obs}, generated by a clique cover alone, we swept the wrist
+over $[-1,1]$ at the seed grasp, at 99 points. The collision checker found it
+free only on $[-1,-0.19]$ and $[0.70,0.92]$\,rad, but all four decompositions
+we had computed (IRIS-NP2 with 42 and 46 regions, two IRIS-ZO covers with 64)
+called all 99 points free. A two-grasp plan for a 4\,rad turn was therefore
+valid relative to the sets, but collided; with the true free interval of
+0.81\,rad the minimum was five grasps, a different discrete structure, not
+just a different geometry. This is why the decomposition seeds regions along
+the free wrist runs at each grasp and cuts the false positives found on dense
+wrist sweeps (steps 2 and 4). On the current decompositions those sweeps find
+no false positive (Table~\ref{tab:offline}), and every plan of
+Tables~\ref{tab:gcs}--\ref{tab:cap_scaling} passes the collision checker.
+A dense check is not a certificate: certifying the thin transition sets with
+C-IRIS~\cite{dai2024certified} would be.
 
-This is not a bug in the region generators: their guarantee bounds the
-fraction of a region's volume in collision, and transition sets have almost
-no volume (Section~\ref{sec:method:graph}). We observed the same sensitivity on low-dimensional versions of the task,
-where a decomposition at 0.90 coverage contained a grasp and release sequence
-that GCS could not connect. For regrasp planning, what matters is not coverage of free
-space but the fidelity of the transition sets.
-\todo{E5: Q0 with validated transition sets; expected 5 grasps with no
-change to the search.}
-
-\subsection{Generalisation across goals, starts and scenes}
-\todo{Results of E1--E4 (Section~\ref{sec:experiments:protocol}).}
-
-% Results figure, to add once E1/E4 are run: (left) grasps vs. turning
-% angle D, a staircase tracking ceil(D/L); (right) planning time vs.
-% required grasps, for the reachability A*, the MIQP and the
-% sampling-based baseline. Uncomment and provide figures/generalisation.pdf.
-% \begin{figure}[t]\centering
-%   \includegraphics[width=\linewidth]{figures/generalisation.pdf}
-%   \caption{...}\label{fig:generalisation}
-% \end{figure}
+\subsection{The trust region on the grasp set}
+Without the trust region $\rho$, the extreme points that the graph
+construction returns lie far outside the region where the linearisation holds:
+on \textsf{1cap\_2obs} they lay 2.27\,rad from the seed in one arm joint, with
+$\|h\|_\infty=0.95$ and the hand 0.80\,m away from the cap. With
+$\rho=0.05$\,rad, $\|h\|_\infty$ stays near $2\times10^{-3}$ along the plans we
+report \tocheck{numbers from a current run}.

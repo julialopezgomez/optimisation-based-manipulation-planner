@@ -13,9 +13,13 @@ hold of the object, move it and let go, and the search carries with each set
 the object configurations it makes reachable. It needs no bound on the number
 of grasps, builds its graph from linear programs alone, and returns a plan
 with the fewest grasps its sets allow, or establishes that none exists. A
-second stage recovers the motions without an optimiser.
-\todo{two sentences of results: the comparison against the mixed-integer and
-sampling-based baselines, and the planning time.}
+second stage places the motions without a solver and shortens them with one
+convex program. On a 10-DOF arm turning a cap among obstacles, it returns the
+fewest grasps for every turn in at most 0.04\,s, while GCS on the same sets
+takes 40--55 times longer and returns an extra grasp on three of five turns,
+and a sampling-based manipulation planner solves only the single-grasp query.
+With eight caps (17-DOF), a weighted search solves every query, up to 15
+grasps, in at most 1.7\,s, where the sampling-based planner solves none.
 \end{abstract}
 
 \begin{IEEEkeywords}

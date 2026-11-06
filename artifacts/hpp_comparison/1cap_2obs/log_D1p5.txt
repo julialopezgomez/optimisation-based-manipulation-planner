@@ -12,3 +12,5 @@ D1p5 seed 4: failed, 12100 nodes
 D1p5 seed 5: failed, 11239 nodes
 D1p5 seed 6: failed, 11674 nodes
 D1p5 seed 7: failed, 7222 nodes
+D1p5 seed 8: failed, 11661 nodes
+D1p5 seed 9: failed, 7450 nodes

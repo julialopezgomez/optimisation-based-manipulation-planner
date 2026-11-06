@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regrasp Planner Results</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --good: #006300; --bad: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --good: #0ca30c; --bad: #f2827a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --good: #0ca30c; --bad: #f2827a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 20px; margin: 40px 0 8px; }
+h3 { font-size: 15px; margin: 24px 0 8px; color: var(--ink-2); }
+p { max-width: 72ch; margin: 8px 0; }
+.sub { color: var(--ink-2); margin: 0 0 24px; }
+.muted { color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin: 12px 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 16px 0; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+.tile .fig { font-size: 32px; font-weight: 650; line-height: 1.1; }
+.tile .cap { color: var(--ink-2); font-size: 13px; margin-top: 6px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--grid); vertical-align: top; }
+thead th { color: var(--ink-2); font-weight: 600; border-bottom: 1px solid var(--axis); white-space: nowrap; }
+tr.grp > * { border-top: 1px solid var(--axis); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.win { font-weight: 650; }
+.miss { color: var(--bad); font-weight: 650; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; vertical-align: -1px; }
+.k0 { border: 1.5px solid var(--muted); } .k1 { background: var(--s1); } .k2 { background: var(--s2); } .k3 { background: var(--s3); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); margin: 0 0 8px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+svg .lbl { fill: var(--ink-2); }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); opacity: 0; transition: opacity .1s; z-index: 9; }
+ul { padding-left: 20px; max-width: 76ch; } li { margin: 4px 0; }
+code { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Regrasp planner results</h1>
+<p class="sub">Reachability A* against full GCS on the same convex sets and HPP's Manipulation RRT, on the
+<code>1cap_2obs</code> (10-DOF) and <code>8caps_3obs</code> (17-DOF) scenes. Generated 27 October 2026
+from the saved results by <code>experiments/results_summary.py</code>.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="fig">5/5 vs 2/5</div><div class="cap">turns planned with the fewest
+  possible grasps, A* vs full GCS (1 cap)</div></div>
+  <div class="tile"><div class="fig">42–55×</div><div class="cap">faster online than full GCS
+  (A* 10 ms–37 ms per query, second stage included)</div></div>
+  <div class="tile"><div class="fig">1/3</div><div class="cap">turns with any HPP plan (only the
+  single-grasp one); 8 caps: 0/120 runs</div></div>
+  <div class="tile"><div class="fig">145/145</div><div class="cap">8-cap queries solved by weighted A*, every plan certified; the slowest median is 1.6 s at K = 8</div></div>
+</div>
+
+<h2>What is compared</h2>
+<ul>
+  <li><b>Reachability A* (ours).</b> Search over (convex set, reachable cap-angle interval) nodes; cost = grasps +
+  ungrasps, plus 10<sup>−3</sup> per set change. Second stage: solver-free placement, then one SOCP that shortens the path
+  over the same sets.</li>
+  <li><b>Full GCS.</b> The same sets and edges, copied once per grasp (GCS visits each vertex at most once), cost =
+  length + 10 per grasp. Drake's <code>SolvePath</code>: convex relaxation, rounding to ≤10 paths, MOSEK.</li>
+  <li><b>Manipulation RRT (HPP).</b> HPP's constraint graph on the same robot and scene, continuous path validation,
+  paths not shortcut. 10 seeds per query (1 cap) or 3 (8 caps), 60 s each.</li>
+  <li>Every returned plan is re-checked with Drake: collisions, the coupling (the cap turns only with the grasping
+  wrist) and the goal.</li>
+</ul>
+
+<h2>Offline stage</h2>
+<p>Done once per scene and shared by the A* and GCS; HPP needs none. C-free is 9-D (arm + fingers, caps welded,
+which is exact), seeded along each grasp's wrist runs, and its false positives on those wrist sweeps are cut off.</p>
+<div class="card scroll"><table>
+<thead><tr><th></th><th class="num">1cap_2obs</th><th class="num">8caps_3obs</th></tr></thead>
+<tbody><tr><th scope="row">Decomposition time (32 threads)</th><td class="num">2.8 min</td><td class="num">18.6 min</td></tr><tr><th scope="row">Free sets (seeded along the wrist)</th><td class="num">61 (3)</td><td class="num">352 (22)</td></tr><tr><th scope="row">False positives, 20,000 uniform samples</th><td class="num">7</td><td class="num">10</td></tr><tr><th scope="row">False positives on the grasps' wrist sweeps</th><td class="num">0</td><td class="num">0</td></tr><tr><th scope="row">Coverage of the free samples</th><td class="num">0.91</td><td class="num">0.81</td></tr><tr><th scope="row">Transition sets</th><td class="num">4</td><td class="num">11</td></tr><tr><th scope="row">Transit / switch edges</th><td class="num">1714 / 10</td><td class="num">23729 / 17</td></tr><tr><th scope="row">A* graph time (LPs, quadprog)</th><td class="num">0.09 s</td><td class="num">2.0 s</td></tr></tbody></table></div>
+
+<h2>One cap (<code>1cap_2obs</code>)</h2>
+<p>One start and goal for every method; the cap turns by D. The obstacles leave at most L<sub>max</sub> =
+0.95 rad of free wrist, so the lower bound is ⌈D/L<sub>max</sub>⌉ grasps. Times are online, per query.</p>
+<div class="card">
+  <h3 style="margin-top:0">Path length by turn (labels: grasps)</h3>
+  <div class="legend"><span><span class="key k1"></span>Reachability A*</span><span><span class="key k2"></span>Full GCS</span></div>
+  <svg id="c1" viewBox="0 0 960 300" role="img" aria-label="Path length of A* and full GCS for each turn"></svg>
+</div>
+<div class="card scroll"><table>
+<thead><tr><th>D [rad]</th><th class="num">Lower bound</th><th>Method</th><th class="num">Grasps</th><th class="num">Length</th>
+<th class="num">Time</th><th class="num">Mem. [GB]</th></tr></thead>
+<tbody><tr class="grp"><th rowspan="4" scope="rowgroup">0.5</th><td rowspan="4" class="num">1</td><td><span class="key k1"></span>Reachability A*</td><td class="num win">1</td><td class="num">14.10</td><td class="num win">10 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k0"></span>GCS on the A* sequence</td><td class="num win">1</td><td class="num">14.10</td><td class="num">19 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k2"></span>Full GCS</td><td class="num win">1</td><td class="num win">11.36</td><td class="num">557 ms</td><td class="num">0.81</td></tr><tr><td><span class="key k3"></span>Manipulation RRT (HPP) · 7/10</td><td class="num">1</td><td class="num">16.67</td><td class="num">40 ms</td><td class="num">&lt;0.1</td></tr><tr class="grp"><th rowspan="4" scope="rowgroup">1.5</th><td rowspan="4" class="num">2</td><td><span class="key k1"></span>Reachability A*</td><td class="num win">2</td><td class="num">16.03</td><td class="num win">17 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k0"></span>GCS on the A* sequence</td><td class="num win">2</td><td class="num">16.03</td><td class="num">28 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k2"></span>Full GCS</td><td class="num miss">3</td><td class="num win">13.99</td><td class="num">728 ms</td><td class="num">0.92</td></tr><tr><td><span class="key k3"></span>Manipulation RRT (HPP) · 0/10</td><td colspan="4" class="muted">no plan within 60 s</td></tr><tr class="grp"><th rowspan="3" scope="rowgroup">2.4</th><td rowspan="3" class="num">3</td><td><span class="key k1"></span>Reachability A*</td><td class="num win">3</td><td class="num">18.21</td><td class="num win">22 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k0"></span>GCS on the A* sequence</td><td class="num win">3</td><td class="num">18.21</td><td class="num">35 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k2"></span>Full GCS</td><td class="num miss">4</td><td class="num win">15.52</td><td class="num">928 ms</td><td class="num">0.78</td></tr><tr class="grp"><th rowspan="3" scope="rowgroup">3.2</th><td rowspan="3" class="num">4</td><td><span class="key k1"></span>Reachability A*</td><td class="num win">4</td><td class="num">20.14</td><td class="num win">19 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k0"></span>GCS on the A* sequence</td><td class="num win">4</td><td class="num">20.14</td><td class="num">33 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k2"></span>Full GCS</td><td class="num win">4</td><td class="num win">18.17</td><td class="num">1.04 s</td><td class="num">1.09</td></tr><tr class="grp"><th rowspan="4" scope="rowgroup">6</th><td rowspan="4" class="num">7</td><td><span class="key k1"></span>Reachability A*</td><td class="num win">7</td><td class="num">26.90</td><td class="num win">37 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k0"></span>GCS on the A* sequence</td><td class="num win">7</td><td class="num">26.90</td><td class="num">59 ms</td><td class="num">&lt;0.01</td></tr><tr><td><span class="key k2"></span>Full GCS</td><td class="num miss">8</td><td class="num win">24.22</td><td class="num">1.82 s</td><td class="num">1.35</td></tr><tr><td><span class="key k3"></span>Manipulation RRT (HPP) · 0/10</td><td colspan="4" class="muted">no plan within 60 s</td></tr></tbody></table></div>
+<ul>
+  <li><b>The A* returns the lower bound on every turn.</b> Full GCS uses one grasp more at D = 1.5, 2.4 and 6 (red),
+  although the A*'s plan is a path in the same GCS graph with a lower GCS cost (e.g. 36.0 vs 44.0 at D = 1.5):
+  rounding the relaxation is not optimal.</li>
+  <li><b>GCS on the A* sequence</b> (the convex restriction of the same layered GCS graph to the A*'s sets) returns the
+  A*'s lengths to seven digits: the A*'s second stage is that same convex program, so it is optimal for the sets the A*
+  chose. Its time includes the A* search and building the layered graph.</li>
+  <li><b>Full GCS finds shorter paths</b>: 19% and 10% shorter at the two turns with equal grasps (D = 0.5, 3.2). Since
+  the second stage is already optimal for the A*'s sets, the gap comes from which sets the A* picks (by number of set
+  changes, not length).</li>
+  <li><b>HPP</b> solves only D = 0.5 (7/10 runs, 18% longer than the A*). Nothing with two or more grasps, at 60 s, nor
+  at 600 s on the scene without the floor (0/10 at D = 1.5 and 6).</li>
+</ul>
+
+<h2>Eight caps (<code>8caps_3obs</code>)</h2>
+<p>20 random queries per K: K random caps, each turned by [0.5, π] rad, summing to 2.5K rad, with random start and
+goal arm configurations. Exact A* stops at 60 s. Medians over solved queries; queries whose start or goal lies outside
+the current C-free are left out of the denominators.</p>
+<div class="card">
+  <h3 style="margin-top:0">Online time per query (median, log scale)</h3>
+  <div class="legend"><span><span class="key k1"></span>Exact A*</span><span><span class="key k3"></span>Weighted A* (w = 1.5)</span></div>
+  <svg id="c8" viewBox="0 0 960 300" role="img" aria-label="Median planning time against the number of caps"></svg>
+  <p class="muted" id="c8note"></p>
+</div>
+<div class="card scroll"><table>
+<thead><tr><th rowspan="2">K</th><th colspan="4">Weighted A* (w = 1.5)</th><th colspan="4">Exact A*</th><th>HPP</th></tr>
+<tr><th class="num">Solved</th><th class="num">Grasps</th><th class="num">Nodes</th><th class="num">ms</th>
+<th class="num">Solved</th><th class="num">Grasps</th><th class="num">Nodes</th><th class="num">ms</th><th class="num">Solved</th></tr></thead>
+<tbody><tr><th scope="row">1</th><td class="num">17/17</td><td class="num">2</td><td class="num">396</td><td class="num">129</td><td class="num">17/17</td><td class="num">2</td><td class="num">551</td><td class="num">227</td><td class="num">0/15</td></tr><tr><th scope="row">2</th><td class="num">19/19</td><td class="num">4</td><td class="num">751</td><td class="num">295</td><td class="num">19/19</td><td class="num">4</td><td class="num">2285</td><td class="num">1057</td><td class="num">0/15</td></tr><tr><th scope="row">3</th><td class="num">18/18</td><td class="num">6</td><td class="num">1102</td><td class="num">455</td><td class="num">18/18</td><td class="num">6</td><td class="num">7070</td><td class="num">5080</td><td class="num">0/15</td></tr><tr><th scope="row">4</th><td class="num">20/20</td><td class="num">7</td><td class="num">1438</td><td class="num">597</td><td class="num">15/20</td><td class="num">7</td><td class="num">22566</td><td class="num">37954</td><td class="num">0/15</td></tr><tr><th scope="row">5</th><td class="num">19/19</td><td class="num">9</td><td class="num">1795</td><td class="num">803</td><td class="num">0/19</td><td class="num">–</td><td class="num">–</td><td class="num">–</td><td class="num">0/15</td></tr><tr><th scope="row">6</th><td class="num">20/20</td><td class="num">11</td><td class="num">2133</td><td class="num">1057</td><td colspan="4" class="muted">not run</td><td class="num">0/15</td></tr><tr><th scope="row">7</th><td class="num">17/17</td><td class="num">13</td><td class="num">2525</td><td class="num">1328</td><td colspan="4" class="muted">not run</td><td class="num">0/15</td></tr><tr><th scope="row">8</th><td class="num">15/15</td><td class="num">15</td><td class="num">2891</td><td class="num">1575</td><td colspan="4" class="muted">not run</td><td class="num">0/15</td></tr></tbody></table></div>
+<ul><li><b>Weighting cost nothing here:</b> on all 69 queries both searches solved, weighted A* returned the same number of actions as exact A*, at a fraction of the time. Exact A* proves the minimum only up to about 4 caps within 60 s.</li><li><b>HPP</b> found no plan in any of its 120 runs (5 queries × 3 seeds per K, 60 s each).</li></ul>
+
+<h2>Notes</h2>
+<ul>
+  <li>An earlier decomposition of the one-cap scene (42 regions, clique cover only, 10-D) called colliding wrist
+  configurations free, and full GCS on it took 44–93 s and 4–6 GB, and did not fit in 60 GB at 8 grasps. Those runs are
+  in the paper's appendix.</li>
+  <li>The A* graph's LPs use quadprog (regularised LP, no licence); with MOSEK each LP checked a licence out, and the
+  8-cap graph took 15 min.</li>
+  <li>Open: adding path length to the A*'s cost (a door point per node, λ‖p − p<sub>goal</sub>‖ in the heuristic) would
+  target the 10–19% length gap at the price of more nodes.</li>
+</ul>
+</main>
+<div id="tip" role="tooltip"></div>
+<script>
+const DATA = {"one": [{"D": 0.5, "lb": 1, "a": {"grasps": 1, "length": 14.100203298137837, "time": 0.01020059999791556, "nodes": 112}, "g": {"grasps": 1, "length": 11.358602518228444, "time": 0.5568487620002998, "mem": 0.806156, "V": 29, "E": 130}}, {"D": 1.5, "lb": 2, "a": {"grasps": 2, "length": 16.033437523280938, "time": 0.016873505999683402, "nodes": 180}, "g": {"grasps": 3, "length": 13.986318136182282, "time": 0.7279367860028287, "mem": 0.9234199999999999, "V": 37, "E": 166}}, {"D": 2.4, "lb": 3, "a": {"grasps": 3, "length": 18.206228129184833, "time": 0.022070801998779643, "nodes": 248}, "g": {"grasps": 4, "length": 15.524939375555428, "time": 0.9275880429995595, "mem": 0.7823439999999999, "V": 45, "E": 202}}, {"D": 3.2, "lb": 4, "a": {"grasps": 4, "length": 20.13759836154872, "time": 0.01886875999844051, "nodes": 194}, "g": {"grasps": 4, "length": 18.167315825552766, "time": 1.0414622859971132, "mem": 1.090548, "V": 53, "E": 238}}, {"D": 6.0, "lb": 7, "a": {"grasps": 7, "length": 26.89739557858586, "time": 0.037110594003024744, "nodes": 398}, "g": {"grasps": 8, "length": 24.216127983074248, "time": 1.8163309630035656, "mem": 1.352104, "V": 77, "E": 346}}], "eight": [{"K": 1, "w": {"queries": 20, "solved": 17, "timed_out": 0, "outside": 3, "certified": 17, "actions": 4.0, "grasps": 2.0, "nodes": 396.0, "ms": 128.79627400252502, "ms_p25": 109.6780409970961, "ms_p75": 167.92433600130607, "length": 18.8958578946422}, "e": {"queries": 20, "solved": 17, "timed_out": 0, "outside": 3, "certified": 17, "actions": 4.0, "grasps": 2.0, "nodes": 551.0, "ms": 226.9853180005157, "ms_p25": 136.17854900076054, "ms_p75": 301.3974679997773, "length": 18.8958578946422}}, {"K": 2, "w": {"queries": 20, "solved": 19, "timed_out": 0, "outside": 1, "certified": 19, "actions": 8.0, "grasps": 4.0, "nodes": 751.0, "ms": 295.31273000247893, "ms_p25": 282.7077575002477, "ms_p75": 311.7785724989517, "length": 30.56029879724534}, "e": {"queries": 20, "solved": 19, "timed_out": 0, "outside": 1, "certified": 19, "actions": 8.0, "grasps": 4.0, "nodes": 2285.0, "ms": 1057.1664409981167, "ms_p25": 831.8865450000885, "ms_p75": 1267.6158435006073, "length": 30.29058037608813}}, {"K": 3, "w": {"queries": 20, "solved": 18, "timed_out": 0, "outside": 2, "certified": 18, "actions": 12.0, "grasps": 6.0, "nodes": 1102.5, "ms": 455.22002650068316, "ms_p25": 392.86575500318577, "ms_p75": 480.2332445005959, "length": 42.14181882664134}, "e": {"queries": 20, "solved": 18, "timed_out": 0, "outside": 2, "certified": 18, "actions": 12.0, "grasps": 6.0, "nodes": 7070.5, "ms": 5079.5280070015, "ms_p25": 4398.681405252319, "ms_p75": 6385.396834999483, "length": 40.08329375828902}}, {"K": 4, "w": {"queries": 20, "solved": 20, "timed_out": 0, "outside": 0, "certified": 20, "actions": 14.0, "grasps": 7.0, "nodes": 1438.0, "ms": 597.4523029999546, "ms_p25": 573.0670387511054, "ms_p75": 646.8322585005808, "length": 52.67012594893198}, "e": {"queries": 20, "solved": 15, "timed_out": 5, "outside": 0, "certified": 15, "actions": 14.0, "grasps": 7.0, "nodes": 22566.0, "ms": 37954.33152699843, "ms_p25": 20905.570757000532, "ms_p75": 43164.46157149949, "length": 52.88892952980316}}, {"K": 5, "w": {"queries": 20, "solved": 19, "timed_out": 0, "outside": 1, "certified": 19, "actions": 18.0, "grasps": 9.0, "nodes": 1795.0, "ms": 802.5893409976561, "ms_p25": 757.1996035003394, "ms_p75": 834.521410501111, "length": 67.60572121987317}, "e": {"queries": 20, "solved": 0, "timed_out": 19, "outside": 1, "certified": 0, "actions": null, "grasps": null, "nodes": null, "ms": null, "ms_p25": null, "ms_p75": null, "length": null}}, {"K": 6, "w": {"queries": 20, "solved": 20, "timed_out": 0, "outside": 0, "certified": 20, "actions": 22.0, "grasps": 11.0, "nodes": 2133.0, "ms": 1056.6804419977416, "ms_p25": 1007.2082357473846, "ms_p75": 1099.688725251326, "length": 79.58195962480406}, "e": null}, {"K": 7, "w": {"queries": 20, "solved": 17, "timed_out": 0, "outside": 3, "certified": 17, "actions": 26.0, "grasps": 13.0, "nodes": 2525.0, "ms": 1327.9637980012922, "ms_p25": 1257.5252130045556, "ms_p75": 1349.9479679958313, "length": 90.22585070794034}, "e": null}, {"K": 8, "w": {"queries": 20, "solved": 15, "timed_out": 0, "outside": 5, "certified": 15, "actions": 30.0, "grasps": 15.0, "nodes": 2891.0, "ms": 1575.2293139958056, "ms_p25": 1555.2951749959902, "ms_p75": 1601.8006755002716, "length": 102.2238207024496}, "e": null}]};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const NS = "http://www.w3.org/2000/svg";
+const tip = document.getElementById("tip");
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+function showTip(ev, html) { tip.innerHTML = html; tip.style.opacity = 1;
+  const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + "px"; tip.style.top = (ev.clientY + 14) + "px"; }
+function hideTip() { tip.style.opacity = 0; }
+function hover(target, html) { target.addEventListener("mousemove", e => showTip(e, html)); target.addEventListener("mouseleave", hideTip);
+  target.addEventListener("touchstart", e => showTip(e.touches[0], html), {passive: true}); }
+function barPath(x, y0, w, h, r) { r = Math.min(r, h); return `M${x},${y0}V${y0 - h + r}Q${x},${y0 - h} ${x + r},${y0 - h}H${x + w - r}Q${x + w},${y0 - h} ${x + w},${y0 - h + r}V${y0}Z`; }
+
+function chartOne() {
+  const svg = document.getElementById("c1"); svg.innerHTML = "";
+  const W = 960, H = 300, L = 48, R = 16, T = 16, B = 40, rows = DATA.one;
+  const ymax = Math.ceil(Math.max(...rows.flatMap(r => [r.a.length, r.g.length])) / 5) * 5;
+  const y = v => T + (H - T - B) * (1 - v / ymax);
+  for (let v = 0; v <= ymax; v += 5) {
+    el("line", {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: css(v ? "--grid" : "--axis"), "stroke-width": 1}, svg);
+    el("text", {x: L - 8, y: y(v) + 4, "text-anchor": "end"}, svg).textContent = v;
+  }
+  el("text", {x: 12, y: T + 4, "text-anchor": "start"}, svg).textContent = "";
+  const band = (W - L - R) / rows.length, bw = 24, gap = 2;
+  rows.forEach((r, i) => {
+    const cx = L + band * (i + 0.5);
+    el("text", {x: cx, y: H - B + 18, "text-anchor": "middle", class: "lbl"}, svg).textContent = `D = ${r.D} rad`;
+    el("text", {x: cx, y: H - B + 32, "text-anchor": "middle"}, svg).textContent = `bound ${r.lb}`;
+    [[r.a, "--s1", "Reachability A*", -1], [r.g, "--s2", "Full GCS", 1]].forEach(([m, col, name, side]) => {
+      const x = side < 0 ? cx - gap / 2 - bw : cx + gap / 2;
+      const p = el("path", {d: barPath(x, y(0), bw, y(0) - y(m.length), 4), fill: css(col)}, svg);
+      el("text", {x: x + bw / 2, y: y(m.length) - 6, "text-anchor": "middle", class: "lbl"}, svg).textContent = m.grasps;
+      const hit = el("rect", {x: x - 4, y: T, width: bw + 8, height: H - T - B, fill: "transparent"}, svg);
+      hover(hit, `<b>${name}</b>, D = ${r.D} rad<br>${m.grasps} grasp(s) (bound ${r.lb})<br>length ${m.length.toFixed(2)}<br>` +
+                 `time ${m.time < 1 ? (m.time * 1e3).toFixed(0) + " ms" : m.time.toFixed(2) + " s"}`);
+    });
+  });
+}
+
+function chartEight() {
+  const svg = document.getElementById("c8"); svg.innerHTML = "";
+  const rows = DATA.eight, note = document.getElementById("c8note");
+  if (!rows.length) { note.textContent = "The scaling run is still in progress."; return; }
+  const W = 960, H = 300, L = 56, R = 120, T = 16, B = 36;
+  const vals = rows.flatMap(r => [r.w && r.w.ms, r.e && r.e.ms]).filter(v => v);
+  const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals)))), hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
+  const y = v => T + (H - T - B) * (1 - (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)));
+  const ks = rows.map(r => r.K), x = k => L + (W - L - R) * (k - ks[0]) / Math.max(1, ks[ks.length - 1] - ks[0]);
+  for (let v = lo; v <= hi * 1.001; v *= 10) {
+    el("line", {x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: css("--grid"), "stroke-width": 1}, svg);
+    el("text", {x: L - 8, y: y(v) + 4, "text-anchor": "end"}, svg).textContent = v >= 1000 ? (v / 1000) + " s" : v + " ms";
+  }
+  el("line", {x1: L, x2: W - R, y1: H - B, y2: H - B, stroke: css("--axis"), "stroke-width": 1}, svg);
+  ks.forEach(k => { el("text", {x: x(k), y: H - B + 18, "text-anchor": "middle", class: "lbl"}, svg).textContent = `K = ${k}`; });
+  [["e", "--s1", "Exact A*"], ["w", "--s3", "Weighted A*"]].forEach(([key, col, name]) => {
+    const pts = rows.filter(r => r[key] && r[key].ms).map(r => [x(r.K), y(r[key].ms), r]);
+    if (!pts.length) return;
+    el("polyline", {points: pts.map(p => p[0] + "," + p[1]).join(" "), fill: "none", stroke: css(col), "stroke-width": 2,
+                     "stroke-linejoin": "round", "stroke-linecap": "round"}, svg);
+    pts.forEach(([px, py, r]) => {
+      el("circle", {cx: px, cy: py, r: 5, fill: css(col), stroke: css("--surface"), "stroke-width": 2}, svg);
+      const m = r[key], valid = m.queries - m.outside;
+      const hit = el("circle", {cx: px, cy: py, r: 14, fill: "transparent"}, svg);
+      hover(hit, `<b>${name}</b>, K = ${r.K}<br>solved ${m.solved}/${valid}${m.timed_out ? " (" + m.timed_out + " hit 60 s)" : ""}<br>` +
+                 `median ${m.ms.toFixed(0)} ms (IQR ${m.ms_p25.toFixed(0)}–${m.ms_p75.toFixed(0)})<br>${m.grasps} grasps, ${m.nodes} nodes`);
+    });
+    const last = pts[pts.length - 1];
+    el("text", {x: last[0] + 10, y: last[1] + 4, class: "lbl"}, svg).textContent = name;
+  });
+  note.textContent = "Exact A* medians are over the queries it solved within 60 s; see the table for how many.";
+}
+function draw() { chartOne(); chartEight(); }
+draw();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+new MutationObserver(draw).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+</script>
+</body>
+</html>

@@ -1,17 +1,20 @@
 \appendix
-\section{All runs of the GCS comparison}
+\section{GCS on an earlier decomposition}
 \label{app:gcs}
-Table~\ref{tab:gcs:all} lists every run of the comparison of
-Section~\ref{sec:results:gcs}, including the runs that failed or ran out of
-memory. All of them use T2, with the transition sets validated as in
-Section~\ref{sec:results:gcs} ($\Lmax=0.81$\,rad).
+Table~\ref{tab:gcs:all} lists every run of the GCS comparison on an earlier
+decomposition of \textsf{1cap\_2obs}, including the runs that failed or ran
+out of memory. That decomposition had 42 IRIS-NP2 regions from a clique cover
+alone, in the 10-D space with the cap jointed and no floor. Its transition sets
+were cut by hand to the wrist intervals that the collision checker accepts
+(Section~\ref{sec:results:fidelity}), so $\Lmax=0.81$\,rad, and 8 of them were
+left. All LPs used MOSEK. Section~\ref{sec:results:gcs} reports the current
+decomposition, generated as in Section~\ref{sec:experiments}.
 \begin{itemize}
   \item \emph{Start and goal.} Each run draws its own start and goal from a
     randomly seeded grasp, so rows can be compared within a run but not across
     runs.
-  \item \emph{Run~A} is the run of Tables~\ref{tab:gcs}
-    and~\ref{tab:gcs:scaling}. It saved its start, goal and sets, and
-    reproduces exactly.
+  \item \emph{Run~A} saved its start, goal and sets, and reproduces exactly.
+    Its start and goal are the ones of Table~\ref{tab:gcs}.
   \item \emph{Runs~B--E} are earlier runs. Their footnotes give what their time
     and memory measure.
   \item \emph{Pruning.} Unless stated otherwise, the free sets kept in each copy
@@ -19,17 +22,20 @@ Section~\ref{sec:results:gcs} ($\Lmax=0.81$\,rad).
     meet a transition set. The approach and depart layers keep those, the free
     sets that contain the start or the goal, and the free sets of the A*'s
     plan. Only detours through free sets that touch none of these are lost.
+  \item \emph{Second stage.} The A* rows use the solver-free placement of
+    Section~\ref{sec:method:recovery}, without the convex program; ``GCS on
+    A* seq.'' is that convex program.
 \end{itemize}
-In Run~D the full GCS paths are much shorter than the A*'s (e.g.\ 6.30
-against 19.13). That run has no row for GCS on the A* sequence, so it does not
-tell whether GCS chose different sets or only placed the configurations
-better. In Runs A--C, where both ran, the full GCS chose the A*'s sets.
-\todo{rerun Run~D's turns on the saved scenario of Run~A.}
+On this decomposition GCS was about 80 times slower than on the
+current one (44\,s against 0.56\,s for one grasp), and its graph was larger:
+543 edges against 130 for one grasp. In Runs A--C the full GCS chose the A*'s
+sets; in Run~D its paths were much shorter than the A*'s placement (e.g.\ 6.30
+against 19.13), but that run has no row for GCS on the A* sequence.
 
 \begin{table*}[t]
 \centering
-\caption{All A* and GCS runs on T2 (10-DOF, two obstacles, 42 free sets,
-$\Lmax=0.81$\,rad), grouped by run. Each run has its own start and goal.
+\caption{All A* and GCS runs on the earlier decomposition of
+\textsf{1cap\_2obs} (42 free sets, $\Lmax=0.81$\,rad), grouped by run. Each run has its own start and goal.
 $|V|/|E|$: the graph each method works on (for GCS on the A* sequence, the
 sets of that sequence). Length: Euclidean, in $(x,\alpha)$. ``Reach.\ A* (ours)'' is the method of this paper. All returned plans
 are certified: every motion lies in its convex set and respects the coupling.

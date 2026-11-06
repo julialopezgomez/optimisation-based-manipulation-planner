@@ -12,3 +12,5 @@ D6 seed 4: failed, 5786 nodes
 D6 seed 5: failed, 6138 nodes
 D6 seed 6: failed, 6179 nodes
 D6 seed 7: failed, 9266 nodes
+D6 seed 8: failed, 7423 nodes
+D6 seed 9: failed, 9166 nodes

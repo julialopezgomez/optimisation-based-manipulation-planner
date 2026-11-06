@@ -68,9 +68,11 @@
 \end{tikzpicture}\\[-2pt]
 {\footnotesize (b) The same plan in the wrist--cap plane}
 \end{minipage}
-\caption{The reachability A* on the running example, task T2 of
-Section~\ref{sec:experiments}, query Q0: turn the cap from $\alpha=-1$ to
-$3$\,rad and bring the arm back to its start.
+\caption{The reachability A* on the running example, scene
+\textsf{1cap\_2obs} of Section~\ref{sec:experiments}, with transition sets
+spanning the whole wrist range as on an earlier decomposition
+(Appendix~\ref{app:gcs}): turn the cap from $\alpha=-1$ to $3$\,rad and bring
+the arm back to its start.
 (a)~Each column is one node on the returned path: the set the robot is in
 (strip) and the interval of cap angles reachable there (bar). The black line
 is the cap angle along the final plan. Entering the transition set $T_6$
@@ -169,13 +171,14 @@ the robot can sweep the entire wrist range of $T_k$ without leaving it.
 \paragraph{Validation} The free sets are collision-free only in a volume
 sense: IRIS-NP2 bounds the fraction of each region's volume in
 collision~\cite{werner2024faster}. A transition set has almost no volume, so it
-can lie entirely in collision without violating that bound. We therefore
-validate each $T_k$ on its own. Because it is a sliver, this is cheap: we test
-densely spaced configurations along $[x_k^-,x_k^+]$ with a collision checker,
-and keep only the wrist sub-intervals on which every test passes. Each of these is $T_k$ intersected with a bound on
-$w$, and is therefore still a polytope. \todo{implement (E5); state the check
-resolution; this is a dense check, not a certificate. Certifying these thin
-sets with C-IRIS~\cite{dai2024certified} is an alternative.}
+can lie entirely in collision without violating that bound. We therefore check
+the decomposition where the transition sets lie. Because they are slivers
+along the wrist, this is cheap: we sweep the wrist densely at each seed grasp
+with a collision checker, and cut every configuration that a region calls free
+but the checker rejects off that region with a separating plane, without
+cutting the free part of the sweep (Section~\ref{sec:experiments}). The regions
+stay polytopes, and the transition sets follow. This is a dense check, not a
+certificate.
 
 \paragraph{Graph} The graph has two kinds of edges. A \emph{transit} edge
 joins $F_i$ and $F_j$ if they intersect, and its door point is the Chebyshev
@@ -369,15 +372,26 @@ first goal node expanded has the minimum cost.
 \label{sec:method:recovery}
 The search fixes the sets and the grasp actions, e.g., \emph{enter, stroke,
 return, stroke, release}. As in CASSR, a second stage computes the
-configurations, here without a solver. A backward pass from $\agoal$ decides
-how much each visit to a transition set turns the object; it ends exactly at
+configurations, in two steps.
+
+\emph{Placement.} Without a solver, a backward pass from $\agoal$ decides how
+much each visit to a transition set turns the object; it ends exactly at
 $\ainit$ because the search proved $\agoal$ reachable. Waypoints are placed at
 door points for transit, in $F_i\cap T_k$ for entering and leaving, and on
 $[x_k^-,x_k^+]$ for strokes and returns. Each motion is a straight line
-between two waypoints of one set, so by convexity it lies in that set; we
-check this and the coupling for every motion. Path length is not optimised: a
-convex program over the chosen sets, e.g., GCS~\cite{marcucci2023motion},
-could shorten the path. \todo{implement, or keep as future work.}
+between two waypoints of one set, so by convexity it lies in that set.
+
+\emph{Shortening.} The placement is valid but long, since door points and
+extreme wrist points are far apart. One second-order cone program then moves
+the waypoints to minimise $\sum_i\|q_{i+1}-q_i\|$ over the same sets, which is
+the convex restriction of GCS~\cite{marcucci2023motion} to the sequence the
+search chose. It keeps the start and the goal, both ends of every motion in
+that motion's set, and every motion's kind: a stroke keeps
+$\Delta\alpha=-\Delta w$ with $\Delta w\ge0$, other motions in a transition set
+keep $\Delta w\le0$, and no other motion turns the object. Each placement is a
+feasible point of this program, so it is always feasible; if the solver fails,
+the placement is kept. We check every motion of the result for containment and
+the coupling.
 
 \subsection{Properties}
 \label{sec:method:properties}
