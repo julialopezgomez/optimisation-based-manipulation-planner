@@ -14,7 +14,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link0.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link0.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -111,7 +111,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link1.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link1.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -167,7 +167,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link2.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link2.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -223,7 +223,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link3.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link3.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -273,7 +273,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link4.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link4.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -335,7 +335,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link5.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link5.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -427,7 +427,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link6.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link6.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -477,7 +477,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/link7.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/link7.dae"/>
       </geometry>
     </visual>
     <collision>
