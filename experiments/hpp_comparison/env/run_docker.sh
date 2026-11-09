@@ -33,19 +33,27 @@ if [[ "$@" == *"--net "* ]]; then
     DOCKER_NETWORK_ARGS=""
 fi
 
-xhost +
+# xhost +
 
 # hpp_comparison: this folder is /home/user/devel (as in tutorial 1), the whole repo is /home/user/obmp.
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
 
+# $DOCKER_COMMAND \
+# # $DOCKER_GPU_ARGS \ # sends display to the container, only for desktop windows. 
+# $DOCKER_SSH_AUTH_ARGS \
+# # $DOCKER_NETWORK_ARGS \ # forward ssh agent, not necessary.
+# # --privileged \ # near full access to host, not necessary.
+# -v "$HERE":/home/user/devel \
+# -v "$REPO":/home/user/obmp \
+# # -v /var/run/docker.sock:/var/run/docker.sock \ # lets the container control docker, which is root-equivalent, not necessary.
+# # -v $HOME/.Xauthority:/home/user/.Xauthority:ro \ # display login tocken, only for desktop windows. 
+# --rm --name hpp-obmp -it hpp:obmp "$@"
+
+# Same as above but without the unnecessary options, for clarity:
 $DOCKER_COMMAND \
-$DOCKER_GPU_ARGS \
-$DOCKER_SSH_AUTH_ARGS \
 $DOCKER_NETWORK_ARGS \
---privileged \
+$DOCKER_SSH_AUTH_ARGS \
 -v "$HERE":/home/user/devel \
 -v "$REPO":/home/user/obmp \
--v /var/run/docker.sock:/var/run/docker.sock \
--v $HOME/.Xauthority:/home/user/.Xauthority:ro \
 --rm --name hpp-obmp -it hpp:obmp "$@"
