@@ -26,3 +26,6 @@ DM=$(conda run -n obmp python -c "from pydrake.multibody.parsing import PackageM
 T=experiments/hpp_comparison/env/install/share/drake_models/franka_description/meshes
 mkdir -p "$T" && cp -r "$DM/franka_description/meshes/visual" "$T/"
 ```
+
+### Meshes update
+Now, we are taking away drake meshes and replacing them with meshes from example-robot-data. This is because drake meshes were rotated in a way that did not match the visualization in HPP. The new meshes are also in formar .dae, instead of .gltf.
