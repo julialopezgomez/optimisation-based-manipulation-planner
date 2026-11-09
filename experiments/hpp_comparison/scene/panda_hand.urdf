@@ -9,7 +9,7 @@
     <visual>
       <origin rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/hand.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/hand.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -44,9 +44,10 @@
       <inertia ixx="3.01220925051e-05" ixy="0.0" ixz="0.0" iyy="2.95873808038e-05" iyz="0.0" izz="6.95125211657e-06"/>
     </inertial>
     <visual>
-      <origin rpy="1.57079632679 0 0" xyz="0 0 0"/>
+      <!-- <origin rpy="1.57079632679 0 0" xyz="0 0 0"/> -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/finger.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/finger.dae"/>
       </geometry>
     </visual>
     <collision>
@@ -93,9 +94,10 @@
       <inertia ixx="3.01220925051e-05" ixy="0.0" ixz="0.0" iyy="2.95873808038e-05" iyz="0.0" izz="6.95125211657e-06"/>
     </inertial>
     <visual>
-      <origin rpy="1.57079632679 0 3.14159265359" xyz="0 0 0"/>
+      <!-- <origin rpy="1.57079632679 0 3.14159265359" xyz="0 0 0"/> -->
+      <origin rpy="0 0 3.14159265359" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://drake_models/franka_description/meshes/visual/finger.gltf"/>
+        <mesh filename="package://example-robot-data/robots/panda_description/meshes/visual/finger.dae"/>
       </geometry>
     </visual>
     <collision>
