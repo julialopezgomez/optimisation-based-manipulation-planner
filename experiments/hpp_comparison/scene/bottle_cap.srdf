@@ -12,6 +12,7 @@
   <handle name="handle" clearance="0.05" approaching_direction="0 0 1">
     <position xyz="0 0 0.1075" wxyz="0 0 1 0"/>
     <link name="cap_link"/>
-    <mask>1 1 1 1 1 0</mask>
+    <mask>1 1 1 1 1 0</mask> 
   </handle>
+
 </robot>
