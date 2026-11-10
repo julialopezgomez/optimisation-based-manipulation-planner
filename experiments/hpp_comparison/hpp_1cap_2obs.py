@@ -3,9 +3,11 @@ from pinocchio import SE3, neutral
 from pyhpp.manipulation import Device, urdf, Graph, Problem, ManipulationPlanner
 from pyhpp.manipulation.constraint_graph_factory import ConstraintGraphFactory
 from pyhpp.constraints import ComparisonType, ComparisonTypes, LockedJoint
+from pyhpp.core import RandomShortcut, SimpleTimeParameterization, DiscretizedCollision, Progressive
 from pyhpp_viser import Viewer  # noqa: F401
 from pathlib import Path
 import numpy as np
+import time
 SCENE = Path(__file__).resolve().parent / "scene"
 
 
@@ -37,6 +39,8 @@ problem = Problem(robot)
 graph = Graph("1cap_2obs", robot, problem)
 factory = ConstraintGraphFactory(graph)
 
+### Define hangles, grippers, objetcs
+
 # numerical constraints
 graph.maxIterations(50) # These are iterations of the constraint solver, not the planning algorithm.
 graph.errorThreshold(1e-4)
@@ -56,6 +60,23 @@ factory.environmentContacts(environmentContacts)
 
 factory.generate()
 
+### Define Validation methods of the Problem (e.g. collision checking, joint limits, etc.)
+
+# Collision and joint limit constraints.
+problem.addConfigValidation("CollisionValidation")
+problem.addConfigValidation("JointBoundValidation")
+
+# (a) point check with a finer step (the default is 0.05)
+problem.pathValidation(DiscretizedCollision(robot, 0.001))
+problem.pathValidationFactory(DiscretizedCollision(robot, 0.001))
+
+# # (b) continuous check over the whole path
+# problem.pathValidation(Progressive(robot, 0.001))
+# problem.pathValidationFactory(Progressive(robot, 0.001))
+
+
+### Add constraints to the graph states and transitions
+
 # The tutorial adds a constraint to keep the gripper open during all transitions, but we don't need it here (I think?)
 cts = ComparisonTypes()
 cts[:] = [ComparisonType.EqualToZero]   
@@ -72,8 +93,18 @@ for name in ["panda_hand/gripper grasps bottle_cap/handle",
     
 graph.initialize()
 
-graph.setWeight(graph.getTransition("Loop | 0-0"), 1)
-graph.setWeight(graph.getTransition("Loop | f"), 1) 
+# Set weights for sampling along each edge:
+weights = {
+    "Loop | f": 1,
+    "panda_hand/gripper > bottle_cap/handle | f": 2,
+    "panda_hand/gripper > bottle_cap/handle | f_ls": 2,
+    "Loop | 0-0": 2,
+    "panda_hand/gripper < bottle_cap/handle | 0-0": 2,
+    "panda_hand/gripper < bottle_cap/handle | 0-0_ls": 2,
+}
+for name, w in weights.items():
+    graph.setWeight(graph.getTransition(name), w)
+
 
 
 v = Viewer(robot)
@@ -92,32 +123,42 @@ v.setGraph(graph)
 
 q_init = q.copy()
 q_goal = q.copy()
-q_init[-1] = 3.0
-q_goal[-1] = -3.0
+q_init[-1] = 1.0
+q_goal[-1] = -1.0
 
 problem.initConfig(q_init)
 problem.addGoalConfig(q_goal)
-
-# Collision and joint limit constraints.
-problem.addConfigValidation("CollisionValidation")
-problem.addConfigValidation("JointBoundValidation")
 
 
 problem.constraintGraph(graph)
 
 manipulationPlanner = ManipulationPlanner(problem)
-manipulationPlanner.maxIterations(20000)
-manipulationPlanner.timeOut(300)  
+# manipulationPlanner.maxIterations(20000)
+manipulationPlanner.timeOut(1200)  
 
-p = manipulationPlanner.solve()
+# Timed solution search
+t0 = time.perf_counter()
+try:
+    p = manipulationPlanner.solve()
+finally:
+    print(f"Search time: {time.perf_counter() - t0:.2f} s")
+
 
 # Optimizer:
-from pyhpp.core import RandomShortcut
 optimizer = RandomShortcut(problem)
 p1 = optimizer.optimize(p)
 
+# Time parametrization:
+timeParam = SimpleTimeParameterization(problem)
+timeParam.order = 2
+timeParam.safety = 0.2
+timeParam.maxAcceleration = 1
+p2 = timeParam.optimize(p1)
+p3 = timeParam.optimize(p)
 
 
 # Load the path to the viewer so that we can display it.
 v.loadPath(p)
 v.loadPath(p1)
+v.loadPath(p2)
+v.loadPath(p3)
