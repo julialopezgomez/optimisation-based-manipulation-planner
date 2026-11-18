@@ -3,7 +3,7 @@ from pinocchio import SE3, neutral
 from pyhpp.manipulation import Device, urdf, Graph, Problem, ManipulationPlanner
 from pyhpp.manipulation.constraint_graph_factory import ConstraintGraphFactory
 from pyhpp.constraints import ComparisonType, ComparisonTypes, LockedJoint
-from pyhpp.core import RandomShortcut, SimpleTimeParameterization, DiscretizedCollision, Progressive
+from pyhpp.core import RandomShortcut, SimpleTimeParameterization, DiscretizedCollision, Progressive, ProgressiveProjector
 from pyhpp_viser import Viewer  # noqa: F401
 from pathlib import Path
 import numpy as np
@@ -74,6 +74,9 @@ problem.pathValidationFactory(DiscretizedCollision(robot, 0.001))
 # problem.pathValidation(Progressive(robot, 0.001))
 # problem.pathValidationFactory(Progressive(robot, 0.001))
 
+# Path projector: walks each straight edge in steps of at most 0.2, projecting onto the
+# constraint manifold, and cuts the edge where the projection jumps (discontinuity).
+problem.pathProjector(ProgressiveProjector(problem.distance(), problem.steeringMethod(), 0.2))
 
 ### Add constraints to the graph states and transitions
 
@@ -123,8 +126,16 @@ v.setGraph(graph)
 
 q_init = q.copy()
 q_goal = q.copy()
-q_init[-1] = 1.0
-q_goal[-1] = -1.0
+q_init[-1] = 3.0
+q_goal[-1] = -3.0
+
+# Project start and goal onto the "free" state so an invalid query fails loudly here.
+res, q_init, err = graph.applyStateConstraints(graph.getState("free"), q_init)
+if not res:
+    raise RuntimeError(f"Failed to project initial configuration (error {err})")
+res, q_goal, err = graph.applyStateConstraints(graph.getState("free"), q_goal)
+if not res:
+    raise RuntimeError(f"Failed to project goal configuration (error {err})")
 
 problem.initConfig(q_init)
 problem.addGoalConfig(q_goal)
@@ -134,7 +145,7 @@ problem.constraintGraph(graph)
 
 manipulationPlanner = ManipulationPlanner(problem)
 # manipulationPlanner.maxIterations(20000)
-manipulationPlanner.timeOut(1200)  
+manipulationPlanner.timeOut(1800)  # 30 min, agreed with Florent as a fair benchmark limit
 
 # Timed solution search
 t0 = time.perf_counter()
