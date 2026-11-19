@@ -50,6 +50,8 @@ for check in COLLISION_CHECKS:
         # same file name the HPP script writes
         filename = f"{check}_D{float(D)}"  
         print(f"Running {filename} ...", flush=True)
+        print(f"  Started at {datetime.now():%Y-%m-%d %H:%M:%S}", flush=True)
+        
         
         # Run the hpp script and log its output in <filename>.log
         with open(out_dir / f"{filename}.log", "w") as log:
