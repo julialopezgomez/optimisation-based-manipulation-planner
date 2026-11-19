@@ -1,0 +1,56 @@
+{
+  "scene": "1cap_2obs",
+  "collision_check": "continuous",
+  "discrete_collision_step": null,
+  "D": 2.0,
+  "cap_init": 3.0,
+  "cap_goal": 1.0,
+  "q_init": [
+    0.0,
+    -0.7853981633974483,
+    0.0,
+    -2.356194490192345,
+    0.0,
+    1.5707963267948966,
+    0.7853981633974483,
+    -0.025,
+    0.025,
+    3.0
+  ],
+  "q_goal": [
+    0.0,
+    -0.7853981633974483,
+    0.0,
+    -2.356194490192345,
+    0.0,
+    1.5707963267948966,
+    0.7853981633974483,
+    -0.025,
+    0.025,
+    1.0
+  ],
+  "number_of_runs(N)": 20,
+  "timeout_search": 1800,
+  "stop_after_X_runs": 2,
+  "stopped_before_N_runs": true,
+  "runs": [
+    {
+      "run": 1,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.2s"
+    },
+    {
+      "run": 2,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.01s"
+    }
+  ]
+}

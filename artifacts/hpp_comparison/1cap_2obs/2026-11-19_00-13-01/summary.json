@@ -1,0 +1,208 @@
+[
+  {
+    "collision_check": "continuous",
+    "D": 0.5,
+    "status": "ok",
+    "number_of_runs_N": 20,
+    "runs_attempted": 20,
+    "successes": 20,
+    "success_rate": 1.0,
+    "search_time": {
+      "mean": 3.9199736669499545,
+      "median": 0.38101705549343023,
+      "std": 5.8538731285844765
+    },
+    "node_number": {
+      "mean": 490.8,
+      "median": 57.5,
+      "std": 732.2064326404133
+    },
+    "pathlength_raw": {
+      "mean": 9.25609848440457,
+      "median": 8.220301166349083,
+      "std": 3.934577965351358
+    },
+    "pathlength_shortcut": {
+      "mean": 5.341717378962023,
+      "median": 5.248413750706186,
+      "std": 1.135538642634062
+    }
+  },
+  {
+    "collision_check": "continuous",
+    "D": 1,
+    "status": "ok",
+    "number_of_runs_N": 20,
+    "runs_attempted": 20,
+    "successes": 19,
+    "success_rate": 0.95,
+    "search_time": {
+      "mean": 204.6491413803673,
+      "median": 69.63186410299386,
+      "std": 289.19400667271594
+    },
+    "node_number": {
+      "mean": 14517.526315789473,
+      "median": 8228.0,
+      "std": 15927.985181231117
+    },
+    "pathlength_raw": {
+      "mean": 13.893753381826789,
+      "median": 11.991851972290155,
+      "std": 5.441084991607759
+    },
+    "pathlength_shortcut": {
+      "mean": 6.055535719864717,
+      "median": 5.69926380112075,
+      "std": 2.805501771869002
+    }
+  },
+  {
+    "collision_check": "continuous",
+    "D": 2,
+    "status": "stopped_before_N_runs",
+    "number_of_runs_N": 20,
+    "runs_attempted": 2,
+    "successes": 0,
+    "success_rate": 0.0,
+    "search_time": null,
+    "node_number": null,
+    "pathlength_raw": null,
+    "pathlength_shortcut": null
+  },
+  {
+    "collision_check": "continuous",
+    "D": 3,
+    "status": "out_of_limit"
+  },
+  {
+    "collision_check": "continuous",
+    "D": 4,
+    "status": "out_of_limit"
+  },
+  {
+    "collision_check": "continuous",
+    "D": 5,
+    "status": "out_of_limit"
+  },
+  {
+    "collision_check": "continuous",
+    "D": 6,
+    "status": "out_of_limit"
+  },
+  {
+    "collision_check": "discrete",
+    "D": 0.5,
+    "status": "ok",
+    "number_of_runs_N": 20,
+    "runs_attempted": 20,
+    "successes": 20,
+    "success_rate": 1.0,
+    "search_time": {
+      "mean": 3.9876900621966342,
+      "median": 0.9825650610000594,
+      "std": 8.006199957550965
+    },
+    "node_number": {
+      "mean": 454.55,
+      "median": 89.5,
+      "std": 951.4560144851679
+    },
+    "pathlength_raw": {
+      "mean": 9.142697710847509,
+      "median": 9.063582343400297,
+      "std": 3.4419413214844474
+    },
+    "pathlength_shortcut": {
+      "mean": 5.395552849603973,
+      "median": 5.366763189235132,
+      "std": 1.4528462983184065
+    }
+  },
+  {
+    "collision_check": "discrete",
+    "D": 1,
+    "status": "ok",
+    "number_of_runs_N": 20,
+    "runs_attempted": 20,
+    "successes": 20,
+    "success_rate": 1.0,
+    "search_time": {
+      "mean": 123.45869678550226,
+      "median": 63.41396676799923,
+      "std": 188.15256844803855
+    },
+    "node_number": {
+      "mean": 9989.1,
+      "median": 6962.5,
+      "std": 12005.423119990399
+    },
+    "pathlength_raw": {
+      "mean": 12.703983581012336,
+      "median": 12.395482711165986,
+      "std": 4.550527321589883
+    },
+    "pathlength_shortcut": {
+      "mean": 6.1990925593235175,
+      "median": 5.7486848678169284,
+      "std": 3.185094099387239
+    }
+  },
+  {
+    "collision_check": "discrete",
+    "D": 2,
+    "status": "ok",
+    "number_of_runs_N": 20,
+    "runs_attempted": 20,
+    "successes": 6,
+    "success_rate": 0.3,
+    "search_time": {
+      "mean": 759.1426271839979,
+      "median": 845.0620767975051,
+      "std": 419.5556484620454
+    },
+    "node_number": {
+      "mean": 40816.666666666664,
+      "median": 47074.0,
+      "std": 16565.663490753665
+    },
+    "pathlength_raw": {
+      "mean": 16.822139316867414,
+      "median": 17.68006856637696,
+      "std": 8.202689293076523
+    },
+    "pathlength_shortcut": {
+      "mean": 11.962437711889393,
+      "median": 10.271334421984285,
+      "std": 7.402035320650273
+    }
+  },
+  {
+    "collision_check": "discrete",
+    "D": 3,
+    "status": "stopped_before_N_runs",
+    "number_of_runs_N": 20,
+    "runs_attempted": 2,
+    "successes": 0,
+    "success_rate": 0.0,
+    "search_time": null,
+    "node_number": null,
+    "pathlength_raw": null,
+    "pathlength_shortcut": null
+  },
+  {
+    "collision_check": "discrete",
+    "D": 4,
+    "status": "out_of_limit"
+  },
+  {
+    "collision_check": "discrete",
+    "D": 5,
+    "status": "out_of_limit"
+  },
+  {
+    "collision_check": "discrete",
+    "D": 6,
+    "status": "out_of_limit"
+  }
+]

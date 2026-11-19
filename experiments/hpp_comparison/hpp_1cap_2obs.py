@@ -33,6 +33,8 @@ cap_urdf_filename = str(SCENE / "bottle_cap.urdf")
 cap_srdf_filename = str(SCENE / "bottle_cap.srdf")
 obstacle_urdf_filename = str(SCENE / "obstacle.urdf")
 obstacle_srdf_filename = str(SCENE / "empty.srdf")
+floor_urdf_filename = str(SCENE / "floor.urdf")
+floor_srdf_filename = str(SCENE / "empty.srdf")
 
 # Create the robot model
 
@@ -41,7 +43,7 @@ robot = Device("1cap_2obs")
 # Load the robot, hand, cap, and obstacles into the robot model with their respective poses
 
 urdf.loadModel(robot, 0, "panda_arm", "anchor", arm_urdf_filename, arm_srdf_filename, SE3.Identity())
-hand_baseFrame = robot.model().getFrameId("panda_arm/panda_link8")
+hand_baseFrame = robot.model().getFrameId("panda_arm/panda_link8") # attach hand to last link of the arm
 hand_pose = SE3(pinocchio.rpy.rpyToMatrix(0, 0, -np.pi/4), np.zeros(3))
 urdf.loadModel(robot, hand_baseFrame, "panda_hand", "anchor", hand_urdf_filename, hand_srdf_filename, hand_pose)
 cap_pose = SE3(pinocchio.rpy.rpyToMatrix(0, 0, 0), np.array([0.5, 0.0, 0.0]))
@@ -50,6 +52,7 @@ obstacle1_pose = SE3(pinocchio.rpy.rpyToMatrix(0, 0, 0), np.array([0.51, 0.031, 
 urdf.loadModel(robot, 0, "obstacle1", "anchor", obstacle_urdf_filename, obstacle_srdf_filename, obstacle1_pose)
 obstacle2_pose = SE3(pinocchio.rpy.rpyToMatrix(0, 0, 0), np.array([0.467, -0.005, 0.01]))
 urdf.loadModel(robot, 0, "obstacle2", "anchor", obstacle_urdf_filename, obstacle_srdf_filename, obstacle2_pose)
+urdf.loadModel(robot, 0, "floor", "anchor", floor_urdf_filename, floor_srdf_filename, SE3.Identity())
 
 # Create the problem, graph and factory
 
@@ -191,7 +194,7 @@ results = {
     "q_goal": q_goal.tolist(),
     "number_of_runs(N)": args.N,
     "timeout_search": timeout_search,
-    "stop_after_X_runs": 2,
+    "stop_after_X_runs": 4,
     "stopped_before_N_runs": False,
     "runs": [],
 }

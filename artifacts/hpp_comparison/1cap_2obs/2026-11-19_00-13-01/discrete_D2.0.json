@@ -1,0 +1,218 @@
+{
+  "scene": "1cap_2obs",
+  "collision_check": "discrete",
+  "discrete_collision_step": 0.005,
+  "D": 2.0,
+  "cap_init": 3.0,
+  "cap_goal": 1.0,
+  "q_init": [
+    0.0,
+    -0.7853981633974483,
+    0.0,
+    -2.356194490192345,
+    0.0,
+    1.5707963267948966,
+    0.7853981633974483,
+    -0.025,
+    0.025,
+    3.0
+  ],
+  "q_goal": [
+    0.0,
+    -0.7853981633974483,
+    0.0,
+    -2.356194490192345,
+    0.0,
+    1.5707963267948966,
+    0.7853981633974483,
+    -0.025,
+    0.025,
+    1.0
+  ],
+  "number_of_runs(N)": 20,
+  "timeout_search": 1800,
+  "stop_after_X_runs": 2,
+  "stopped_before_N_runs": false,
+  "runs": [
+    {
+      "run": 1,
+      "success": true,
+      "search_time": 727.9666815869859,
+      "node_number": 43102,
+      "pathlength_raw": 30.680645009962973,
+      "pathlength_shortcut": 27.847241346642427,
+      "error": null
+    },
+    {
+      "run": 2,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.01s"
+    },
+    {
+      "run": 3,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.12s"
+    },
+    {
+      "run": 4,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800s"
+    },
+    {
+      "run": 5,
+      "success": true,
+      "search_time": 321.0079224790097,
+      "node_number": 25603,
+      "pathlength_raw": 19.197326467752106,
+      "pathlength_shortcut": 10.890852059934709,
+      "error": null
+    },
+    {
+      "run": 6,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.06s"
+    },
+    {
+      "run": 7,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.1s"
+    },
+    {
+      "run": 8,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "A* timed out extracting the solution path from the roadmap."
+    },
+    {
+      "run": 9,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800s"
+    },
+    {
+      "run": 10,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.02s"
+    },
+    {
+      "run": 11,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.06s"
+    },
+    {
+      "run": 12,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.04s"
+    },
+    {
+      "run": 13,
+      "success": true,
+      "search_time": 118.43702311697416,
+      "node_number": 12259,
+      "pathlength_raw": 6.544335789121057,
+      "pathlength_shortcut": 4.925738960175172,
+      "error": null
+    },
+    {
+      "run": 14,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.01s"
+    },
+    {
+      "run": 15,
+      "success": true,
+      "search_time": 1203.0720956849982,
+      "node_number": 57213,
+      "pathlength_raw": 7.6198434703809665,
+      "pathlength_shortcut": 7.568125060615481,
+      "error": null
+    },
+    {
+      "run": 16,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.06s"
+    },
+    {
+      "run": 17,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.07s"
+    },
+    {
+      "run": 18,
+      "success": true,
+      "search_time": 962.1574720080243,
+      "node_number": 51046,
+      "pathlength_raw": 20.727874498985567,
+      "pathlength_shortcut": 10.87162823796471,
+      "error": null
+    },
+    {
+      "run": 19,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.14s"
+    },
+    {
+      "run": 20,
+      "success": true,
+      "search_time": 1222.2145682279952,
+      "node_number": 55677,
+      "pathlength_raw": 16.162810665001814,
+      "pathlength_shortcut": 9.67104060600386,
+      "error": null
+    }
+  ]
+}

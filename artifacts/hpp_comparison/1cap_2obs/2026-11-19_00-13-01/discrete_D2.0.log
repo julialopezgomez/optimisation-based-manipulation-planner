@@ -1,0 +1,68 @@
+╭──────────────── viser ────────────────╮
+│             ╷                         │
+│   HTTP      │ http://localhost:8000   │
+│   Websocket │ ws://localhost:8000     │
+│             ╵                         │
+╰───────────────────────────────────────╯
+Graph viewer thread not running, cannot publish viewer snapshot.
+Graph viewer thread not running, cannot publish viewer snapshot.
+Turning the cap from 3.0 rad to 1.0 rad (delta: 2.0 rad)
+Run 1/20
+Search time: 727.9666815869859 s
+Number of nodes in the roadmap: 43102
+Loading paths 1, 2, 3, 4 to viewer for run 1
+Run 2/20
+Run 2 failed: time out (1800s) reached after 1800.01s
+Run 3/20
+Run 3 failed: time out (1800s) reached after 1800.12s
+Run 4/20
+Run 4 failed: time out (1800s) reached after 1800s
+Run 5/20
+Search time: 321.0079224790097 s
+Number of nodes in the roadmap: 25603
+Loading paths 17, 18, 19, 20 to viewer for run 5
+Run 6/20
+Run 6 failed: time out (1800s) reached after 1800.06s
+Run 7/20
+Run 7 failed: time out (1800s) reached after 1800.1s
+Run 8/20
+Run 8 failed: A* timed out extracting the solution path from the roadmap.
+Run 9/20
+Run 9 failed: time out (1800s) reached after 1800s
+Run 10/20
+Run 10 failed: time out (1800s) reached after 1800.02s
+Run 11/20
+Run 11 failed: time out (1800s) reached after 1800.06s
+Run 12/20
+Run 12 failed: time out (1800s) reached after 1800.04s
+Run 13/20
+Search time: 118.43702311697416 s
+Number of nodes in the roadmap: 12259
+Loading paths 49, 50, 51, 52 to viewer for run 13
+Run 14/20
+Run 14 failed: time out (1800s) reached after 1800.01s
+Run 15/20
+Search time: 1203.0720956849982 s
+Number of nodes in the roadmap: 57213
+Loading paths 57, 58, 59, 60 to viewer for run 15
+Run 16/20
+Run 16 failed: time out (1800s) reached after 1800.06s
+Run 17/20
+Run 17 failed: time out (1800s) reached after 1800.07s
+Run 18/20
+Search time: 962.1574720080243 s
+Number of nodes in the roadmap: 51046
+Loading paths 69, 70, 71, 72 to viewer for run 18
+Run 19/20
+Run 19 failed: time out (1800s) reached after 1800.14s
+Run 20/20
+Search time: 1222.2145682279952 s
+Number of nodes in the roadmap: 55677
+Loading paths 77, 78, 79, 80 to viewer for run 20
+####################
+Number of rounds: 20
+Number of successes: 6
+Success rate: 30.0%
+Average time per success: 759.1426271839979
+Average number nodes per success: 40816.666666666664
+(viser) Server stopped

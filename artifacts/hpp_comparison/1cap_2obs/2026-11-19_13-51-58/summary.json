@@ -1,0 +1,31 @@
+[
+  {
+    "collision_check": "continuous",
+    "D": 0.5,
+    "status": "ok",
+    "number_of_runs_N": 20,
+    "runs_attempted": 20,
+    "successes": 20,
+    "success_rate": 1.0,
+    "search_time": {
+      "mean": 11.384968134656082,
+      "median": 0.8482644195173634,
+      "std": 37.074041852154394
+    },
+    "node_number": {
+      "mean": 1149.05,
+      "median": 81.5,
+      "std": 3626.2778502894676
+    },
+    "pathlength_raw": {
+      "mean": 10.299930786923426,
+      "median": 9.71399870854563,
+      "std": 5.174889716609698
+    },
+    "pathlength_shortcut": {
+      "mean": 5.06789685399677,
+      "median": 5.170925702832667,
+      "std": 1.5053551865891286
+    }
+  }
+]
