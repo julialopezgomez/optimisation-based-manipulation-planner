@@ -1,0 +1,94 @@
+╭──────────────── viser ────────────────╮
+│             ╷                         │
+│   HTTP      │ http://localhost:8000   │
+│   Websocket │ ws://localhost:8000     │
+│             ╵                         │
+╰───────────────────────────────────────╯
+Graph viewer thread not running, cannot publish viewer snapshot.
+Graph viewer thread not running, cannot publish viewer snapshot.
+Turning the cap from 3.0 rad to 2.0 rad (delta: 1.0 rad)
+Run 1/20
+Search time: 215.45240059299977 s
+Number of nodes in the roadmap: 19652
+Loading paths 1, 2, 3, 4 to viewer for run 1
+Run 2/20
+Search time: 12.81931053599692 s
+Number of nodes in the roadmap: 1616
+Loading paths 5, 6, 7, 8 to viewer for run 2
+Run 3/20
+Search time: 27.311444944003597 s
+Number of nodes in the roadmap: 3330
+Loading paths 9, 10, 11, 12 to viewer for run 3
+Run 4/20
+Search time: 38.48152682199725 s
+Number of nodes in the roadmap: 4618
+Loading paths 13, 14, 15, 16 to viewer for run 4
+Run 5/20
+Search time: 0.1259401689749211 s
+Number of nodes in the roadmap: 11
+Loading paths 17, 18, 19, 20 to viewer for run 5
+Run 6/20
+Search time: 0.20328292500926182 s
+Number of nodes in the roadmap: 35
+Loading paths 21, 22, 23, 24 to viewer for run 6
+Run 7/20
+Search time: 806.4357654709893 s
+Number of nodes in the roadmap: 44373
+Loading paths 25, 26, 27, 28 to viewer for run 7
+Run 8/20
+Run 8 failed: time out (1800s) reached after 1800.04s
+Run 9/20
+Search time: 2.938135948003037 s
+Number of nodes in the roadmap: 326
+Loading paths 33, 34, 35, 36 to viewer for run 9
+Run 10/20
+Search time: 400.804571339977 s
+Number of nodes in the roadmap: 29616
+Loading paths 37, 38, 39, 40 to viewer for run 10
+Run 11/20
+Search time: 44.34199230399099 s
+Number of nodes in the roadmap: 5463
+Loading paths 41, 42, 43, 44 to viewer for run 11
+Run 12/20
+Search time: 46.88519675299176 s
+Number of nodes in the roadmap: 5817
+Loading paths 45, 46, 47, 48 to viewer for run 12
+Run 13/20
+Search time: 68.66946054901928 s
+Number of nodes in the roadmap: 8228
+Loading paths 49, 50, 51, 52 to viewer for run 13
+Run 14/20
+Search time: 14.492127661011182 s
+Number of nodes in the roadmap: 1733
+Loading paths 53, 54, 55, 56 to viewer for run 14
+Run 15/20
+Search time: 455.541899052012 s
+Number of nodes in the roadmap: 32288
+Loading paths 57, 58, 59, 60 to viewer for run 15
+Run 16/20
+Search time: 7.651793577009812 s
+Number of nodes in the roadmap: 1067
+Loading paths 61, 62, 63, 64 to viewer for run 16
+Run 17/20
+Search time: 0.05228688500938006 s
+Number of nodes in the roadmap: 23
+Loading paths 65, 66, 67, 68 to viewer for run 17
+Run 18/20
+Search time: 3.2785797730030026 s
+Number of nodes in the roadmap: 372
+Loading paths 69, 70, 71, 72 to viewer for run 18
+Run 19/20
+Search time: 7.965384129987797 s
+Number of nodes in the roadmap: 901
+Loading paths 73, 74, 75, 76 to viewer for run 19
+Run 20/20
+Search time: 180.8160196329991 s
+Number of nodes in the roadmap: 17518
+Loading paths 77, 78, 79, 80 to viewer for run 20
+####################
+Number of rounds: 20
+Number of successes: 19
+Success rate: 95.0%
+Average time per success: 122.85616416131502
+Average number nodes per success: 9315.105263157895
+(viser) Server stopped

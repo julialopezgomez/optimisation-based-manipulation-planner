@@ -1,0 +1,218 @@
+{
+  "scene": "1cap_2obs",
+  "collision_check": "continuous",
+  "discrete_collision_step": null,
+  "D": 1.0,
+  "cap_init": 3.0,
+  "cap_goal": 2.0,
+  "q_init": [
+    0.0,
+    -0.7853981633974483,
+    0.0,
+    -2.356194490192345,
+    0.0,
+    1.5707963267948966,
+    0.7853981633974483,
+    -0.025,
+    0.025,
+    3.0
+  ],
+  "q_goal": [
+    0.0,
+    -0.7853981633974483,
+    0.0,
+    -2.356194490192345,
+    0.0,
+    1.5707963267948966,
+    0.7853981633974483,
+    -0.025,
+    0.025,
+    2.0
+  ],
+  "number_of_runs(N)": 20,
+  "timeout_search": 1800,
+  "stop_after_X_runs": 4,
+  "stopped_before_N_runs": false,
+  "runs": [
+    {
+      "run": 1,
+      "success": true,
+      "search_time": 215.45240059299977,
+      "node_number": 19652,
+      "pathlength_raw": 18.81450997926545,
+      "pathlength_shortcut": 9.90583981997113,
+      "error": null
+    },
+    {
+      "run": 2,
+      "success": true,
+      "search_time": 12.81931053599692,
+      "node_number": 1616,
+      "pathlength_raw": 13.854955557312726,
+      "pathlength_shortcut": 6.123006304764296,
+      "error": null
+    },
+    {
+      "run": 3,
+      "success": true,
+      "search_time": 27.311444944003597,
+      "node_number": 3330,
+      "pathlength_raw": 19.8363244856685,
+      "pathlength_shortcut": 5.728222124579109,
+      "error": null
+    },
+    {
+      "run": 4,
+      "success": true,
+      "search_time": 38.48152682199725,
+      "node_number": 4618,
+      "pathlength_raw": 12.756608347221828,
+      "pathlength_shortcut": 3.9266583770742955,
+      "error": null
+    },
+    {
+      "run": 5,
+      "success": true,
+      "search_time": 0.1259401689749211,
+      "node_number": 11,
+      "pathlength_raw": 7.407572603739349,
+      "pathlength_shortcut": 5.336443647730463,
+      "error": null
+    },
+    {
+      "run": 6,
+      "success": true,
+      "search_time": 0.20328292500926182,
+      "node_number": 35,
+      "pathlength_raw": 8.935796408559465,
+      "pathlength_shortcut": 4.166734851640664,
+      "error": null
+    },
+    {
+      "run": 7,
+      "success": true,
+      "search_time": 806.4357654709893,
+      "node_number": 44373,
+      "pathlength_raw": 16.592007360781846,
+      "pathlength_shortcut": 3.791911487949781,
+      "error": null
+    },
+    {
+      "run": 8,
+      "success": false,
+      "search_time": null,
+      "node_number": null,
+      "pathlength_raw": null,
+      "pathlength_shortcut": null,
+      "error": "time out (1800s) reached after 1800.04s"
+    },
+    {
+      "run": 9,
+      "success": true,
+      "search_time": 2.938135948003037,
+      "node_number": 326,
+      "pathlength_raw": 8.91360535656949,
+      "pathlength_shortcut": 4.86956750699043,
+      "error": null
+    },
+    {
+      "run": 10,
+      "success": true,
+      "search_time": 400.804571339977,
+      "node_number": 29616,
+      "pathlength_raw": 18.27671015287392,
+      "pathlength_shortcut": 5.373543212789817,
+      "error": null
+    },
+    {
+      "run": 11,
+      "success": true,
+      "search_time": 44.34199230399099,
+      "node_number": 5463,
+      "pathlength_raw": 8.695076259617107,
+      "pathlength_shortcut": 4.488338511264302,
+      "error": null
+    },
+    {
+      "run": 12,
+      "success": true,
+      "search_time": 46.88519675299176,
+      "node_number": 5817,
+      "pathlength_raw": 14.11612895337595,
+      "pathlength_shortcut": 5.430104026508559,
+      "error": null
+    },
+    {
+      "run": 13,
+      "success": true,
+      "search_time": 68.66946054901928,
+      "node_number": 8228,
+      "pathlength_raw": 9.178658406096947,
+      "pathlength_shortcut": 7.652490882104644,
+      "error": null
+    },
+    {
+      "run": 14,
+      "success": true,
+      "search_time": 14.492127661011182,
+      "node_number": 1733,
+      "pathlength_raw": 6.863968742718483,
+      "pathlength_shortcut": 4.553343111423299,
+      "error": null
+    },
+    {
+      "run": 15,
+      "success": true,
+      "search_time": 455.541899052012,
+      "node_number": 32288,
+      "pathlength_raw": 21.667501935550625,
+      "pathlength_shortcut": 5.238519556964718,
+      "error": null
+    },
+    {
+      "run": 16,
+      "success": true,
+      "search_time": 7.651793577009812,
+      "node_number": 1067,
+      "pathlength_raw": 14.822701654145943,
+      "pathlength_shortcut": 5.158328219861844,
+      "error": null
+    },
+    {
+      "run": 17,
+      "success": true,
+      "search_time": 0.05228688500938006,
+      "node_number": 23,
+      "pathlength_raw": 7.115754160216515,
+      "pathlength_shortcut": 5.894211531457962,
+      "error": null
+    },
+    {
+      "run": 18,
+      "success": true,
+      "search_time": 3.2785797730030026,
+      "node_number": 372,
+      "pathlength_raw": 12.010563053622196,
+      "pathlength_shortcut": 6.399399084231192,
+      "error": null
+    },
+    {
+      "run": 19,
+      "success": true,
+      "search_time": 7.965384129987797,
+      "node_number": 901,
+      "pathlength_raw": 12.595580218762848,
+      "pathlength_shortcut": 7.503383886515961,
+      "error": null
+    },
+    {
+      "run": 20,
+      "success": true,
+      "search_time": 180.8160196329991,
+      "node_number": 17518,
+      "pathlength_raw": 21.69516005872566,
+      "pathlength_shortcut": 6.584171121092586,
+      "error": null
+    }
+  ]
+}
