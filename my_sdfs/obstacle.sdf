@@ -29,7 +29,7 @@
           </cylinder>
         </geometry>
         <material>
-          <diffuse>1.0 0.0 0.0 1.0</diffuse> <!-- Changed color to blue -->
+          <diffuse>1.0 0.0 0.0 1.0</diffuse> <!-- Changed color to red -->
         </material>
       </visual>
       <collision name="collision_obs">

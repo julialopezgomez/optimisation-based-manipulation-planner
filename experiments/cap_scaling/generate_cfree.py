@@ -103,8 +103,7 @@ def build_plant():
     plant = builder.plant()
     parser = Parser(plant, builder.scene_graph())
     parser.SetAutoRenaming(True)
-    arm, hand = scene.add_panda(parser, plant)
-    caps, _ = scene.add_scene(parser, plant, ARGS.scene, welded=True)
+    arm, hand, caps = scene.add_scene(parser, plant, ARGS.scene, welded=True)
     plant.Finalize()
     return builder.Build(), plant, arm, hand, caps
 
