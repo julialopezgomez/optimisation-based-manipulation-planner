@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scene viewer</title>
+<style>
+  :root { --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #dcdcd6;
+          --accent: #2f5fb3; --bad: #b3261e; --warn: #8a5a00; --good: #2e7d32; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #17171a; --panel: #212125; --text: #e8e8e3; --muted: #9d9d97; --line: #38383d;
+            --accent: #7ea6ff; --bad: #ff8a80; --warn: #ffcc66; --good: #81c784; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, sans-serif; }
+  header { padding: 8px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: baseline; }
+  header h1 { font-size: 15px; margin: 0; }
+  #status { color: var(--muted); }
+  #status.error { color: var(--bad); }
+  main { display: grid; grid-template-columns: 330px 1fr; height: calc(100vh - 38px); }
+  aside { overflow-y: auto; padding: 12px 16px; border-right: 1px solid var(--line); background: var(--panel); }
+  #work { display: grid; grid-template-rows: 58vh 1fr; min-width: 0; }
+  iframe { width: 100%; height: 100%; border: 0; border-bottom: 1px solid var(--line); background: #fff; }
+  #below { overflow: auto; padding: 12px 16px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 0 6px; }
+  h3 { font-size: 13px; margin: 12px 0 4px; display: flex; gap: 8px; align-items: center; }
+  label { display: block; color: var(--muted); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+  .setting { margin-bottom: 8px; }
+  .setting .name { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text); }
+  .setting .inputs { display: flex; gap: 6px; margin-top: 2px; }
+  input, select, textarea { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line);
+                            border-radius: 4px; padding: 3px 5px; width: 100%; }
+  input:disabled { opacity: .5; }
+  button { font: inherit; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--line);
+           background: var(--panel); color: var(--text); cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.small { padding: 1px 6px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .buttons { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; font-weight: normal; color: var(--muted); padding: 2px 4px; white-space: nowrap; }
+  td { padding: 2px 4px; }
+  td input, td select { min-width: 70px; }
+  td.idx { color: var(--muted); width: 1%; white-space: nowrap; }
+  #checks div { margin: 2px 0; }
+  .bad { color: var(--bad); } .warn { color: var(--warn); } .good { color: var(--good); }
+  textarea { height: 220px; font-family: ui-monospace, monospace; font-size: 11px; }
+  .hint { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header><h1>Scene viewer</h1><span id="status">Starting…</span>
+  <a id="meshcat_link" target="_blank" style="margin-left:auto; color:var(--accent)">open the 3D view in its own tab</a></header>
+<main>
+  <aside>
+    <h2>Generate</h2>
+    <div class="row">
+      <label>caps<input id="n_caps" type="number" min="1" value="3"></label>
+      <label>small obstacles per cap<input id="n_small_obs" value="2" title="one number, or one per cap: 2,0,3"></label>
+      <label>walls<input id="n_walls" type="number" min="0" value="1"></label>
+      <label>big obstacles<input id="n_big_obs" type="number" min="0" value="1"></label>
+      <label>seed<input id="seed" type="number" value="0"></label>
+      <label>&nbsp;<button id="new_seed">New seed</button></label>
+    </div>
+    <label style="margin-top:6px">preset small-obstacle angles (optional)
+      <input id="angles" placeholder="72,189; ; 30,150   (one group per cap, deg)"></label>
+    <div class="buttons"><button class="primary" id="generate">Generate</button></div>
+    <div class="row" style="margin-top:10px">
+      <label>preset scene<select id="preset"></select></label>
+      <label>&nbsp;<button id="load_preset">Load preset</button></label>
+    </div>
+
+    <h2>Generator ranges</h2>
+    <div class="hint">Used by Generate. Pairs are min and max.</div>
+    <div id="settings"></div>
+    <div class="buttons"><button id="reset">Reset to multicap_scene.py values</button></div>
+  </aside>
+
+  <div id="work">
+    <iframe id="meshcat" title="Meshcat 3D view"></iframe>
+    <div id="below">
+      <div>
+        <h2>Objects</h2>
+        <div class="hint">Change any value, then Apply. Walls tied to a cap are placed by side and distance to the
+          cap centre; set the cap to "none" to place a wall by its angle. "show" marks the object in the view.</div>
+        <div id="objects"></div>
+        <label style="display:flex; gap:6px; align-items:center; margin-top:8px; width:auto">
+          <input type="checkbox" id="floor" style="width:auto"> floor</label>
+        <div class="buttons"><button class="primary" id="apply">Apply edits</button></div>
+      </div>
+      <div>
+        <h2>Checks</h2>
+        <div id="checks" class="hint">Nothing rendered yet.</div>
+        <h2>Scene JSON</h2>
+        <textarea id="json" spellcheck="false"></textarea>
+        <div class="buttons">
+          <button id="apply_json">Apply JSON</button>
+          <button id="download">Download</button>
+          <button id="upload">Load file</button>
+          <input type="file" id="file" accept=".json" hidden>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let config = null, scene = null, model = null;
+
+// Columns of the object table: [field, header]. "cap" and "side" are drop-downs, the rest numbers.
+const COLUMNS = {
+  caps: [["angle", "angle (deg)"], ["radius", "from base (m)"], ["z", "height (m)"]],
+  small_obs: [["cap", "cap"], ["angle", "angle around cap (deg)"], ["dist", "from cap centre (m)"]],
+  walls: [["cap", "cap"], ["side", "side"], ["dist", "to cap centre (m)"], ["angle", "angle (deg)"],
+          ["height", "height (m)"], ["r_in", "r in (m)"], ["r_out", "r out (m)"], ["thickness", "thickness (m)"]],
+  big_obs: [["angle", "angle (deg)"], ["dist", "from base (m)"], ["radius", "radius (m)"], ["height", "height (m)"]],
+};
+const TITLES = {caps: "Caps", small_obs: "Small obstacles", walls: "Walls", big_obs: "Big obstacles"};
+const NEW = {
+  caps: {angle: 0, radius: 0.5, z: 0},
+  small_obs: {cap: 0, angle: 0, dist: 0.033, dz: 0.01},
+  walls: {cap: 0, side: 1, dist: 0.11, angle: 0, height: 0.4, r_in: 0.3, r_out: 0.75, thickness: 0.04},
+  big_obs: {angle: 180, dist: 0.5, radius: 0.05, height: 0.3},
+};
+
+function setStatus(text, error = false) { $("status").textContent = text; $("status").className = error ? "error" : ""; }
+
+async function post(path, body) {
+  document.querySelectorAll("button").forEach(b => b.disabled = true);
+  setStatus("Working…");
+  try {
+    const reply = await (await fetch(path, {method: "POST", body: JSON.stringify(body)})).json();
+    if (reply.error) setStatus(reply.error, true); else setStatus("Ready");
+    return reply;
+  } catch (e) {
+    setStatus("No answer from scene_viewer.py: is it still running?", true);
+    return {error: String(e)};
+  } finally {
+    document.querySelectorAll("button").forEach(b => b.disabled = false);
+  }
+}
+
+// ---------------------------------------------------------------- generator settings
+function buildSettings() {
+  const box = $("settings");
+  box.innerHTML = "";
+  for (const [name, {value, help}] of Object.entries(config.settings)) {
+    const div = document.createElement("div");
+    div.className = "setting";
+    div.innerHTML = `<div class="name">${name}</div><div class="hint">${help}</div>`;
+    const inputs = document.createElement("div");
+    inputs.className = "inputs";
+    const keys = Array.isArray(value) ? value.map((_, i) => i) : typeof value === "object" ? Object.keys(value) : [null];
+    for (const key of keys) {
+      const input = document.createElement("input");
+      input.type = "number"; input.step = "any";
+      input.value = key === null ? value : value[key];
+      input.dataset.name = name;
+      if (key !== null) input.dataset.key = key;
+      if (typeof value === "object" && !Array.isArray(value)) input.title = key;
+      inputs.appendChild(input);
+    }
+    div.appendChild(inputs);
+    box.appendChild(div);
+  }
+}
+
+function readSettings() {
+  const values = {};
+  for (const [name, {value}] of Object.entries(config.settings)) {
+    values[name] = Array.isArray(value) ? [] : typeof value === "object" ? {} : null;
+  }
+  document.querySelectorAll("#settings input").forEach(input => {
+    const {name, key} = input.dataset, x = Number(input.value);
+    if (key === undefined) values[name] = x;
+    else if (Array.isArray(values[name])) values[name][Number(key)] = x;
+    else values[name][key] = x;
+  });
+  return values;
+}
+
+// ---------------------------------------------------------------- generate / apply
+function readCounts(text) {
+  const parts = text.split(",").map(s => s.trim()).filter(s => s !== "").map(Number);
+  return parts.length === 1 ? parts[0] : parts;
+}
+
+function readAngles(text) {
+  if (!text.trim()) return null;
+  return text.split(";").map(group => group.split(",").map(s => s.trim()).filter(s => s !== "").map(Number));
+}
+
+async function generate() {
+  const reply = await post("/api/generate", {
+    settings: readSettings(), n_caps: Number($("n_caps").value), n_small_obs: readCounts($("n_small_obs").value),
+    n_big_obs: Number($("n_big_obs").value), n_walls: Number($("n_walls").value), seed: Number($("seed").value),
+    small_obs_angles_deg: readAngles($("angles").value),
+  });
+  showReply(reply);
+}
+
+async function apply(body) { showReply(await post("/api/apply", {settings: readSettings(), ...body})); }
+
+function showReply(reply) {
+  if (reply.error) return;
+  scene = reply.scene; model = reply.model;
+  buildObjects();
+  $("json").value = JSON.stringify(scene, null, 2);
+  const checks = $("checks");
+  checks.innerHTML = "";
+  const line = (cls, text) => { const d = document.createElement("div"); d.className = cls; d.textContent = text; checks.appendChild(d); };
+  if (reply.overlaps.length === 0) line("good", "✓ No overlapping objects (Drake check, caps jointed).");
+  reply.overlaps.forEach(t => line("bad", "✖ " + t));
+  reply.notes.forEach(t => line("warn", "• " + t));
+  if (reply.notes.length === 0) line("hint", "All values inside the generator ranges.");
+}
+
+// ---------------------------------------------------------------- object table
+function fmt(x) { return Number.isFinite(x) ? String(Math.round(x * 10000) / 10000) : ""; }
+
+function buildObjects() {
+  const box = $("objects");
+  box.innerHTML = "";
+  $("floor").checked = model.floor;
+  for (const kind of Object.keys(COLUMNS)) {
+    const h = document.createElement("h3");
+    h.innerHTML = `${TITLES[kind]} <button class="small">+ add</button>`;
+    h.querySelector("button").onclick = () => addRow(kind);
+    box.appendChild(h);
+    if (model[kind].length === 0) continue;
+    const table = document.createElement("table");
+    table.innerHTML = "<tr><th>#</th>" + COLUMNS[kind].map(([, t]) => `<th>${t}</th>`).join("") + "<th></th></tr>";
+    model[kind].forEach((obj, i) => table.appendChild(objectRow(kind, obj, i)));
+    box.appendChild(table);
+  }
+}
+
+function objectRow(kind, obj, i) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td class="idx">${i + 1}</td>`;
+  for (const [field] of COLUMNS[kind]) {
+    const td = document.createElement("td");
+    let input;
+    if (field === "cap") {
+      input = document.createElement("select");
+      const options = model.caps.map((_, k) => [k, `cap ${k + 1}`]);
+      if (kind === "walls") options.push(["", "none"]);
+      input.innerHTML = options.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
+      input.value = obj.cap === null ? "" : obj.cap;
+      input.onchange = () => { obj.cap = input.value === "" ? null : Number(input.value); buildObjects(); };
+    } else if (field === "side") {
+      input = document.createElement("select");
+      input.innerHTML = `<option value="1">+ (counter-clockwise)</option><option value="-1">− (clockwise)</option>`;
+      input.value = obj.side;
+      input.onchange = () => { obj.side = Number(input.value); };
+    } else {
+      input = document.createElement("input");
+      input.type = "number"; input.step = "any"; input.value = fmt(obj[field]);
+      input.onchange = () => { obj[field] = Number(input.value); };   // untouched values keep full precision
+    }
+    if (kind === "walls" && obj.cap === null && (field === "side" || field === "dist")) input.disabled = true;
+    if (kind === "walls" && obj.cap !== null && field === "angle") { input.disabled = true; input.title = "set by cap, side and distance"; }
+    td.appendChild(input);
+    tr.appendChild(td);
+  }
+  const td = document.createElement("td");
+  td.style.whiteSpace = "nowrap";
+  td.innerHTML = `<button class="small">show</button> <button class="small">✕</button>`;
+  const [show, remove] = td.querySelectorAll("button");
+  show.onclick = () => post("/api/highlight", {scene, kind, index: i});
+  remove.onclick = () => removeRow(kind, i);
+  tr.appendChild(td);
+  return tr;
+}
+
+function addRow(kind) {
+  if ((kind === "small_obs" || kind === "walls") && model.caps.length === 0) {
+    setStatus("Add a cap first: small obstacles and walls are placed relative to a cap.", true);
+    return;
+  }
+  model[kind].push({...NEW[kind]});
+  buildObjects();
+}
+
+function removeRow(kind, i) {
+  model[kind].splice(i, 1);
+  if (kind === "caps") {   // objects tied to the removed cap: small obstacles go, walls keep their angle
+    model.small_obs = model.small_obs.filter(o => o.cap !== i);
+    model.small_obs.forEach(o => { if (o.cap > i) o.cap -= 1; });
+    model.walls.forEach(w => { if (w.cap === i) w.cap = null; else if (w.cap > i) w.cap -= 1; });
+  }
+  buildObjects();
+}
+
+// ---------------------------------------------------------------- start
+async function start() {
+  config = await (await fetch("/api/config")).json();
+  $("meshcat").src = $("meshcat_link").href = `${location.protocol}//${location.hostname}:${config.meshcat_port}`;
+  buildSettings();
+  $("preset").innerHTML = config.presets.map(p => `<option>${p}</option>`).join("");
+  $("generate").onclick = generate;
+  $("new_seed").onclick = () => { $("seed").value = Math.floor(Math.random() * 100000); generate(); };
+  $("load_preset").onclick = () => apply({preset: $("preset").value});
+  $("reset").onclick = buildSettings;
+  $("apply").onclick = () => { model.floor = $("floor").checked; apply({model}); };
+  $("apply_json").onclick = () => {
+    try { apply({scene: JSON.parse($("json").value)}); } catch (e) { setStatus("JSON: " + e.message, true); }
+  };
+  $("download").onclick = () => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([$("json").value], {type: "application/json"}));
+    a.download = "scene.json";
+    a.click();
+  };
+  $("upload").onclick = () => $("file").click();
+  $("file").onchange = async () => {
+    const file = $("file").files[0];
+    if (!file) return;
+    try { apply({scene: JSON.parse(await file.text())}); } catch (e) { setStatus("JSON: " + e.message, true); }
+    $("file").value = "";
+  };
+  setStatus("Ready");
+  generate();
+}
+start();
+</script>
+</body>
+</html>

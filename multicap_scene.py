@@ -149,7 +149,7 @@ def random_scene(n_caps, n_small_obs=0, n_big_obs=0, n_walls=0, seed=0, small_ob
     so there is room for at most about 2 walls per cap."""
     rng = np.random.default_rng(seed)
     discs = []  # (x, y, radius) footprint of everything placed
-    clear = lambda x, y, r: all(np.hypot(x - a, y - b) - r - c >= MARGIN for a, b, c in discs)
+    clear = lambda x, y, r: all(np.hypot(x - a, y - b) - r - c >= MARGIN for a, b, c in discs) # True if (x, y, r) is clear of all discs
     gap = lambda a, b: abs((a - b + 180) % 360 - 180)  # angle between two directions, in degrees
 
     # Caps: random angles around the robot, at least MIN_CAP_GAP apart. The free angle left after the gaps is
